@@ -1,0 +1,18 @@
+HTTP/1.1 200 OK
+Date: Tue, 13 Sep 2011 00:05:52 GMT
+P3P: policyref="http://info.yahoo.com/w3c/p3p.xml", CP="CAO DSP COR CUR ADM DEV TAI PSA PSD IVAi IVDi CONi TELo OTPi OUR DELi SAMi OTRi UNRi PUBi IND PHY ONL UNI PUR FIN COM NAV INT DEM CNT STA POL HEA PRE LOC GOV"
+Cache-Control: private
+Set-Cookie: IU=deleted; expires=Mon, 13-Sep-2010 00:05:51 GMT; path=/; domain=.yahoo.com
+Set-Cookie: fpps=deleted; expires=Mon, 13-Sep-2010 00:05:51 GMT; path=/; domain=www.yahoo.com
+Set-Cookie: FPCK3=AgBObp0wAHKZMABiNzAAYtsgAENFMABbJjAAZlI=; expires=Thu, 13-Oct-2011 00:05:52 GMT; path=/; domain=www.yahoo.com
+Set-Cookie: CH=deleted; expires=Mon, 13-Sep-2010 00:05:51 GMT; path=/; domain=www.yahoo.com
+Set-Cookie: CH=AgBObp0wAAsUMAAgzTAALcMwACieMAAUPSAANHAQAQJkMAAdUzAAJJYwABR4MAAH/g==; expires=Thu, 13-Oct-2011 00:05:52 GMT; path=/; domain=.yahoo.com
+Set-Cookie: fpc_s=d=.vQW8eUasXnjMBBtSIAZbQXYxWowyrc9vL0bLhtXY2PJZAKF_jR7WpSjKilaboIjcLBpyFFJ4EdoEHrUkGHn8nDGTAGEXgdTlxwzJpuXInec5lGA3t47J.bCZv3CU4tPtIxXkMABXVbscH97yiuuVYK1wAnCTECPU0N_PJXW2sj_7IestXxnSpBLZmxQ1oFhuhNocDwLUfrHDwuyV9DZk51rsoI6DUlujKQXrYgLa9pPdbddli_Izbijjgu_OJFYBU0AkPmT2XPwzihv7pdrmoyj3hmcDFMq8Ct2fZld5.6ESeG4AivZPBrBiDQ-&v=2; path=/; domain=www.yahoo.com
+Vary: Accept-Encoding
+Content-Type: text/html;charset=utf-8
+Content-Encoding: gzip
+Age: 0
+Transfer-Encoding: chunked
+Connection: keep-alive
+Server: YTS/1.20.0
+
