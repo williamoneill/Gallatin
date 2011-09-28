@@ -79,6 +79,36 @@ namespace Gallatin.Core
             public Socket ServerSocket { get; set; }
             public byte[] Buffer { get; set; }
             public IProxyClient ProxyClient { get; set; }
+
+            public void EndSession(bool inError)
+            {
+                Log.Info("{0} Ending client connection. Error: {1} ", ProxyClient.Id, inError);
+
+                if (ClientSocket != null)
+                {
+                    if (ClientSocket.Connected)
+                    {
+                        if (inError)
+                        {
+                            ClientSocket.Send(Encoding.UTF8.GetBytes("HTTP/1.0 500 Internal Server Error\r\nContent-Length: 11\r\n\r\nProxy error"));
+                        }
+
+                        ClientSocket.Shutdown(SocketShutdown.Both);
+                    }
+
+                    ClientSocket.Close();
+                    ClientSocket.Dispose();
+                }
+
+                if (ServerSocket != null)
+                {
+                    if (ServerSocket.Connected)
+                        ServerSocket.Shutdown(SocketShutdown.Both);
+
+                    ServerSocket.Close();
+                    ServerSocket.Dispose();
+                }
+            }
         }
 
         public void Start(int port)
@@ -131,31 +161,52 @@ namespace Gallatin.Core
             }
             catch ( Exception ex )
             {
-                //session.EndSession(true);
-                Log.Exception( session.ProxyClient.Id + " An error was encountered when receiving data.", ex);
+                session.EndSession(true);
+                Log.Exception( session.ProxyClient.Id + " An error was encountered when receiving data from the client.", ex);
             }
         }
 
-        //public void GetData( IProxyClient proxyClient )
-        //{
-        //    _Client client = new _Client(proxyClient);
+        private void HandleDataFromRemoteHost(IAsyncResult ar)
+        {
+            Session session = ar.AsyncState as Session;
 
-        //    proxyClient.ActiveSocket.BeginReceive(client.Buffer,
-        //                         0,
-        //                         client.Buffer.Length,
-        //                         SocketFlags.None,
-        //                         HandleReceive,
-        //                         client );
-        //}
+            try
+            {
+                int bytesReceived = session.ServerSocket.EndReceive(ar);
+                session.ProxyClient.NewDataAvailable(session.Buffer.Take(bytesReceived));
+            }
+            catch (Exception ex)
+            {
+                session.EndSession(true);
+                Log.Exception(session.ProxyClient.Id + " An error was encountered when receiving data from the remote host.", ex);
+            }
+        }
 
-        public void SendMessage( IProxyClient client, IHttpRequestMessage message )
+        private void HandleSendToClient(IAsyncResult ar)
+        {
+            //TODO: implement - determine if the client socket should be closed, ending the client session
+        }
+
+        public void SendMessage(IProxyClient client, IHttpRequestMessage message)
         {
             throw new NotImplementedException();
         }
 
         public void SendMessage( IProxyClient client, IHttpResponseMessage message )
         {
-            throw new NotImplementedException();
+            Session session;
+
+            if (_activeSessions.TryGetValue(client, out session))
+            {
+                session.Buffer = message.CreateHttpMessage();
+
+                session.ClientSocket.BeginSend( session.Buffer,
+                                                0,
+                                                session.Buffer.Length,
+                                                SocketFlags.None,
+                                                HandleSendToClient,
+                                                session );
+            }
         }
 
         public void GetDataFromClient( IProxyClient client )
@@ -175,7 +226,17 @@ namespace Gallatin.Core
 
         public void GetDataFromRemoteHost( IProxyClient client )
         {
-            throw new NotImplementedException();
+            Session session;
+
+            if (_activeSessions.TryGetValue(client, out session))
+            {
+                session.ServerSocket.BeginReceive(session.Buffer,
+                                                   0,
+                                                   session.Buffer.Length,
+                                                   SocketFlags.None,
+                                                   HandleDataFromRemoteHost,
+                                                   session);
+            }
         }
     }
 }
