@@ -6,3 +6,5 @@ lib
 *.user
 *.suo
 obj
+debug
+release

@@ -110,7 +110,9 @@ namespace Gallatin.Core
                 // Immediately listen for the next clientSession
                 _serverSocket.BeginAccept(HandleNewConnect, null);
 
-                this._activeSessions.Add( new ProxyClient(this), new Session(clientSocket) );
+                ProxyClient proxyClient = new ProxyClient( this );
+
+                this._activeSessions.Add( proxyClient, new Session(clientSocket, proxyClient) );
             }
             catch (Exception ex)
             {
@@ -129,22 +131,22 @@ namespace Gallatin.Core
             }
             catch ( Exception ex )
             {
-                client.Client.EndSession(true);
-                Log.Exception( client.Client.Id + " An error was encountered when receiving data.", ex);
+                //session.EndSession(true);
+                Log.Exception( session.ProxyClient.Id + " An error was encountered when receiving data.", ex);
             }
         }
 
-        public void GetData( IProxyClient proxyClient )
-        {
-            _Client client = new _Client(proxyClient);
+        //public void GetData( IProxyClient proxyClient )
+        //{
+        //    _Client client = new _Client(proxyClient);
 
-            proxyClient.ActiveSocket.BeginReceive(client.Buffer,
-                                 0,
-                                 client.Buffer.Length,
-                                 SocketFlags.None,
-                                 HandleReceive,
-                                 client );
-        }
+        //    proxyClient.ActiveSocket.BeginReceive(client.Buffer,
+        //                         0,
+        //                         client.Buffer.Length,
+        //                         SocketFlags.None,
+        //                         HandleReceive,
+        //                         client );
+        //}
 
         public void SendMessage( IProxyClient client, IHttpRequestMessage message )
         {
