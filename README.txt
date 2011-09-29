@@ -1,0 +1,1 @@
+This is--or soon will be--a content filtering proxy written in .NET. It will resemble DansGuardian, which unfortunately does not run on Windows.
