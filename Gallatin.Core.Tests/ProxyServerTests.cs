@@ -70,7 +70,7 @@ namespace Gallatin.Core.Tests
                 Encoding.UTF8.GetBytes( "GET / HTTP/1.1\r\nHost: 127.0.0.1\r\n\r\n" );
 
             // Proxy server setup
-            ProxyServer proxyServer = new ProxyServer();
+            ProxyServerOld proxyServer = new ProxyServerOld();
             proxyServer.Start(2222);
             proxyServer.ClientMessagePosted += new EventHandler<ClientRequestArgs>(proxyServer_ClientMessagePosted);
             proxyServer.ServerResponsePosted += new EventHandler<ServerResponseArgs>(proxyServer_ServerResponsePosted);
@@ -107,7 +107,7 @@ namespace Gallatin.Core.Tests
         [Test]
         public void HttpsTest()
         {
-            ProxyServer proxyServer = new ProxyServer();
+            ProxyServerOld proxyServer = new ProxyServerOld();
             proxyServer.Start(2222);
             proxyServer.ClientMessagePosted += new EventHandler<ClientRequestArgs>(proxyServer_ClientMessagePosted);
             proxyServer.ServerResponsePosted += new EventHandler<ServerResponseArgs>(proxyServer_ServerResponsePosted);
@@ -136,7 +136,7 @@ namespace Gallatin.Core.Tests
         [Test]
         public void YahooTest()
         {
-            ProxyServer proxyServer = new ProxyServer();
+            ProxyServerOld proxyServer = new ProxyServerOld();
             proxyServer.Start(2222);
             proxyServer.ClientMessagePosted += new EventHandler<ClientRequestArgs>(proxyServer_ClientMessagePosted);
             proxyServer.ServerResponsePosted += new EventHandler<ServerResponseArgs>(proxyServer_ServerResponsePosted);

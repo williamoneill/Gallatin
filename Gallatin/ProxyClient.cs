@@ -1,28 +1,52 @@
+using System.Collections.Generic;
 using System.IO;
 using System.Net.Sockets;
 
 namespace Gallatin.Core
 {
-    public class ProxyClient
+    public class ProxyClient : IProxyClient
     {
-        internal ProxyClient()
+        private INetworkService _networkService;
+
+        public ProxyClient()
         {
-            Buffer = new byte[BufferSize];
-            ContentStream = new MemoryStream();
-            
         }
 
-        public ProxyClient( Socket clientSocket ) : this()
+        public void SendComplete()
         {
-            ClientSocket = clientSocket;
+            State.HandleSendComplete(_networkService);
         }
 
-        public Socket ClientSocket { get; private set; }
+        public void NewDataAvailable( IEnumerable<byte> data )
+        {
+            State.HandleNewDataAvailable(_networkService, data);
+        }
 
-        public MemoryStream ContentStream { get; private set; }
+        public void StartSession(INetworkService networkService)
+        {
+            _networkService = networkService;
+            State = new ReceiveRequestFromClientState(this);
+        }
 
-        public byte[] Buffer { get; private set; }
+        public void EndSession()
+        {
+            // TODO: create a state that does not accept data or send data
+            State = null;
+        }
 
-        public static readonly int BufferSize = 10000;
+        internal IProxyClientState State
+        {
+            get; set;
+        }
+
+        internal INetworkService NetworkService 
+        { 
+            get
+        {
+            return _networkService;
+        } 
+        }
     }
+
+
 }

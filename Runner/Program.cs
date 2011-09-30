@@ -8,17 +8,29 @@ namespace Runner
 {
     class Program
     {
+        
+
         static void Main(string[] args)
         {
-            ProxyServer server = new ProxyServer();
-            server.ClientMessagePosted += new EventHandler<ClientRequestArgs>(server_ClientMessagePosted);
-            server.ServerResponsePosted += new EventHandler<ServerResponseArgs>(server_ServerResponsePosted);
-            server.Start( 8080 );
+            try
+            {
+                ProxyServer server = new ProxyServer();
+                server.Start(8080);
 
-            Console.WriteLine("Press any key to terminate");
-            Console.ReadKey();
+                Console.WriteLine("Press any key to terminate");
+                Console.ReadKey();
+                
+            }
+            catch(Exception ex)
+            {
+                Log.Exception("app exception", ex);
+            }
 
-            server.Stop();
+        }
+
+        static void CurrentDomain_UnhandledException(object sender, UnhandledExceptionEventArgs e)
+        {
+            Log.Exception("Unhandled exception", (Exception)e.ExceptionObject);
         }
 
         static void server_ServerResponsePosted(object sender, ServerResponseArgs e)

@@ -1,350 +1,151 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Data;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
-using System.Threading;
+using System.Diagnostics;
 
 namespace Gallatin.Core
 {
-    public class ProxyServer : IProxyServer, INetworkMessageService
+    public class ProxyServer : INetworkService
     {
-        private readonly List<IClientSession> _activeSessions = new List<IClientSession>();
-        private readonly ManualResetEvent _shutdown = new ManualResetEvent( false );
-        private readonly Mutex _shutdownMutex = new Mutex( false );
-        private int _listeningPort;
+        private Dictionary<IProxyClient, Session> _activeSessions;
         private Socket _serverSocket;
-        private Thread _worker;
 
-        #region INetworkMessageService Members
+        #region INetworkService Members
 
-        public event EventHandler<ClientRequestArgs> ClientMessagePosted;
-
-        public event EventHandler<ServerResponseArgs> ServerResponsePosted;
-
-        public void SendServerMessage( IHttpRequestMessage message, IClientSession clientSession )
+        private void EndSession(Session session, bool inError)
         {
-            ClientSession session = clientSession as ClientSession;
-
-            if ( session == null )
-            {
-                throw new ArgumentException( "Client session not recognized" );
-            }
-
-            session.Buffer = message.CreateHttpMessage();
-            //Log.Info("{0} Sending message to server", session.SessionId);
-            //Log.Info(() => string.Format("{0} {1}", session.SessionId.ToString(), Encoding.UTF8.GetString(session.Buffer)));
-
-            if ( session.ServerSocket == null
-                 || !session.ServerSocket.Connected )
-            {
-                Log.Info("{0} Establishing server connection", session.SessionId);
-
-                session.ServerSocket = new Socket(AddressFamily.InterNetwork,
-                                                   SocketType.Stream,
-                                                   ProtocolType.Tcp );
-
-                session.ServerSocket.BeginConnect( message.Destination.Host,
-                                                   message.Destination.Port,
-                                                   HandleServerConnect,
-                                                   session );
-            }
-            else
-            {
-                Log.Info("{0} Reusing active server connection", session.SessionId);
-
-                session.ActiveSocket = session.ServerSocket;
-
-                session.ActiveSocket.BeginSend( session.Buffer,
-                                                0,
-                                                session.Buffer.Length,
-                                                SocketFlags.None,
-                                                HandleSend,
-                                                session );
-            }
+            Log.Info("{0} Ending session", session.Id);
+            session.EndSession(inError);
+            _activeSessions.Remove( session.ProxyClient );
         }
 
-
-        public void SendClientMessage( IHttpResponseMessage message, IClientSession clientSession )
+        public void SendMessage( IProxyClient client, IHttpRequestMessage message )
         {
-            ClientSession session = clientSession as ClientSession;
+            Session session;
 
-            if ( session == null )
+            if ( _activeSessions.TryGetValue( client, out session ) )
             {
-                throw new ArgumentException( "Client session not recognized" );
-            }
+                Log.Info("{0} ProxyServer::SendMessage -- Sending request to remote host", session.Id);
 
-            if ( session.ClientSocket == null )
-            {
-                throw new ArgumentException( "Client is not connected" );
-            }
+                session.Buffer = message.CreateHttpMessage();
+                session.Message = message;
 
-            session.ActiveSocket = session.ClientSocket;
+                Log.Info("{0} {1}", session.Id, Encoding.UTF8.GetString(session.Buffer));
 
-            session.Buffer = message.CreateHttpMessage();
-
-            //Log.Info("{0} Returning message to client", session.SessionId);
-            //Log.Info(() => string.Format("{0} {1}", session.SessionId.ToString(), Encoding.UTF8.GetString(session.Buffer)));
-
-            session.ActiveSocket.BeginSend( session.Buffer,
-                                            0,
-                                            session.Buffer.Length,
-                                            SocketFlags.None,
-                                            HandleSend,
-                                            session );
-        }
-
-        #endregion
-
-        #region IProxyServer Members
-
-        public void Start( int port )
-        {
-            if ( _shutdownMutex.WaitOne( 1000 ) )
-            {
-                try
+                if (session.ServerSocket == null)
                 {
-                    if ( _serverSocket == null )
-                    {
-                        _listeningPort = port;
+                    session.ServerSocket = new Socket( AddressFamily.InterNetwork,
+                                                       SocketType.Stream,
+                                                       ProtocolType.Tcp );
 
-                        _serverSocket = new Socket( AddressFamily.InterNetwork,
-                                                    SocketType.Stream,
-                                                    ProtocolType.Tcp );
-
-                        IPAddress hostAddress =
-                            ( Dns.Resolve( IPAddress.Any.ToString() ) ).AddressList[0];
-                        IPEndPoint endPoint = new IPEndPoint( hostAddress, _listeningPort );
-
-                        _serverSocket.Bind( endPoint );
-
-                        _serverSocket.Listen( 30 );
-
-                        _serverSocket.BeginAccept( HandleNewConnect, null );
-
-                        //_worker = new Thread(WorkerThread)
-                        //          {
-                        //              IsBackground = true,
-                        //              Name = "Proxy server worker thread"
-                        //          };
-                        //_worker.Start();
-                    }
-                }
-                finally
-                {
-                    _shutdownMutex.ReleaseMutex();
-                }
-            }
-            else
-            {
-                throw new ApplicationException(
-                    "Unable to enter critical section. Server cannot start." );
-            }
-        }
-
-        public void Stop()
-        {
-            if ( _shutdownMutex.WaitOne( 5000 ) )
-            {
-                try
-                {
-                    //_shutdown.Set();
-
-                    //if ( !_worker.Join( 5000 ) )
-                    //{
-                    //    _worker.Abort();
-                    //}
-
-                    _serverSocket.Close();
-                }
-                finally
-                {
-                    _shutdownMutex.ReleaseMutex();
-                }
-            }
-            else
-            {
-                throw new ApplicationException(
-                    "Unable to enter critical section to terminate proxy server." );
-            }
-        }
-
-        #endregion
-
-        private void WorkerThread()
-        {
-            while ( !_shutdown.WaitOne( 1000 ) )
-            {
-                DateTime cutoffDate = DateTime.Now.AddSeconds( -30 );
-
-                foreach ( IClientSession session in _activeSessions.ToArray() )
-                {
-                    if ( session.IsActive )
-                    {
-                        if ( session.LastActivity < cutoffDate )
-                        {
-                            session.EndSession(false);
-                            _activeSessions.Remove( session );
-                        }
-                    }
-                    else
-                    {
-                        _activeSessions.Remove( session );
-                    }
-                }
-            }
-        }
-
-        private void HandleServerConnect( IAsyncResult ar )
-        {
-            ClientSession session = ar.AsyncState as ClientSession;
-
-            if ( session == null )
-            {
-                throw new ArgumentException();
-            }
-
-            Log.Info("{0} Connected to remote host", session.SessionId);
-
-            try
-            {
-                session.ServerSocket.EndConnect( ar );
-
-                session.ActiveSocket = session.ServerSocket;
-
-                session.ServerSocket.BeginSend( session.Buffer,
-                                                0,
-                                                session.Buffer.Length,
-                                                SocketFlags.None,
-                                                HandleSend,
-                                                session );
-            }
-            catch ( Exception ex )
-            {
-                Log.Exception(
-                     session.SessionId +  " An error was encountered when attempting to connect to the remote host.", ex );
-                session.EndSession(true);
-            }
-        }
-
-        private void HandleSend( IAsyncResult ar )
-        {
-            ClientSession session = ar.AsyncState as ClientSession;
-
-            if ( session == null )
-            {
-                throw new ApplicationException(
-                    "Internal error. Client session was of an unexpected type." );
-            }
-
-            try
-            {
-                SocketError socketError;
-
-                long bytesSent = session.ActiveSocket.EndSend( ar, out socketError );
-
-                if ( bytesSent == 0 )
-                {
-                    Log.Error("{0} Network send failure.", session.SessionId);
-                    session.EndSession(true);
-                }
-                if ( socketError != SocketError.Success )
-                {
-                    Log.Error( "{0} Socket error encountered while sending data. {1}",
-                        session.SessionId, socketError );
-                    session.EndSession(true);
+                    session.ServerSocket.BeginConnect( message.Destination.Host,
+                                                       message.Destination.Port,
+                                                       HandleConnectToServer,
+                                                       session );
                 }
                 else
                 {
-                    // Sending data to server...
-                    if ( session.ActiveSocket
-                         == session.ServerSocket )
-                    {
-                        Log.Info("{0} Remote host send complete", session.SessionId);
-
-                        session.ResetBuffer();
-
-                        session.ActiveSocket.BeginReceive( session.Buffer,
-                                                           0,
-                                                           session.Buffer.Length,
-                                                           SocketFlags.None,
-                                                           HandleReceive,
-                                                           session );
-                    }
-                    else
-                    {
-                        Log.Info("{0} Proxy client send complete", session.SessionId);
-
-                        IHttpMessage message;
-
-                        session.EndSession(false);
-
-                        if (session.HttpMessageParser.TryGetCompleteMessage(out message))
-                        {
-                            IHttpResponseMessage response = message as IHttpResponseMessage;
-
-                            if (response == null)
-                            {
-                                session.EndSession(true);
-                                Log.Error(
-                                    "{0} The HTTP response was invalid. Expected response when evaluating close.", session.SessionId);
-                            }
-                            else
-                            {
-                                Log.Info("{0} Closing client connection", session.SessionId);
-                                session.EndSession(false);
-
-
-                                // See http://www.w3.org/Protocols/rfc2616/rfc2616-sec19.html#sec19.6.2
-                                // See RFC 8.1.3 - proxy servers must not establish a HTTP/1.1 persistent connection with 1.0 client. For
-                                // now, all 1.0 clients will not get persistent connections from the proxy.
-                                if (response.Version == "1.0")
-                                {
-                                    Log.Info("{0} Closing client connection", session.SessionId);
-                                    session.EndSession(false);
-                                }
-
-                                    // See http://www.w3.org/Protocols/rfc2616/rfc2616-sec8.html#sec8.1
-                                else if (response.Version == "1.1")
-                                {
-                                    KeyValuePair<string, string> connectionHeader =
-                                        response.Headers.SingleOrDefault(
-                                            s =>
-                                            s.Key.Equals("Connection",
-                                                          StringComparison.
-                                                              InvariantCultureIgnoreCase));
-
-                                    // Closing the connection if status code != 200 is not part of the HTTP standard,
-                                    // at least as far as I can tell, but things don't work correctly if this is not done.
-                                    if (response.StatusCode != 200 ||
-                                        (!connectionHeader.Equals(
-                                            default(KeyValuePair<string, string>))
-                                        &&
-                                        connectionHeader.Value.Equals("close",
-                                                                       StringComparison.
-                                                                           InvariantCultureIgnoreCase)))
-                                    {
-                                        Log.Info("{0} Closing client connection", session.SessionId);
-                                        session.EndSession(false);
-                                    }
-                                }
-                                else
-                                {
-                                    Log.Info("{0} Closing client connection", session.SessionId);
-                                    session.EndSession(false);
-                                }
-                            }
-                        }
-                    }
+                    session.ServerSocket.BeginSend( session.Buffer,
+                                                    0,
+                                                    session.Buffer.Length,
+                                                    SocketFlags.None,
+                                                    HandleSendToServer,
+                                                    session );
                 }
             }
-            catch ( Exception ex )
-            {
-                Log.Exception( session.SessionId + " Failed to send HTTP data.", ex );
+        }
 
-                session.EndSession(true);
+        public void SendMessage( IProxyClient client, IHttpResponseMessage message )
+        {
+            Session session;
+
+            if ( _activeSessions.TryGetValue( client, out session ) )
+            {
+                Log.Info("{0} ProxyServer::SendMessage -- Sending response to client", session.Id);
+
+                session.Buffer = message.CreateHttpMessage();
+                session.Message = message;
+
+                StackTrace stackTrace = new StackTrace();
+                StackFrame[] stackFrames = stackTrace.GetFrames();
+                foreach (var frame in stackFrames)
+                {
+                    Log.Info(frame.GetMethod().Name);
+                }
+
+                Log.Info("{0} {1}", session.Id, Encoding.UTF8.GetString(session.Buffer));
+
+                session.ClientSocket.BeginSend( session.Buffer,
+                                                0,
+                                                session.Buffer.Length,
+                                                SocketFlags.None,
+                                                HandleSendToClient,
+                                                session );
+            }
+        }
+
+        public void GetDataFromClient( IProxyClient client )
+        {
+            Session session;
+
+            if ( _activeSessions.TryGetValue( client, out session ) )
+            {
+                Log.Info("{0} ProxyServer::GetDataFromClient -- Receiving data from client", session.Id);
+
+                session.ResetBufferForReceive();
+
+                session.ClientSocket.BeginReceive( session.Buffer,
+                                                   0,
+                                                   session.Buffer.Length,
+                                                   SocketFlags.None,
+                                                   HandleDataFromClient,
+                                                   session );
+            }
+        }
+
+        public void GetDataFromRemoteHost( IProxyClient client )
+        {
+            Session session;
+
+            if ( _activeSessions.TryGetValue( client, out session ) )
+            {
+                Log.Info("{0} ProxyServer::GetDataFromRemoteHost -- Receiving data from remote host", session.Id);
+
+                session.ResetBufferForReceive();
+
+                session.ServerSocket.BeginReceive( session.Buffer,
+                                                   0,
+                                                   session.Buffer.Length,
+                                                   SocketFlags.None,
+                                                   HandleDataFromRemoteHost,
+                                                   session );
+            }
+        }
+
+        #endregion
+
+        public void Start( int port )
+        {
+            if ( _serverSocket == null )
+            {
+                _activeSessions = new Dictionary<IProxyClient, Session>();
+
+                _serverSocket = new Socket( AddressFamily.InterNetwork,
+                                            SocketType.Stream,
+                                            ProtocolType.Tcp );
+
+                IPAddress hostAddress =
+                    ( Dns.Resolve( IPAddress.Any.ToString() ) ).AddressList[0];
+                IPEndPoint endPoint = new IPEndPoint( hostAddress, port );
+
+                _serverSocket.Bind( endPoint );
+
+                _serverSocket.Listen( 30 );
+
+                _serverSocket.BeginAccept( HandleNewConnect, null );
             }
         }
 
@@ -357,16 +158,15 @@ namespace Gallatin.Core
                 // Immediately listen for the next clientSession
                 _serverSocket.BeginAccept( HandleNewConnect, null );
 
-                ClientSession client = new ClientSession( clientSocket );
+                ProxyClient proxyClient = new ProxyClient();
 
-                Log.Info("{0} New clientSession connection", client.SessionId);
+                Session session = new Session( clientSocket, proxyClient );
 
-                client.ActiveSocket.BeginReceive(client.Buffer,
-                                                  0,
-                                                  client.Buffer.Length,
-                                                  SocketFlags.None,
-                                                  HandleReceive,
-                                                  client );
+                _activeSessions.Add( proxyClient, session );
+
+                Log.Info( "{0} New client connect", session.Id );
+
+                proxyClient.StartSession( this );
             }
             catch ( Exception ex )
             {
@@ -374,81 +174,490 @@ namespace Gallatin.Core
             }
         }
 
-        private void HandleReceive( IAsyncResult ar )
+        private void HandleDataFromClient( IAsyncResult ar )
         {
-            ClientSession client = ar.AsyncState as ClientSession;
-            if ( client == null )
-            {
-                throw new ApplicationException(
-                    "Internal error. Client session was of an unexpected type." );
-            }
+            Session session = ar.AsyncState as Session;
 
-            Log.Info("{0} Received data", client.SessionId);
+            if ( session == null )
+            {
+                throw new InvalidOperationException(
+                    "Internal error. Client session was invalid." );
+            }
 
             try
             {
-                int bytesReceived = client.ActiveSocket.EndReceive( ar );
+                Log.Info("{0} Data received from client", session.Id);
 
-                if ( bytesReceived > 0 )
+                int bytesReceived = session.ClientSocket.EndReceive(ar);
+                session.ProxyClient.NewDataAvailable( session.Buffer.Take( bytesReceived ) );
+            }
+            catch ( Exception ex )
+            {
+                EndSession( session, true );
+                Log.Exception(
+                    session.Id + " An error was encountered when receiving data from the client.",
+                    ex );
+            }
+        }
+
+        private void HandleDataFromRemoteHost( IAsyncResult ar )
+        {
+            Session session = ar.AsyncState as Session;
+
+            if ( session == null )
+            {
+                throw new InvalidOperationException(
+                    "Internal error. Client session was invalid." );
+            }
+
+            try
+            {
+                Log.Info("{0} Data received from remote host", session.Id);
+
+                int bytesReceived = session.ServerSocket.EndReceive(ar);
+                session.ProxyClient.NewDataAvailable( session.Buffer.Take( bytesReceived ) );
+            }
+            catch ( Exception ex )
+            {
+                EndSession( session, true );
+                Log.Exception(
+                    session.Id
+                    + " An error was encountered when receiving data from the remote host.",
+                    ex );
+            }
+        }
+
+        private void HandleSendToClient( IAsyncResult ar )
+        {
+            Session session = ar.AsyncState as Session;
+
+            if ( session == null )
+            {
+                throw new InvalidOperationException(
+                    "Internal error. Client session was invalid." );
+            }
+
+            try
+            {
+                Log.Info("{0} Sending data to client", session.Id);
+
+                SocketError socketError;
+
+                session.ClientSocket.EndSend( ar, out socketError );
+
+                if ( socketError != SocketError.Success )
                 {
-                    IHttpMessage httpMessage =
-                        client.HttpMessageParser.AppendData( client.Buffer.Take( bytesReceived ) );
+                    EndSession( session, true );
+                    Log.Error( "{0} Unable to send message to client: {1}", session.Id, socketError );
+                }
+                else
+                {
+                    IHttpResponseMessage responseMessage = session.Message as IHttpResponseMessage;
 
-                    if ( httpMessage != null )
+                    if ( responseMessage != null )
                     {
-                        if ( httpMessage is HttpRequestMessage )
+                        // See http://www.w3.org/Protocols/rfc2616/rfc2616-sec19.html#sec19.6.2
+                        // See RFC 8.1.3 - proxy servers must not establish a HTTP/1.1 persistent connection with 1.0 client. For
+                        // now, all 1.0 clients will not get persistent connections from the proxy.
+                        if ( responseMessage.Version == "1.0" )
                         {
-                            HttpRequestMessage requestMessage = httpMessage as HttpRequestMessage;
-
-                            EventHandler<ClientRequestArgs> clientMessagePosted =
-                                ClientMessagePosted;
-                            if ( clientMessagePosted != null )
-                            {
-                                clientMessagePosted( this,
-                                                     new ClientRequestArgs( requestMessage, client ) );
-                            }
+                            Log.Info( "{0} Closing client connection", session.Id );
+                            EndSession( session, false );
                         }
-                        else if ( httpMessage is HttpResponseMessage )
+
+                            // See http://www.w3.org/Protocols/rfc2616/rfc2616-sec8.html#sec8.1
+                        else if ( responseMessage.Version == "1.1" )
                         {
-                            client.ActiveSocket = client.ClientSocket;
+                            KeyValuePair<string, string> connectionHeader =
+                                responseMessage.Headers.SingleOrDefault(
+                                    s =>
+                                    s.Key.Equals( "Connection",
+                                                  StringComparison.
+                                                      InvariantCultureIgnoreCase ) );
 
-                            HttpResponseMessage responseMessage = httpMessage as HttpResponseMessage;
-
-                            EventHandler<ServerResponseArgs> serverResponsePosted =
-                                ServerResponsePosted;
-                            if ( serverResponsePosted != null )
+                            // Closing the connection if status code != 200 is not part of the HTTP standard,
+                            // at least as far as I can tell, but things don't work correctly if this is not done.
+                            if ( responseMessage.StatusCode != 200
+                                 ||
+                                 ( !connectionHeader.Equals(
+                                     default( KeyValuePair<string, string> ) )
+                                   &&
+                                   connectionHeader.Value.Equals( "close",
+                                                                  StringComparison.
+                                                                      InvariantCultureIgnoreCase ) ) )
                             {
-                                serverResponsePosted( this,
-                                                      new ServerResponseArgs( responseMessage,
-                                                                              client ) );
+                                Log.Info( "{0} Closing client connection", session.Id );
+                                EndSession( session, false );
+                            }
+                            else
+                            {
+                                Log.Info("{0} Maintaining persistent client connection", session.Id);
+                                session.ProxyClient.SendComplete();
                             }
                         }
                         else
                         {
-                            throw new DataException(
-                                "The HTTP message was not recognized as a request or response" );
+                            Log.Info( "{0} Closing client connection", session.Id );
+                            EndSession( session, false );
                         }
                     }
                     else
                     {
-                        client.ActiveSocket.BeginReceive( client.Buffer,
-                                                          0,
-                                                          client.Buffer.Length,
-                                                          SocketFlags.None,
-                                                          HandleReceive,
-                                                          client );
+                        EndSession( session, true );
+                        Log.Error(
+                            "An internal error occurred. The response to the client was missing or invaild." );
                     }
-                }
-                else
-                {
-                    Log.Warning( "{0} Proxy server received no data from the client", client.SessionId );
                 }
             }
             catch ( Exception ex )
             {
-                Log.Exception( client.SessionId + " An error occurred while receiving data over the network.", ex );
-                client.EndSession(true);
+                EndSession( session, true );
+                Log.Exception(
+                    session.Id + " An error was received when sending message to the client.", ex );
             }
         }
+
+        private void HandleConnectToServer( IAsyncResult ar )
+        {
+            Session session = ar.AsyncState as Session;
+
+            if ( session == null )
+            {
+                throw new InvalidOperationException(
+                    "Internal error. Client session was invalid." );
+            }
+
+            try
+            {
+                Log.Info("{0} Connected to remote host", session.Id);
+
+                session.ServerSocket.EndConnect(ar);
+
+                session.ServerSocket.BeginSend( session.Buffer,
+                                                0,
+                                                session.Buffer.Length,
+                                                SocketFlags.None,
+                                                HandleSendToServer,
+                                                session );
+            }
+            catch ( Exception ex )
+            {
+                EndSession( session, true );
+                Log.Exception(
+                    session.Id + " An error occurred while trying to connect to remote host. ", ex );
+            }
+        }
+
+        private void HandleSendToServer( IAsyncResult ar )
+        {
+            Session session = ar.AsyncState as Session;
+
+            if ( session == null )
+            {
+                throw new InvalidOperationException(
+                    "Internal error. Client session was invalid." );
+            }
+
+            try
+            {
+                Log.Info("{0} Data sent to remote host", session.Id);
+
+                SocketError socketError;
+
+                session.ServerSocket.EndSend( ar, out socketError );
+
+                if ( socketError == SocketError.Success )
+                {
+                    session.ProxyClient.SendComplete();
+                }
+                else
+                {
+                    EndSession( session, true );
+                    Log.Error( session.Id
+                               + " An error occurred while sending data to the remote host. "
+                               + socketError );
+                }
+            }
+            catch ( Exception ex )
+            {
+                EndSession( session, true );
+                Log.Exception(
+                    session.Id + " An error occurred while sending data to the remote host.", ex );
+            }
+        }
+
+        #region Nested type: Session
+
+        private class Session
+        {
+            private const int BufferSize = 8192;
+
+            public Session( Socket clientSocket, IProxyClient proxyClient )
+            {
+                ProxyClient = proxyClient;
+                ClientSocket = clientSocket;
+                Buffer = new byte[BufferSize];
+                Id = Guid.NewGuid();
+            }
+
+            public Guid Id { get; private set; }
+            public Socket ClientSocket { get; private set; }
+            public Socket ServerSocket { get; set; }
+            public byte[] Buffer { get; set; }
+            public IProxyClient ProxyClient { get; private set; }
+            public IHttpMessage Message { get; set; }
+
+            public void ResetBufferForReceive()
+            {
+                Buffer = new byte[BufferSize];
+            }
+
+            public void EndSession( bool inError )
+            {
+                Log.Info( "{0} Ending client connection. Error: {1} ", Id, inError );
+
+                if ( ClientSocket != null )
+                {
+                    if ( ClientSocket.Connected )
+                    {
+                        if ( inError )
+                        {
+                            ClientSocket.Send(
+                                Encoding.UTF8.GetBytes(
+                                    "HTTP/1.0 500 Internal Server Error\r\nContent-Length: 11\r\n\r\nProxy error" ) );
+                        }
+
+                        ClientSocket.Shutdown( SocketShutdown.Both );
+                    }
+
+                    ClientSocket.Close();
+                    ClientSocket.Dispose();
+                }
+
+                if ( ServerSocket != null )
+                {
+                    if ( ServerSocket.Connected )
+                    {
+                        ServerSocket.Shutdown( SocketShutdown.Both );
+                    }
+
+                    ServerSocket.Close();
+                    ServerSocket.Dispose();
+                }
+            }
+        }
+
+        #endregion
     }
+
+    //public class ProxyServer
+    //{
+    //    private Socket _serverSocket;
+
+    //    public ProxyServer( int port, IHttpClient remoteServer )
+    //    {
+    //        if ( remoteServer == null )
+    //        {
+    //            throw new ArgumentNullException( "remoteServer" );
+    //        }
+
+    //        _remoteServerProxy = remoteServer;
+
+    //        Port = port;
+    //    }
+
+    //    public int Port { get; private set; }
+
+    //    public void Start()
+    //    {
+    //        try
+    //        {
+    //            if ( _serverSocket == null )
+    //            {
+    //                _serverSocket = new Socket( AddressFamily.InterNetwork,
+    //                                            SocketType.Stream,
+    //                                            ProtocolType.Tcp );
+
+    //                IPAddress hostAddress =
+    //                    ( Dns.Resolve( IPAddress.Any.ToString() ) ).AddressList[0];
+    //                IPEndPoint endPoint = new IPEndPoint( hostAddress, Port );
+
+    //                _serverSocket.Bind( endPoint );
+
+    //                _serverSocket.Listen( 10 );
+
+    //                _serverSocket.BeginAccept( HandleNewConnect, null );
+    //            }
+    //        }
+    //        catch ( Exception ex )
+    //        {
+    //            Trace.TraceError( "Unable to start server. {0}", ex.Message );
+    //            throw;
+    //        }
+    //    }
+
+    //    public void Stop()
+    //    {
+    //        if ( _serverSocket != null )
+    //        {
+    //            _serverSocket.Close();
+    //            _serverSocket = null;
+    //        }
+    //    }
+
+
+    //    private void HandleNewConnect( IAsyncResult ar )
+    //    {
+    //        Trace.TraceInformation( "New clientSession connection" );
+
+    //        try
+    //        {
+    //            Socket clientSocket = _serverSocket.EndAccept( ar );
+
+    //            // Immediately listen for the next clientSession
+    //            _serverSocket.BeginAccept( HandleNewConnect, null );
+
+    //            ProxyClient client = new ProxyClient( clientSocket );
+
+    //            client.ClientSocket.BeginReceive( client.Buffer,
+    //                                              0,
+    //                                              client.Buffer.Length,
+    //                                              SocketFlags.None,
+    //                                              HandleReceive,
+    //                                              client );
+    //        }
+    //        catch ( Exception ex )
+    //        {
+    //            Trace.TraceError( "Unable to service new clientSession connection. {0}", ex.Message );
+    //        }
+    //    }
+
+    //    private void HandleSend( IAsyncResult ar )
+    //    {
+    //        ProxyClient client = ar.AsyncState as ProxyClient;
+
+    //        Trace.Assert( client != null );
+
+    //        try
+    //        {
+    //            SocketError error;
+
+    //            client.ClientSocket.EndSend( ar, out error );
+
+    //            if ( error != SocketError.Success )
+    //            {
+    //                Trace.TraceError( "Failed to send clientSession data. {0}", (int) error );
+    //            }
+
+    //            client.ClientSocket.Close();
+    //        }
+    //        catch ( Exception ex )
+    //        {
+    //            Trace.TraceError( "Unable to send data to clientSession. {0}", ex.Message );
+    //        }
+    //    }
+
+    //    private void HandleReturnFromServer( HttpResponse response, ProxyClient client )
+    //    {
+    //        try
+    //        {
+    //            // See http://west-wind.com/presentations/dotnetwebrequest/dotnetwebrequest.htm
+    //            StringBuilder stringBuilder = new StringBuilder();
+    //            stringBuilder.AppendFormat( "HTTP/{0} {1} {2}\r\n",
+    //                                        response.Version,
+    //                                        response.ResponseCode,
+    //                                        response.Status );
+
+    //            foreach ( KeyValuePair<string, string> headerPair in response.HeaderPairs )
+    //            {
+    //                stringBuilder.AppendFormat( "{0}: {1}\r\n", headerPair.Key, headerPair.Value );
+    //            }
+
+    //            // End header
+    //            stringBuilder.Append( "\r\n" );
+
+    //            List<byte> bufferList = new List<byte>();
+
+    //            bufferList.AddRange( Encoding.GetEncoding( 1252 ).GetBytes( stringBuilder.ToString() ) );
+
+    //            if ( response.Body != null )
+    //            {
+    //                bufferList.AddRange( response.Body );
+    //            }
+
+    //            //Trace.TraceInformation( Encoding.GetEncoding( 1252 ).GetString( bufferList.ToArray() ) );
+
+    //            Trace.TraceInformation( "Sending response to original clientSession" );
+
+    //            client.ClientSocket.BeginSend( bufferList.ToArray(),
+    //                                           0,
+    //                                           bufferList.Count,
+    //                                           SocketFlags.None,
+    //                                           HandleSend,
+    //                                           client );
+    //        }
+    //        catch ( Exception ex )
+    //        {
+    //            Trace.TraceError(
+    //                "An error occurred while processing the response from the remote server. {0}",
+    //                ex.Message );
+
+    //            try
+    //            {
+    //                client.ClientSocket.Close();
+    //            }
+    //            catch ( Exception closeError )
+    //            {
+    //                Trace.TraceError( "Unable to close the clientSession socket. {0}", ex.Message );
+    //            }
+    //        }
+    //    }
+
+    //    private void HandleReceive( IAsyncResult ar )
+    //    {
+    //        try
+    //        {
+    //            ProxyClient client = ar.AsyncState as ProxyClient;
+
+    //            Trace.Assert( client != null );
+
+    //            int bytesReceived = client.ClientSocket.EndReceive( ar );
+
+    //            if ( bytesReceived > 0 )
+    //            {
+    //                client.ContentStream.Write( client.Buffer, 0, bytesReceived );
+
+    //                HttpMessageOld message;
+
+    //                if ( HttpContentParser.TryParse( client.ContentStream, out message ) )
+    //                {
+    //                    HttpRequest request = message as HttpRequest;
+
+    //                    Trace.Assert( request != null );
+
+    //                    _remoteServerProxy.BeginWebRequest( request,
+    //                                                        HandleReturnFromServer,
+    //                                                        client );
+    //                }
+    //                else
+    //                {
+    //                    client.ClientSocket.BeginReceive( client.Buffer,
+    //                                                      0,
+    //                                                      client.Buffer.Length,
+    //                                                      SocketFlags.None,
+    //                                                      HandleReceive,
+    //                                                      client );
+    //                }
+    //            }
+    //            else
+    //            {
+    //                Trace.Write( "foo" );
+    //            }
+    //        }
+    //        catch ( Exception ex )
+    //        {
+    //            Trace.TraceError( "Unable to receive data from clientSession. {0}", ex.Message );
+    //        }
+    //    }
+    //}
 }

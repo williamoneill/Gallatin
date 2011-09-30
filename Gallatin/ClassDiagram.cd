@@ -1,9 +1,9 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <ClassDiagram MajorVersion="1" MinorVersion="1">
   <Class Name="Gallatin.Core.ProxyServer" Collapsed="true">
-    <Position X="2.25" Y="3.75" Width="1.5" />
+    <Position X="0.5" Y="3.75" Width="1.5" />
     <TypeIdentifier>
-      <HashCode>EIAABEAAgCAAEACIAAAAAAAAEAABAAAAIEAAwAAAgAA=</HashCode>
+      <HashCode>QAAAAEgIAKAAAACYACAAAAAAAAAAAAAAAAAAAAABAAA=</HashCode>
       <FileName>ProxyServer.cs</FileName>
     </TypeIdentifier>
     <Lollipop Position="0.2" />
@@ -48,6 +48,20 @@
     <TypeIdentifier>
       <HashCode>AAEAAAAAAAAAgAAAEAAAAAAAAAAAAAAAAAAAgAAAAAA=</HashCode>
       <FileName>IClientSession.cs</FileName>
+    </TypeIdentifier>
+  </Interface>
+  <Interface Name="Gallatin.Core.INetworkService">
+    <Position X="0.5" Y="1.75" Width="2.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAIACAAAAAAACAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>INetworkService.cs</FileName>
+    </TypeIdentifier>
+  </Interface>
+  <Interface Name="Gallatin.Core.IProxyClient">
+    <Position X="2.75" Y="4" Width="2" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAQAgAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>IProxyClient.cs</FileName>
     </TypeIdentifier>
   </Interface>
   <Font Name="Segoe UI" Size="9" />
