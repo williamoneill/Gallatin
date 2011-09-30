@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Gallatin.Core
+namespace Gallatin.Core.Web
 {
     public class HttpRequestMessage : HttpMessage, IHttpRequestMessage
     {

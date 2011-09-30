@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace Gallatin.Core
+namespace Gallatin.Core.Web
 {
     public class HttpResponseMessage : HttpMessage, IHttpResponseMessage
     {

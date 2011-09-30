@@ -1,6 +1,7 @@
 using System.Collections.Generic;
+using Gallatin.Core.Service;
 
-namespace Gallatin.Core
+namespace Gallatin.Core.Client
 {
     internal interface IProxyClientState
     {

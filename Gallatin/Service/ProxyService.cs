@@ -5,10 +5,13 @@ using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using System.Diagnostics;
+using Gallatin.Core.Client;
+using Gallatin.Core.Util;
+using Gallatin.Core.Web;
 
-namespace Gallatin.Core
+namespace Gallatin.Core.Service
 {
-    public class ProxyServer : INetworkService
+    public class ProxyService : INetworkService
     {
         private Dictionary<IProxyClient, Session> _activeSessions;
         private Socket _serverSocket;

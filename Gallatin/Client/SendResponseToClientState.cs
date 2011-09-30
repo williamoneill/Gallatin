@@ -1,7 +1,10 @@
 using System;
 using System.Collections.Generic;
+using Gallatin.Core.Service;
+using Gallatin.Core.Util;
+using Gallatin.Core.Web;
 
-namespace Gallatin.Core
+namespace Gallatin.Core.Client
 {
     internal class SendResponseToClientState : ProxyClientStateBase
     {

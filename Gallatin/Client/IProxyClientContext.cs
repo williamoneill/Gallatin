@@ -1,4 +1,4 @@
-namespace Gallatin.Core
+namespace Gallatin.Core.Client
 {
     internal interface IProxyClientContext
     {

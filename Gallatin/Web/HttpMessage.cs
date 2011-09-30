@@ -1,12 +1,11 @@
 using System.Collections.Generic;
-using System.IO;
 using System.Text;
 
-namespace Gallatin.Core
+namespace Gallatin.Core.Web
 {
     public abstract class HttpMessage : IHttpMessage
     {
-        public HttpMessage( byte[] body, string version, IEnumerable<KeyValuePair<string, string>> headers )
+        protected HttpMessage( byte[] body, string version, IEnumerable<KeyValuePair<string, string>> headers )
         {
             // TODO: assert all parameters
 

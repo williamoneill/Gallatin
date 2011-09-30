@@ -1,8 +1,7 @@
 using System.Collections.Generic;
-using System.IO;
-using System.Net.Sockets;
+using Gallatin.Core.Service;
 
-namespace Gallatin.Core
+namespace Gallatin.Core.Client
 {
     public class ProxyClient : IProxyClient
     {
@@ -42,9 +41,9 @@ namespace Gallatin.Core
         internal INetworkService NetworkService 
         { 
             get
-        {
-            return _networkService;
-        } 
+            {
+                return _networkService;
+            } 
         }
     }
 

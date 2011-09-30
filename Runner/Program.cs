@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Gallatin.Core;
+using Gallatin.Core.Service;
+using Gallatin.Core.Util;
 
 namespace Runner
 {
@@ -14,7 +16,7 @@ namespace Runner
         {
             try
             {
-                ProxyServer server = new ProxyServer();
+                ProxyService server = new ProxyService();
                 server.Start(8080);
 
                 Console.WriteLine("Press any key to terminate");
@@ -33,16 +35,5 @@ namespace Runner
             Log.Exception("Unhandled exception", (Exception)e.ExceptionObject);
         }
 
-        static void server_ServerResponsePosted(object sender, ServerResponseArgs e)
-        {
-            INetworkMessageService networkMessageService = sender as INetworkMessageService;
-            networkMessageService.SendClientMessage(e.ResponseMessage, e.ClientSession);
-        }
-
-        static void server_ClientMessagePosted(object sender, ClientRequestArgs e)
-        {
-            INetworkMessageService networkMessageService = sender as INetworkMessageService;
-            networkMessageService.SendServerMessage(e.RequestMessage, e.ClientSession);
-        }
     }
 }

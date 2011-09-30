@@ -1,8 +1,6 @@
 ﻿using System;
-using System.Linq;
-using System.Text;
 
-namespace Gallatin.Core
+namespace Gallatin.Core.Web
 {
     public interface IHttpRequestMessage : IHttpMessage 
     {

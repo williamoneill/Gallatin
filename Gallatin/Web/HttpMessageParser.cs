@@ -6,7 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 
-namespace Gallatin.Core
+namespace Gallatin.Core.Web
 {
     /// <summary>
     /// 	This is a stateful class that evaluates the raw network stream to create an <see cref = "IHttpMessage" />.

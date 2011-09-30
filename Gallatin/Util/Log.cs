@@ -1,10 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
-using System.Text;
 
-namespace Gallatin.Core
+namespace Gallatin.Core.Util
 {
     public static class Log
     {

@@ -1,4 +1,7 @@
-﻿namespace Gallatin.Core
+﻿using Gallatin.Core.Client;
+using Gallatin.Core.Web;
+
+namespace Gallatin.Core.Service
 {
     public interface INetworkService
     {
