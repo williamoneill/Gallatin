@@ -17,11 +17,15 @@ namespace Gallatin.Core.Client
 
         public override void HandleSendComplete( INetworkService networkService )
         {
+            Log.Info("SendResponseToClientState::HandleSendComplete");
+
             ProxyClient.State = new ReceiveRequestFromClientState( ProxyClient );
         }
 
         public override void HandleNewDataAvailable( INetworkService networkService, IEnumerable<byte> data )
         {
+            Log.Info("SendResponseToClientState::HandleNewDataAvailable");
+
             throw new InvalidOperationException(
                 "Unable to receive data while sending response to client" );
         }

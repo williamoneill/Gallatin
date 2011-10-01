@@ -1,12 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using Gallatin.Core.Web;
 using NUnit.Framework;
 using System.IO;
 
-namespace Gallatin.Core.Tests
+namespace Gallatin.Core.Tests.Web
 {
     [TestFixture]
     public class HttpMessageParserTests

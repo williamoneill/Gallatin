@@ -36,8 +36,6 @@ namespace Gallatin.Core.Service
                 session.Buffer = message.CreateHttpMessage();
                 session.Message = message;
 
-                Log.Info("{0} {1}", session.Id, Encoding.UTF8.GetString(session.Buffer));
-
                 if (session.ServerSocket == null)
                 {
                     session.ServerSocket = new Socket( AddressFamily.InterNetwork,
@@ -78,8 +76,6 @@ namespace Gallatin.Core.Service
                 {
                     Log.Info(frame.GetMethod().Name);
                 }
-
-                Log.Info("{0} {1}", session.Id, Encoding.UTF8.GetString(session.Buffer));
 
                 session.ClientSocket.BeginSend( session.Buffer,
                                                 0,
@@ -215,10 +211,14 @@ namespace Gallatin.Core.Service
 
             try
             {
-                Log.Info("{0} Data received from remote host", session.Id);
-
                 int bytesReceived = session.ServerSocket.EndReceive(ar);
-                session.ProxyClient.NewDataAvailable( session.Buffer.Take( bytesReceived ) );
+
+                Log.Info("{0} Data received from remote host. Length {1}", session.Id, bytesReceived);
+                
+                if( bytesReceived > 0 )
+                {
+                    session.ProxyClient.NewDataAvailable(session.Buffer.Take(bytesReceived));
+                }
             }
             catch ( Exception ex )
             {

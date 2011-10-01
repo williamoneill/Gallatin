@@ -35,7 +35,6 @@ namespace Gallatin.Core.Client
                 if (responseMessage != null)
                 {
                     ProxyClient.State = new SendResponseToClientState(ProxyClient, responseMessage);
-                    networkService.SendMessage(base.ProxyClient, responseMessage);
                 }
                 else
                 {
