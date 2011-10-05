@@ -1,4 +1,21 @@
-﻿using System;
+﻿#region License
+
+// Copyright 2011 Bill O'Neill
+// 
+// Licensed under the Apache License, Version 2.0 (the "License"); you may not use
+// this file except in compliance with the License. You may obtain a copy of the
+// License at
+// 
+//    http://www.apache.org/licenses/LICENSE-2.0
+// 
+// Unless required by applicable law or agreed to in writing, software distributed
+// under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
+// CONDITIONS OF ANY KIND, either express or implied. See the License for the
+// specific language governing permissions and limitations under the License.
+
+#endregion
+
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
@@ -25,6 +42,7 @@ namespace Gallatin.Core.Web
         private int? _Index;
         private byte[] _body;
         private List<byte> _combinedChunkedData;
+        private IHttpMessage _completeMessage;
         private bool? _hasBody;
 
         private List<List<byte>> _headerLines;
@@ -37,8 +55,6 @@ namespace Gallatin.Core.Web
         }
 
         #region IHttpMessageParser Members
-
-        private IHttpMessage _completeMessage;
 
         /// <summary>
         /// 	The intent of this method is to attempt to create an HTTP message
@@ -67,7 +83,7 @@ namespace Gallatin.Core.Web
 
         #endregion
 
-        public bool TryGetCompleteMessage(  out IHttpMessage message )
+        public bool TryGetCompleteMessage( out IHttpMessage message )
         {
             message = _completeMessage;
 
@@ -247,8 +263,8 @@ namespace Gallatin.Core.Web
                 KeyValuePair<string, string> contentLength =
                     _headerPairs.Where(
                         s =>
-                        s.Key.Equals( "content-length", StringComparison.InvariantCultureIgnoreCase ) 
-                        && !s.Value.Equals("0"))
+                        s.Key.Equals( "content-length", StringComparison.InvariantCultureIgnoreCase )
+                        && !s.Value.Equals( "0" ) )
                         .SingleOrDefault();
 
                 // RFC 2616 4.4.3 - use transfer-encoding over content-length if both

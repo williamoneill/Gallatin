@@ -40,6 +40,10 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Client\IProxyClientFactory.cs" />
+    <Compile Include="Client\ProxyClientFactory.cs" />
+    <Compile Include="Client\SessionEndedState.cs" />
+    <Compile Include="Client\SessionNotStartedState.cs" />
     <Compile Include="Web\HttpMessage.cs">
       <SubType>Code</SubType>
     </Compile>
@@ -52,7 +56,6 @@
     <Compile Include="Web\IHttpResponseMessage.cs" />
     <Compile Include="Service\INetworkService.cs" />
     <Compile Include="Client\IProxyClient.cs" />
-    <Compile Include="Client\IProxyClientContext.cs" />
     <Compile Include="Client\IProxyClientState.cs" />
     <Compile Include="Service\IProxyService.cs" />
     <Compile Include="Util\Log.cs" />

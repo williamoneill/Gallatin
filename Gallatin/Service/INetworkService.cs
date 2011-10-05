@@ -1,4 +1,21 @@
-﻿using Gallatin.Core.Client;
+﻿#region License
+
+// Copyright 2011 Bill O'Neill
+// 
+// Licensed under the Apache License, Version 2.0 (the "License"); you may not use
+// this file except in compliance with the License. You may obtain a copy of the
+// License at
+// 
+//    http://www.apache.org/licenses/LICENSE-2.0
+// 
+// Unless required by applicable law or agreed to in writing, software distributed
+// under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
+// CONDITIONS OF ANY KIND, either express or implied. See the License for the
+// specific language governing permissions and limitations under the License.
+
+#endregion
+
+using Gallatin.Core.Client;
 using Gallatin.Core.Web;
 
 namespace Gallatin.Core.Service
@@ -6,21 +23,8 @@ namespace Gallatin.Core.Service
     public interface INetworkService
     {
         void SendMessage( IProxyClient client, IHttpRequestMessage message );
-        void SendMessage(IProxyClient client, IHttpResponseMessage message);
-        void GetDataFromClient(IProxyClient client);
-        void GetDataFromRemoteHost(IProxyClient client);
+        void SendMessage( IProxyClient client, IHttpResponseMessage message );
+        void GetDataFromClient( IProxyClient client );
+        void GetDataFromRemoteHost( IProxyClient client );
     }
-
-    //public interface IMessageEvaluator
-    //{
-    //    void EvaluateClientMessage(IHttpRequestMessage request, IProxyServerService proxyServer);
-    //    void EvaluateServerMessage(IHttpResponseMessage response, IProxyServerService proxyServer);
-    //    IMessageEvaluator Next { get; set; }
-    //}
-
-    //public interface IProxyServerService
-    //{
-    //    void SendClientResponse( IHttpResponseMessage response );
-    //    void SendRemoteHostRequest( IHttpRequestMessage request );
-    //}
 }

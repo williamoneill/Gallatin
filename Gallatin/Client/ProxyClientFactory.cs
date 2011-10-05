@@ -15,16 +15,17 @@
 
 #endregion
 
-using System.Collections.Generic;
-using Gallatin.Core.Service;
-
 namespace Gallatin.Core.Client
 {
-    public interface IProxyClient
+    public class ProxyClientFactory : IProxyClientFactory
     {
-        void SendComplete();
-        void NewDataAvailable( IEnumerable<byte> data );
-        void StartSession( INetworkService networkService );
-        void EndSession();
+        #region IProxyClientFactory Members
+
+        public IProxyClient CreateClient()
+        {
+            return new ProxyClient();
+        }
+
+        #endregion
     }
 }

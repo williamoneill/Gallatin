@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Gallatin.Core;
+using Gallatin.Core.Client;
 using Gallatin.Core.Service;
 using Gallatin.Core.Util;
 
@@ -16,7 +17,7 @@ namespace Runner
         {
             try
             {
-                ProxyService server = new ProxyService();
+                ProxyService server = new ProxyService( new ProxyClientFactory() );
                 server.Start(8080);
 
                 Console.WriteLine("Press any key to terminate");
