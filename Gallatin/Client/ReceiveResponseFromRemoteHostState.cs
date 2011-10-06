@@ -19,20 +19,7 @@ namespace Gallatin.Core.Client
             ProxyClient.NetworkService.GetDataFromRemoteHost( ProxyClient );
         }
 
-        public override void HandleSendComplete( INetworkService networkService )
-        {
-            throw new InvalidOperationException(
-                "Unable to acknowledge sent data while waiting for response from server" );
-        }
-
-        public override void HandleNewDataAvailableFromClient(INetworkService networkService, IEnumerable<byte> data)
-        {
-            throw new InvalidOperationException(
-                "Unable to receive data from client in the current state" );
-        }
-
-        public override void HandleNewDataAvailableFromServer( INetworkService networkService,
-                                                     IEnumerable<byte> data )
+        public override void HandleNewDataAvailableFromServer( INetworkService networkService, byte[] data )
         {
             IHttpMessage message = _parser.AppendData( data );
 

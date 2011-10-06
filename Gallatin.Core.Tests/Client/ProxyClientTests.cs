@@ -22,7 +22,7 @@ namespace Gallatin.Core.Tests.Client
 
             var requestData =
                 Encoding.UTF8.GetBytes( "GET / HTTP/1.1\r\nHost: www.yahoo.com\r\n\r\n" );
-            var responseData = Encoding.UTF8.GetBytes( "HTTP/1.1 200 OK\r\n\r\n" );
+            var responseData = Encoding.UTF8.GetBytes( "HTTP/1.1 200 OK\r\nConnection: keep-alive\r\n\r\n" );
             var requestData2 =
                 Encoding.UTF8.GetBytes("GET / HTTP/1.1\r\nHost: www.cnn.com\r\n\r\n");
             var responseData2 = Encoding.UTF8.GetBytes("HTTP/1.1 304 Not Modified\r\n\r\n");
@@ -43,9 +43,7 @@ namespace Gallatin.Core.Tests.Client
 
             proxyClient.SendComplete();
 
-            proxyClient.EndSession();
-
-            mockNetworkService.Verify( s => s.GetDataFromClient( proxyClient ), Times.Exactly( 3 ) );
+            mockNetworkService.Verify( s => s.GetDataFromClient( proxyClient ), Times.Exactly( 2 ) );
             mockNetworkService.Verify( s => s.GetDataFromRemoteHost( proxyClient ),
                                        Times.Exactly( 2 ) );
             mockNetworkService.Verify(
@@ -112,7 +110,6 @@ namespace Gallatin.Core.Tests.Client
                 () => proxyClient.NewDataAvailableFromClient(new byte[200]));
             proxyClient.SendComplete();
 
-            proxyClient.EndSession();
         }
 
         [Test]

@@ -1,22 +1,4 @@
-#region License
-
-// Copyright 2011 Bill O'Neill
-// 
-// Licensed under the Apache License, Version 2.0 (the "License"); you may not use
-// this file except in compliance with the License. You may obtain a copy of the
-// License at
-// 
-//    http://www.apache.org/licenses/LICENSE-2.0
-// 
-// Unless required by applicable law or agreed to in writing, software distributed
-// under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
-// CONDITIONS OF ANY KIND, either express or implied. See the License for the
-// specific language governing permissions and limitations under the License.
-
-#endregion
-
 using System;
-using System.Collections.Generic;
 using System.Text;
 using Gallatin.Core.Service;
 using Gallatin.Core.Util;
@@ -24,49 +6,80 @@ using Gallatin.Core.Web;
 
 namespace Gallatin.Core.Client
 {
-    //internal class SslTunnelActiveState : ProxyClientStateBase
-    //{
-    //    public SslTunnelActiveState( ProxyClient proxyClient,  ) : base( proxyClient )
-    //    {
-    //        HttpMessageParser parser = new HttpMessageParser();
+    internal class EstablishedSslConnectionState : ProxyClientStateBase
+    {
+        private readonly string _host;
+        private readonly int _port;
+        private IHttpRequestMessage _requestMessage;
 
-    //        parser.AppendData( Encoding.UTF8.GetBytes(string.Format("HTTP/{0} ")) )
+        public EstablishedSslConnectionState( ProxyClient proxyClient, IHttpRequestMessage requestMessage )
+            : base( proxyClient )
+        {
+            const int HOST_PORT_TOKEN_COUNT = 2;
 
-    //        ProxyClient.NetworkService.SendMessage(  );
-    //    }
+            Log.Info( Encoding.UTF8.GetString( requestMessage.CreateHttpMessage()) );
 
-    //    public override void HandleSendComplete( INetworkService networkService )
-    //    {
-    //        throw new NotImplementedException();
-    //    }
+            _requestMessage = requestMessage;
 
-    //    public override void HandleNewDataAvailable( INetworkService networkService, IEnumerable<byte> data )
-    //    {
-    //        throw new NotImplementedException();
-    //    }
-    //}
+            Log.Info( "Connecting to remote host via SSL" );
 
-    //internal class ConnectToSslServerState : ProxyClientStateBase
-    //{
-    //    public ConnectToSslServerState( ProxyClient proxyClient, IHttpRequestMessage requestMessage ) : base( proxyClient )
-    //    {
-    //        Log.Info("Connecting to remote host via SSL");
+            _host = requestMessage.Destination.Host;
+            _port = requestMessage.Destination.Port;
 
-    //        ProxyClient.NetworkService.SendMessage(ProxyClient, requestMessage);
-    //    }
+            // Not the standard port 80? Probably not if we are SSL.
+            if ( requestMessage.Destination.Port == -1 )
+            {
+                string[] tokens = requestMessage.Destination.AbsoluteUri.Split( ':' );
+                if ( tokens.Length == HOST_PORT_TOKEN_COUNT )
+                {
+                    _host = tokens[0];
+                    _port = int.Parse( tokens[1] );
 
-    //    public override void HandleSendComplete( INetworkService networkService )
-    //    {
-    //        // As per http://curl.haxx.se/rfc/draft-luotonen-web-proxy-tunneling-01.txt
-    //        // send a response to the client and then assume tunnel mode
-    //    }
+                }
 
-    //    public override void HandleNewDataAvailable( INetworkService networkService, IEnumerable<byte> data )
-    //    {
-    //        throw new InvalidOperationException(
-    //            "Unable to receive data while sending request to remote host");
-    //    }
-    //}
+                const int HTTPS_PORT = 443;
+                const int SNEWS_PORT = 563;
+
+                if(_port != HTTPS_PORT || _port != SNEWS_PORT)
+                {
+                    // TODO: too much is going on in the constructor
+                    throw new ArgumentException( "Unrecognized port for secure connection" );
+                }
+            }
+
+        }
+
+        public void StartSslSession()
+        {
+            ProxyClient.NetworkService.SendServerMessage(ProxyClient,
+                                                          null,
+                                                          _host,
+                                                          _port);
+
+            ProxyClient.NetworkService.SendClientMessage(
+                ProxyClient,
+                Encoding.UTF8.GetBytes( string.Format(
+                    "HTTP/{0} 200 Connection Established\r\nProxy-agent: Gallatin-Proxy\r\n\r\n", _requestMessage.Version)));
+
+            
+        }
+
+        public override void HandleSendComplete( INetworkService networkService )
+        {
+        }
+
+        public override void HandleNewDataAvailableFromClient( INetworkService networkService,
+                                                               byte[] data )
+        {
+            ProxyClient.NetworkService.SendServerMessage( ProxyClient, data, _host, _port );
+        }
+
+        public override void HandleNewDataAvailableFromServer( INetworkService networkService,
+                                                               byte[] data )
+        {
+            ProxyClient.NetworkService.SendClientMessage( ProxyClient, data );
+        }
+    }
 
     internal class ReceiveRequestFromClientState : ProxyClientStateBase
     {
@@ -80,20 +93,8 @@ namespace Gallatin.Core.Client
             ProxyClient.NetworkService.GetDataFromClient( ProxyClient );
         }
 
-        public override void HandleSendComplete( INetworkService networkService )
-        {
-            throw new InvalidOperationException(
-                "Cannot handle sent data while awaiting request from client" );
-        }
-
-        public override void HandleNewDataAvailableFromServer(INetworkService networkService, IEnumerable<byte> data)
-        {
-            throw new InvalidOperationException(
-                "Unable to receive data from server in current state" );
-        }
-
         public override void HandleNewDataAvailableFromClient( INetworkService networkService,
-                                                     IEnumerable<byte> data )
+                                                               byte[] data )
         {
             IHttpMessage message = _parser.AppendData( data );
 
@@ -103,15 +104,24 @@ namespace Gallatin.Core.Client
 
                 if ( requestMessage != null )
                 {
-                    // SSL?
-                    if( requestMessage.Method.Equals("Connect", StringComparison.InvariantCultureIgnoreCase) )
+                    // SSL
+                    if (requestMessage.Method.Equals("Connect",
+                                                       StringComparison.InvariantCultureIgnoreCase))
                     {
-                        // TODO: implement
-                        //ProxyClient.State = new ConnectToSslServerState( ProxyClient, requestMessage );
+                        Log.Info("Establishing SSL connection");
+
+                        var ssl = new EstablishedSslConnectionState(ProxyClient,
+                                                                               requestMessage);
+
+                        ProxyClient.State = ssl;
+
+                        ssl.StartSslSession();
+
                     }
                     else
                     {
-                        ProxyClient.State = new SendDataToRemoteHostState(ProxyClient, requestMessage);
+                        ProxyClient.State = new SendDataToRemoteHostState(ProxyClient,
+                                                                           requestMessage);
                     }
                 }
                 else

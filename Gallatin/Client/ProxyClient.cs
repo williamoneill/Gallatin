@@ -30,12 +30,12 @@ namespace Gallatin.Core.Client
             State.HandleSendComplete( _networkService );
         }
 
-        public void NewDataAvailableFromServer( IEnumerable<byte> data )
+        public void NewDataAvailableFromServer( byte[] data )
         {
             State.HandleNewDataAvailableFromServer( _networkService, data );
         }
 
-        public void NewDataAvailableFromClient(IEnumerable<byte> data)
+        public void NewDataAvailableFromClient( byte[] data )
         {
             State.HandleNewDataAvailableFromClient(_networkService, data);
         }
@@ -56,11 +56,6 @@ namespace Gallatin.Core.Client
             {
                 throw new InvalidOperationException( "Session has already been started" );
             }
-        }
-
-        public void EndSession()
-        {
-            State = new SessionEndedState( this );
         }
 
         #endregion

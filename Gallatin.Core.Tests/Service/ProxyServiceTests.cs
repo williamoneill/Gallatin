@@ -72,7 +72,7 @@ namespace Gallatin.Core.Tests.Service
         {
             private TcpClient tcpClient;
             private NetworkStream networkStream;
-            private bool _success = false;
+            private bool _success;
             private Thread _thread;
 
             private void Worker()
@@ -120,7 +120,7 @@ namespace Gallatin.Core.Tests.Service
                 _networkService.GetDataFromRemoteHost(this);
             }
 
-            public void NewDataAvailableFromServer( IEnumerable<byte> data )
+            public void NewDataAvailableFromServer( byte[] data )
             {
                 IHttpMessageParser parser = new HttpMessageParser();
                 IHttpMessage message = parser.AppendData(responseData);
@@ -128,7 +128,7 @@ namespace Gallatin.Core.Tests.Service
                 _networkService.SendClientMessage(this, responseMessage.CreateHttpMessage());
             }
 
-            public void NewDataAvailableFromClient( IEnumerable<byte> data )
+            public void NewDataAvailableFromClient( byte[] data )
             {
                 IHttpMessageParser parser = new HttpMessageParser();
                 IHttpMessage message = parser.AppendData(requestData);

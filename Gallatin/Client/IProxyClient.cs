@@ -6,9 +6,8 @@ namespace Gallatin.Core.Client
     public interface IProxyClient
     {
         void SendComplete();
-        void NewDataAvailableFromServer( IEnumerable<byte> data );
-        void NewDataAvailableFromClient(IEnumerable<byte> data);
+        void NewDataAvailableFromServer( byte[] data );
+        void NewDataAvailableFromClient( byte[] data);
         void StartSession(INetworkService networkService);
-        void EndSession();
     }
 }
