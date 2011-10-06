@@ -215,9 +215,10 @@ namespace Gallatin.Core.Service
 
                 Log.Info("{0} Data received from client -- {1} bytes", session.Id, bytesReceived);
 
-                Log.Info(Encoding.UTF8.GetString(session.ClientBuffer.Take(bytesReceived).ToArray()));
-
-                session.ProxyClient.NewDataAvailableFromClient( session.ClientBuffer.Take( bytesReceived ).ToArray() );
+                if (bytesReceived > 0)
+                {
+                    session.ProxyClient.NewDataAvailableFromClient(session.ClientBuffer.Take(bytesReceived).ToArray());
+                }
             }
             catch ( Exception ex )
             {
