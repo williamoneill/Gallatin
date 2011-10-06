@@ -1,21 +1,4 @@
-﻿#region License
-
-// Copyright 2011 Bill O'Neill
-// 
-// Licensed under the Apache License, Version 2.0 (the "License"); you may not use
-// this file except in compliance with the License. You may obtain a copy of the
-// License at
-// 
-//    http://www.apache.org/licenses/LICENSE-2.0
-// 
-// Unless required by applicable law or agreed to in writing, software distributed
-// under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
-// CONDITIONS OF ANY KIND, either express or implied. See the License for the
-// specific language governing permissions and limitations under the License.
-
-#endregion
-
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
@@ -45,33 +28,34 @@ namespace Gallatin.Core.Service
 
         #region INetworkService Members
 
-        public void SendMessage( IProxyClient client, IHttpRequestMessage message )
+        public void SendServerMessage( IProxyClient client, IEnumerable<byte> message, string host, int port )
         {
+            // TODO: verify host:port does not change if socket is connected
+
             Session session;
 
             if ( _activeSessions.TryGetValue( client, out session ) )
             {
-                string destination = message.Destination.Host;
-                int port = message.Destination.Port;
+                //string destination = message.Destination.Host;
+                //int port = message.Destination.Port;
 
-                // Not the standard port 80?
-                if ( port == -1 )
-                {
-                    string[] tokens = message.Destination.AbsoluteUri.Split( ':' );
-                    if ( tokens.Length == 2 )
-                    {
-                        destination = tokens[0];
-                        port = int.Parse( tokens[1] );
-                    }
-                }
+                //// Not the standard port 80?
+                //if ( port == -1 )
+                //{
+                //    string[] tokens = message.Destination.AbsoluteUri.Split( ':' );
+                //    if ( tokens.Length == 2 )
+                //    {
+                //        destination = tokens[0];
+                //        port = int.Parse( tokens[1] );
+                //    }
+                //}
 
-                session.Buffer = message.CreateHttpMessage();
-                session.Message = message;
+                session.Buffer = message.ToArray();
 
                 Log.Info(
                     "{0} ProxyServer::SendMessage -- Sending request to remote host: {1} {2}",
                     session.Id,
-                    destination,
+                    host,
                     port );
 
                 if ( session.ServerSocket == null )
@@ -80,7 +64,7 @@ namespace Gallatin.Core.Service
                                                        SocketType.Stream,
                                                        ProtocolType.Tcp );
 
-                    session.ServerSocket.BeginConnect( destination,
+                    session.ServerSocket.BeginConnect( host,
                                                        port,
                                                        HandleConnectToServer,
                                                        session );
@@ -97,7 +81,7 @@ namespace Gallatin.Core.Service
             }
         }
 
-        public void SendMessage( IProxyClient client, IHttpResponseMessage message )
+        public void SendClientMessage(IProxyClient client, IEnumerable<byte> message)
         {
             Session session;
 
@@ -105,8 +89,7 @@ namespace Gallatin.Core.Service
             {
                 Log.Info( "{0} ProxyServer::SendMessage -- Sending response to client", session.Id );
 
-                session.Buffer = message.CreateHttpMessage();
-                session.Message = message;
+                session.Buffer = message.ToArray();
 
                 session.ClientSocket.BeginSend( session.Buffer,
                                                 0,
@@ -230,7 +213,7 @@ namespace Gallatin.Core.Service
                 Log.Info( "{0} Data received from client", session.Id );
 
                 int bytesReceived = session.ClientSocket.EndReceive( ar );
-                session.ProxyClient.NewDataAvailable( session.Buffer.Take( bytesReceived ) );
+                session.ProxyClient.NewDataAvailableFromClient( session.Buffer.Take( bytesReceived ) );
             }
             catch ( Exception ex )
             {
@@ -261,7 +244,7 @@ namespace Gallatin.Core.Service
 
                 if ( bytesReceived > 0 )
                 {
-                    session.ProxyClient.NewDataAvailable( session.Buffer.Take( bytesReceived ) );
+                    session.ProxyClient.NewDataAvailableFromServer( session.Buffer.Take( bytesReceived ) );
                 }
             }
             catch ( Exception ex )
@@ -299,8 +282,6 @@ namespace Gallatin.Core.Service
                 }
                 else
                 {
-                    IHttpResponseMessage responseMessage = session.Message as IHttpResponseMessage;
-
                     Log.Info( "{0} Closing client connection", session.Id );
                     EndSession( session, false );
 
@@ -455,7 +436,6 @@ namespace Gallatin.Core.Service
             public Socket ServerSocket { get; set; }
             public byte[] Buffer { get; set; }
             public IProxyClient ProxyClient { get; private set; }
-            public IHttpMessage Message { get; set; }
 
             public void ResetBufferForReceive()
             {
@@ -500,214 +480,4 @@ namespace Gallatin.Core.Service
         #endregion
     }
 
-    //public class ProxyServer
-    //{
-    //    private Socket _serverSocket;
-
-    //    public ProxyServer( int port, IHttpClient remoteServer )
-    //    {
-    //        if ( remoteServer == null )
-    //        {
-    //            throw new ArgumentNullException( "remoteServer" );
-    //        }
-
-    //        _remoteServerProxy = remoteServer;
-
-    //        Port = port;
-    //    }
-
-    //    public int Port { get; private set; }
-
-    //    public void Start()
-    //    {
-    //        try
-    //        {
-    //            if ( _serverSocket == null )
-    //            {
-    //                _serverSocket = new Socket( AddressFamily.InterNetwork,
-    //                                            SocketType.Stream,
-    //                                            ProtocolType.Tcp );
-
-    //                IPAddress hostAddress =
-    //                    ( Dns.Resolve( IPAddress.Any.ToString() ) ).AddressList[0];
-    //                IPEndPoint endPoint = new IPEndPoint( hostAddress, Port );
-
-    //                _serverSocket.Bind( endPoint );
-
-    //                _serverSocket.Listen( 10 );
-
-    //                _serverSocket.BeginAccept( HandleNewConnect, null );
-    //            }
-    //        }
-    //        catch ( Exception ex )
-    //        {
-    //            Trace.TraceError( "Unable to start server. {0}", ex.Message );
-    //            throw;
-    //        }
-    //    }
-
-    //    public void Stop()
-    //    {
-    //        if ( _serverSocket != null )
-    //        {
-    //            _serverSocket.Close();
-    //            _serverSocket = null;
-    //        }
-    //    }
-
-
-    //    private void HandleNewConnect( IAsyncResult ar )
-    //    {
-    //        Trace.TraceInformation( "New clientSession connection" );
-
-    //        try
-    //        {
-    //            Socket clientSocket = _serverSocket.EndAccept( ar );
-
-    //            // Immediately listen for the next clientSession
-    //            _serverSocket.BeginAccept( HandleNewConnect, null );
-
-    //            ProxyClient client = new ProxyClient( clientSocket );
-
-    //            client.ClientSocket.BeginReceive( client.Buffer,
-    //                                              0,
-    //                                              client.Buffer.Length,
-    //                                              SocketFlags.None,
-    //                                              HandleReceive,
-    //                                              client );
-    //        }
-    //        catch ( Exception ex )
-    //        {
-    //            Trace.TraceError( "Unable to service new clientSession connection. {0}", ex.Message );
-    //        }
-    //    }
-
-    //    private void HandleSend( IAsyncResult ar )
-    //    {
-    //        ProxyClient client = ar.AsyncState as ProxyClient;
-
-    //        Trace.Assert( client != null );
-
-    //        try
-    //        {
-    //            SocketError error;
-
-    //            client.ClientSocket.EndSend( ar, out error );
-
-    //            if ( error != SocketError.Success )
-    //            {
-    //                Trace.TraceError( "Failed to send clientSession data. {0}", (int) error );
-    //            }
-
-    //            client.ClientSocket.Close();
-    //        }
-    //        catch ( Exception ex )
-    //        {
-    //            Trace.TraceError( "Unable to send data to clientSession. {0}", ex.Message );
-    //        }
-    //    }
-
-    //    private void HandleReturnFromServer( HttpResponse response, ProxyClient client )
-    //    {
-    //        try
-    //        {
-    //            // See http://west-wind.com/presentations/dotnetwebrequest/dotnetwebrequest.htm
-    //            StringBuilder stringBuilder = new StringBuilder();
-    //            stringBuilder.AppendFormat( "HTTP/{0} {1} {2}\r\n",
-    //                                        response.Version,
-    //                                        response.ResponseCode,
-    //                                        response.Status );
-
-    //            foreach ( KeyValuePair<string, string> headerPair in response.HeaderPairs )
-    //            {
-    //                stringBuilder.AppendFormat( "{0}: {1}\r\n", headerPair.Key, headerPair.Value );
-    //            }
-
-    //            // End header
-    //            stringBuilder.Append( "\r\n" );
-
-    //            List<byte> bufferList = new List<byte>();
-
-    //            bufferList.AddRange( Encoding.GetEncoding( 1252 ).GetBytes( stringBuilder.ToString() ) );
-
-    //            if ( response.Body != null )
-    //            {
-    //                bufferList.AddRange( response.Body );
-    //            }
-
-    //            //Trace.TraceInformation( Encoding.GetEncoding( 1252 ).GetString( bufferList.ToArray() ) );
-
-    //            Trace.TraceInformation( "Sending response to original clientSession" );
-
-    //            client.ClientSocket.BeginSend( bufferList.ToArray(),
-    //                                           0,
-    //                                           bufferList.Count,
-    //                                           SocketFlags.None,
-    //                                           HandleSend,
-    //                                           client );
-    //        }
-    //        catch ( Exception ex )
-    //        {
-    //            Trace.TraceError(
-    //                "An error occurred while processing the response from the remote server. {0}",
-    //                ex.Message );
-
-    //            try
-    //            {
-    //                client.ClientSocket.Close();
-    //            }
-    //            catch ( Exception closeError )
-    //            {
-    //                Trace.TraceError( "Unable to close the clientSession socket. {0}", ex.Message );
-    //            }
-    //        }
-    //    }
-
-    //    private void HandleReceive( IAsyncResult ar )
-    //    {
-    //        try
-    //        {
-    //            ProxyClient client = ar.AsyncState as ProxyClient;
-
-    //            Trace.Assert( client != null );
-
-    //            int bytesReceived = client.ClientSocket.EndReceive( ar );
-
-    //            if ( bytesReceived > 0 )
-    //            {
-    //                client.ContentStream.Write( client.Buffer, 0, bytesReceived );
-
-    //                HttpMessageOld message;
-
-    //                if ( HttpContentParser.TryParse( client.ContentStream, out message ) )
-    //                {
-    //                    HttpRequest request = message as HttpRequest;
-
-    //                    Trace.Assert( request != null );
-
-    //                    _remoteServerProxy.BeginWebRequest( request,
-    //                                                        HandleReturnFromServer,
-    //                                                        client );
-    //                }
-    //                else
-    //                {
-    //                    client.ClientSocket.BeginReceive( client.Buffer,
-    //                                                      0,
-    //                                                      client.Buffer.Length,
-    //                                                      SocketFlags.None,
-    //                                                      HandleReceive,
-    //                                                      client );
-    //                }
-    //            }
-    //            else
-    //            {
-    //                Trace.Write( "foo" );
-    //            }
-    //        }
-    //        catch ( Exception ex )
-    //        {
-    //            Trace.TraceError( "Unable to receive data from clientSession. {0}", ex.Message );
-    //        }
-    //    }
-    //}
 }

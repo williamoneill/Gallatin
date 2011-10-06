@@ -33,11 +33,17 @@ namespace Gallatin.Core.Client
                 "Cannot accept sent data when client session has ended" );
         }
 
-        public override void HandleNewDataAvailable( INetworkService networkService,
+        public override void HandleNewDataAvailableFromServer( INetworkService networkService,
                                                      IEnumerable<byte> data )
         {
             throw new InvalidOperationException(
                 "Cannot accept new data when client session has ended" );
+        }
+        public override void HandleNewDataAvailableFromClient(INetworkService networkService,
+                                                     IEnumerable<byte> data)
+        {
+            throw new InvalidOperationException(
+                "Cannot accept new data when client session has ended");
         }
     }
 }

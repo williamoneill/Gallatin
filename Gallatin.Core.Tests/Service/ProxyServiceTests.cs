@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -113,32 +114,26 @@ namespace Gallatin.Core.Tests.Service
         public class MockProxyClient : IProxyClient
         {
             private INetworkService _networkService;
-            private bool _isFirstReceive = true;
 
             public void SendComplete()
             {
-                _isFirstReceive = false;
                 _networkService.GetDataFromRemoteHost(this);
             }
 
-            public void NewDataAvailable(IEnumerable<byte> data)
+            public void NewDataAvailableFromServer( IEnumerable<byte> data )
             {
-                if(_isFirstReceive)
-                {
-                    IHttpMessage message;
-                    IHttpMessageParser parser = new HttpMessageParser();
-                    message = parser.AppendData(requestData);
-                    IHttpRequestMessage requestMessage = message as IHttpRequestMessage;
-                    this._networkService.SendMessage(this, requestMessage);
-                }
-                else
-                {
-                    IHttpMessage message;
-                    IHttpMessageParser parser = new HttpMessageParser();
-                    message = parser.AppendData(responseData);
-                    IHttpResponseMessage responseMessage = message as IHttpResponseMessage;
-                    this._networkService.SendMessage(this, responseMessage);
-                }
+                IHttpMessageParser parser = new HttpMessageParser();
+                IHttpMessage message = parser.AppendData(responseData);
+                IHttpResponseMessage responseMessage = message as IHttpResponseMessage;
+                _networkService.SendClientMessage(this, responseMessage.CreateHttpMessage());
+            }
+
+            public void NewDataAvailableFromClient( IEnumerable<byte> data )
+            {
+                IHttpMessageParser parser = new HttpMessageParser();
+                IHttpMessage message = parser.AppendData(requestData);
+                IHttpRequestMessage requestMessage = message as IHttpRequestMessage;
+                _networkService.SendServerMessage(this, requestMessage.CreateHttpMessage(), requestMessage.Destination.Host, requestMessage.Destination.Port);
             }
 
             public void StartSession(INetworkService networkService)

@@ -30,7 +30,7 @@ namespace Gallatin.Core.Client
         {
             Log.Info( "Transitioning to SendDataToRemoteHostState" );
 
-            ProxyClient.NetworkService.SendMessage( ProxyClient, requestMessage );
+            ProxyClient.NetworkService.SendServerMessage( ProxyClient, requestMessage.CreateHttpMessage(), requestMessage.Destination.Host, requestMessage.Destination.Port );
         }
 
         public override void HandleSendComplete( INetworkService networkService )
@@ -38,11 +38,18 @@ namespace Gallatin.Core.Client
             ProxyClient.State = new ReceiveResponseFromRemoteHostState( ProxyClient );
         }
 
-        public override void HandleNewDataAvailable( INetworkService networkService,
+        public override void HandleNewDataAvailableFromServer( INetworkService networkService,
                                                      IEnumerable<byte> data )
         {
             throw new InvalidOperationException(
                 "Unable to receive data while sending request to remote host" );
+        }
+
+        public override void HandleNewDataAvailableFromClient(INetworkService networkService,
+                                                     IEnumerable<byte> data)
+        {
+            throw new InvalidOperationException(
+                "Unable to receive data while sending request to remote host");
         }
     }
 }

@@ -23,6 +23,7 @@ namespace Gallatin.Core.Client
     internal interface IProxyClientState
     {
         void HandleSendComplete( INetworkService networkService );
-        void HandleNewDataAvailable( INetworkService networkService, IEnumerable<byte> data );
+        void HandleNewDataAvailableFromServer( INetworkService networkService, IEnumerable<byte> data );
+        void HandleNewDataAvailableFromClient(INetworkService networkService, IEnumerable<byte> data);
     }
 }

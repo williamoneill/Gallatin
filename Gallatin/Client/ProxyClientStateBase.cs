@@ -33,8 +33,12 @@ namespace Gallatin.Core.Client
 
         public abstract void HandleSendComplete( INetworkService networkService );
 
-        public abstract void HandleNewDataAvailable( INetworkService networkService,
-                                                     IEnumerable<byte> data );
+        public abstract void HandleNewDataAvailableFromServer( INetworkService networkService,
+                                                               IEnumerable<byte> data );
+
+        public abstract void HandleNewDataAvailableFromClient( INetworkService networkService,
+                                                               IEnumerable<byte> data );
+
 
         #endregion
     }

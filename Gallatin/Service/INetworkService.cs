@@ -15,6 +15,7 @@
 
 #endregion
 
+using System.Collections.Generic;
 using Gallatin.Core.Client;
 using Gallatin.Core.Web;
 
@@ -22,8 +23,8 @@ namespace Gallatin.Core.Service
 {
     public interface INetworkService
     {
-        void SendMessage( IProxyClient client, IHttpRequestMessage message );
-        void SendMessage( IProxyClient client, IHttpResponseMessage message );
+        void SendServerMessage(IProxyClient client, IEnumerable<byte> message, string host, int port);
+        void SendClientMessage( IProxyClient client, IEnumerable<byte> message );
         void GetDataFromClient( IProxyClient client );
         void GetDataFromRemoteHost( IProxyClient client );
     }

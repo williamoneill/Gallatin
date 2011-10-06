@@ -17,12 +17,57 @@
 
 using System;
 using System.Collections.Generic;
+using System.Text;
 using Gallatin.Core.Service;
 using Gallatin.Core.Util;
 using Gallatin.Core.Web;
 
 namespace Gallatin.Core.Client
 {
+    //internal class SslTunnelActiveState : ProxyClientStateBase
+    //{
+    //    public SslTunnelActiveState( ProxyClient proxyClient,  ) : base( proxyClient )
+    //    {
+    //        HttpMessageParser parser = new HttpMessageParser();
+
+    //        parser.AppendData( Encoding.UTF8.GetBytes(string.Format("HTTP/{0} ")) )
+
+    //        ProxyClient.NetworkService.SendMessage(  );
+    //    }
+
+    //    public override void HandleSendComplete( INetworkService networkService )
+    //    {
+    //        throw new NotImplementedException();
+    //    }
+
+    //    public override void HandleNewDataAvailable( INetworkService networkService, IEnumerable<byte> data )
+    //    {
+    //        throw new NotImplementedException();
+    //    }
+    //}
+
+    //internal class ConnectToSslServerState : ProxyClientStateBase
+    //{
+    //    public ConnectToSslServerState( ProxyClient proxyClient, IHttpRequestMessage requestMessage ) : base( proxyClient )
+    //    {
+    //        Log.Info("Connecting to remote host via SSL");
+
+    //        ProxyClient.NetworkService.SendMessage(ProxyClient, requestMessage);
+    //    }
+
+    //    public override void HandleSendComplete( INetworkService networkService )
+    //    {
+    //        // As per http://curl.haxx.se/rfc/draft-luotonen-web-proxy-tunneling-01.txt
+    //        // send a response to the client and then assume tunnel mode
+    //    }
+
+    //    public override void HandleNewDataAvailable( INetworkService networkService, IEnumerable<byte> data )
+    //    {
+    //        throw new InvalidOperationException(
+    //            "Unable to receive data while sending request to remote host");
+    //    }
+    //}
+
     internal class ReceiveRequestFromClientState : ProxyClientStateBase
     {
         private readonly HttpMessageParser _parser = new HttpMessageParser();
@@ -41,7 +86,13 @@ namespace Gallatin.Core.Client
                 "Cannot handle sent data while awaiting request from client" );
         }
 
-        public override void HandleNewDataAvailable( INetworkService networkService,
+        public override void HandleNewDataAvailableFromServer(INetworkService networkService, IEnumerable<byte> data)
+        {
+            throw new InvalidOperationException(
+                "Unable to receive data from server in current state" );
+        }
+
+        public override void HandleNewDataAvailableFromClient( INetworkService networkService,
                                                      IEnumerable<byte> data )
         {
             IHttpMessage message = _parser.AppendData( data );
@@ -52,7 +103,16 @@ namespace Gallatin.Core.Client
 
                 if ( requestMessage != null )
                 {
-                    ProxyClient.State = new SendDataToRemoteHostState( ProxyClient, requestMessage );
+                    // SSL?
+                    if( requestMessage.Method.Equals("Connect", StringComparison.InvariantCultureIgnoreCase) )
+                    {
+                        // TODO: implement
+                        //ProxyClient.State = new ConnectToSslServerState( ProxyClient, requestMessage );
+                    }
+                    else
+                    {
+                        ProxyClient.State = new SendDataToRemoteHostState(ProxyClient, requestMessage);
+                    }
                 }
                 else
                 {
