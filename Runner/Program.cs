@@ -2,6 +2,7 @@
 using Gallatin.Core.Client;
 using Gallatin.Core.Service;
 using Gallatin.Core.Util;
+using System.IO;
 
 namespace Runner
 {
@@ -11,6 +12,11 @@ namespace Runner
         {
             try
             {
+                foreach(var file in new DirectoryInfo(".").GetFiles("*.log"))
+                {
+                    file.Delete();
+                }
+
                 ProxyService server = new ProxyService( new ProxyClientFactory() );
                 server.Start( 8080 );
 

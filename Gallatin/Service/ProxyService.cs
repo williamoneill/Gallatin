@@ -35,61 +35,94 @@ namespace Gallatin.Core.Service
 
         public void SendServerMessage( IProxyClient client, byte[] message, string host, int port )
         {
-            // TODO: verify host:port does not change if socket is connected
-
             Session session = FindSessionByClientReference( client );
 
-            if ( session != null )
+            if (session != null)
             {
-                session.ServerBuffer = message;
-
-                Log.Info(
-                    "{0} ProxyServer::SendMessage -- Sending request to remote host: {1} {2}",
-                    session.Id,
-                    host,
-                    port );
-
-                if ( session.ServerSocket == null )
+                try
                 {
-                    session.ServerSocket = new Socket( AddressFamily.InterNetwork,
-                                                       SocketType.Stream,
-                                                       ProtocolType.Tcp );
+                    session.ServerBuffer = message;
 
-                    session.ServerSocket.BeginConnect( host,
-                                                       port,
-                                                       HandleConnectToServer,
-                                                       session );
+                    Log.Info( "{0} {1}", session.Id, Encoding.UTF8.GetString( message ) );
+
+                    Log.Info(
+                        "{0} ProxyServer::SendMessage -- Sending request to remote host: {1} {2}",
+                        session.Id,
+                        host,
+                        port );
+
+                    if ( session.ServerSocket == null || host != session.Host || port != session.Port )
+                    {
+                        if(session.ServerSocket != null)
+                        {
+                            if(session.ServerSocket.Connected)
+                            {
+                                session.ServerSocket.Shutdown(SocketShutdown.Both);
+                                session.ServerSocket.Close();
+                            }
+
+                            session.ServerSocket = null;
+                        }
+
+                        session.Host = host;
+                        session.Port = port;
+
+                        session.ServerSocket = new Socket( AddressFamily.InterNetwork,
+                                                           SocketType.Stream,
+                                                           ProtocolType.Tcp );
+
+                        session.ServerSocket.BeginConnect( host,
+                                                           port,
+                                                           HandleConnectToServer,
+                                                           session );
+                    }
+                        // TODO: null check may go away once i figure out ssl
+                    else if ( message != null )
+                    {
+                        session.ServerSocket.BeginSend( session.ServerBuffer,
+                                                        0,
+                                                        session.ServerBuffer.Length,
+                                                        SocketFlags.None,
+                                                        HandleSendToServer,
+                                                        session );
+                    }
+
                 }
-                // TODO: null check may go away once i figure out ssl
-                else if (message != null)
+                catch ( Exception ex )
                 {
-                    session.ServerSocket.BeginSend( session.ServerBuffer,
-                                                    0,
-                                                    session.ServerBuffer.Length,
-                                                    SocketFlags.None,
-                                                    HandleSendToServer,
-                                                    session );
+                    Log.Exception(session.Id + " Unhandled exception when sending server message.", ex );
                 }
             }
+
         }
 
         public void SendClientMessage(IProxyClient client, byte[] message)
         {
             Session session = FindSessionByClientReference(client);
 
-            if ( session != null )
+            if (session != null)
             {
-                Log.Info( "{0} ProxyServer::SendMessage -- Sending response to client", session.Id );
+                try
+                {
+                    Log.Info( "{0} ProxyServer::SendMessage -- Sending response to client",
+                              session.Id );
 
-                session.ClientBuffer = message;
+                    session.ClientBuffer = message;
 
-                session.ClientSocket.BeginSend( session.ClientBuffer,
-                                                0,
-                                                session.ClientBuffer.Length,
-                                                SocketFlags.None,
-                                                HandleSendToClient,
-                                                session );
+                    session.ClientSocket.BeginSend( session.ClientBuffer,
+                                                    0,
+                                                    session.ClientBuffer.Length,
+                                                    SocketFlags.None,
+                                                    HandleSendToClient,
+                                                    session );
+
+                }
+                catch ( Exception ex )
+                {
+                    Log.Exception( session.Id +" Unhandled exception when sending client message.", ex );
+                }
             }
+
         }
 
         public void GetDataFromClient( IProxyClient client )
@@ -222,10 +255,10 @@ namespace Gallatin.Core.Service
             }
             catch ( Exception ex )
             {
-                EndSession( session, true );
                 Log.Exception(
                     session.Id + " An error was encountered when receiving data from the client.",
-                    ex );
+                    ex);
+                EndSession(session, true);
             }
         }
 
@@ -247,6 +280,8 @@ namespace Gallatin.Core.Service
                           session.Id,
                           bytesReceived );
 
+                Log.Info("{0} {1}", session.Id, Encoding.UTF8.GetString(session.ServerBuffer.Take(bytesReceived).ToArray()));
+
                 if ( bytesReceived > 0 )
                 {
                     session.ProxyClient.NewDataAvailableFromServer( session.ServerBuffer.Take( bytesReceived ).ToArray() );
@@ -254,11 +289,11 @@ namespace Gallatin.Core.Service
             }
             catch ( Exception ex )
             {
-                EndSession( session, true );
                 Log.Exception(
                     session.Id
                     + " An error was encountered when receiving data from the remote host.",
-                    ex );
+                    ex);
+                EndSession(session, true);
             }
         }
 
@@ -282,78 +317,19 @@ namespace Gallatin.Core.Service
 
                 if ( socketError != SocketError.Success )
                 {
-                    EndSession( session, true );
-                    Log.Error( "{0} Unable to send message to client: {1}", session.Id, socketError );
+                    Log.Error("{0} Unable to send message to client: {1}", session.Id, socketError);
+                    EndSession(session, true);
                 }
                 else
                 {
-                    session.ProxyClient.SendComplete();
+                    session.ProxyClient.ClientSendComplete();
                 }
-
-
-                //else
-                //{
-
-                //    //if (responseMessage != null)
-                //    //{
-                //    //    // See http://www.w3.org/Protocols/rfc2616/rfc2616-sec19.html#sec19.6.2
-                //    //    // See RFC 8.1.3 - proxy servers must not establish a HTTP/1.1 persistent connection with 1.0 client. For
-                //    //    // now, all 1.0 clients will not get persistent connections from the proxy.
-                //    //    if ( responseMessage.Version == "1.0" )
-                //    //    {
-                //    //        Log.Info( "{0} Closing client connection", session.Id );
-                //    //        EndSession( session, false );
-                //    //    }
-
-                //    //        // See http://www.w3.org/Protocols/rfc2616/rfc2616-sec8.html#sec8.1
-                //    //    else if ( responseMessage.Version == "1.1" )
-                //    //    {
-                //    //        KeyValuePair<string, string> connectionHeader =
-                //    //            responseMessage.Headers.SingleOrDefault(
-                //    //                s =>
-                //    //                s.Key.Equals( "Connection",
-                //    //                              StringComparison.
-                //    //                                  InvariantCultureIgnoreCase ) );
-
-                //    //        // Closing the connection if status code != 200 is not part of the HTTP standard,
-                //    //        // at least as far as I can tell, but things don't work correctly if this is not done.
-                //    //        if ( responseMessage.StatusCode != 200
-                //    //             ||
-                //    //             ( !connectionHeader.Equals(
-                //    //                 default( KeyValuePair<string, string> ) )
-                //    //               &&
-                //    //               connectionHeader.Value.Equals( "close",
-                //    //                                              StringComparison.
-                //    //                                                  InvariantCultureIgnoreCase ) ) )
-                //    //        {
-                //    //            Log.Info( "{0} Closing client connection", session.Id );
-                //    //            EndSession( session, false );
-                //    //        }
-                //    //        else
-                //    //        {
-                //    //            Log.Info("{0} Maintaining persistent client connection", session.Id);
-                //    //            session.ProxyClient.SendComplete();
-                //    //        }
-                //    //    }
-                //    //    else
-                //    //    {
-                //    //        Log.Info( "{0} Closing client connection", session.Id );
-                //    //        EndSession( session, false );
-                //    //    }
-                //    //}
-                //    //else
-                //    //{
-                //    //    EndSession( session, true );
-                //    //    Log.Error(
-                //    //        "An internal error occurred. The response to the client was missing or invaild." );
-                //    //}
-                //}
             }
             catch ( Exception ex )
             {
-                EndSession( session, true );
                 Log.Exception(
-                    session.Id + " An error was received when sending message to the client.", ex );
+                    session.Id + " An error was received when sending message to the client.", ex);
+                EndSession(session, true);
             }
         }
 
@@ -382,15 +358,14 @@ namespace Gallatin.Core.Service
                                                     SocketFlags.None,
                                                     HandleSendToServer,
                                                     session);
-                    
                 }
 
             }
             catch ( Exception ex )
             {
-                EndSession( session, true );
                 Log.Exception(
-                    session.Id + " An error occurred while trying to connect to remote host. ", ex );
+                    session.Id + " An error occurred while trying to connect to remote host. ", ex);
+                EndSession(session, true);
             }
         }
 
@@ -414,21 +389,21 @@ namespace Gallatin.Core.Service
 
                 if ( socketError == SocketError.Success )
                 {
-                    session.ProxyClient.SendComplete();
+                    session.ProxyClient.ServerSendComplete();
                 }
                 else
                 {
-                    EndSession( session, true );
-                    Log.Error( session.Id
+                    Log.Error(session.Id
                                + " An error occurred while sending data to the remote host. "
-                               + socketError );
+                               + socketError);
+                    EndSession(session, true);
                 }
             }
             catch ( Exception ex )
             {
-                EndSession( session, true );
                 Log.Exception(
-                    session.Id + " An error occurred while sending data to the remote host.", ex );
+                    session.Id + " An error occurred while sending data to the remote host.", ex);
+                EndSession(session, true);
             }
         }
 
@@ -451,6 +426,8 @@ namespace Gallatin.Core.Service
             public byte[] ClientBuffer { get; set; }
             public IProxyClient ProxyClient { get; private set; }
             public byte[] ServerBuffer { get; set; }
+            public string Host { get; set; }
+            public int Port { get; set; }
 
             public void EndSession( bool inError )
             {
