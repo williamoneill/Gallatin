@@ -57,7 +57,6 @@
     <Compile Include="Web\IHttpResponseMessage.cs" />
     <Compile Include="Service\INetworkService.cs" />
     <Compile Include="Client\IProxyClient.cs" />
-    <Compile Include="Client\IProxyClientState.cs" />
     <Compile Include="Service\IProxyService.cs" />
     <Compile Include="Util\Log.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

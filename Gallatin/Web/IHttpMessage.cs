@@ -10,6 +10,8 @@ namespace Gallatin.Core.Web
 
         IEnumerable<KeyValuePair<string, string>> Headers { get; }
 
+        string this[ string key ] { get; }
+
         byte[] CreateHttpMessage();
     }
 }

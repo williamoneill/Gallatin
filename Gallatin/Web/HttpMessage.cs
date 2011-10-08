@@ -1,6 +1,8 @@
 
 
+using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 
 namespace Gallatin.Core.Web
@@ -19,6 +21,26 @@ namespace Gallatin.Core.Web
         }
 
         #region IHttpMessage Members
+
+        public string this[string key]
+        {
+            get
+            {
+                if(Headers != null)
+                {
+                    var header =
+                        Headers.FirstOrDefault(
+                            s => s.Key.Equals( key, StringComparison.InvariantCultureIgnoreCase ) );
+
+                    if(header.Equals(default(KeyValuePair<string,string> )))
+                    {
+                        return null;
+                    }
+                    return header.Value;
+                }
+                return null;
+            }
+        }
 
         public byte[] Body { get; private set; }
 

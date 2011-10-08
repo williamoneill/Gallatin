@@ -23,7 +23,7 @@ namespace Gallatin.Core.Web
             new Regex( @"(?<method>\w*)\s*(?<destination>\S*)\sHTTP/(?<version>.*)$" );
 
         private readonly List<byte> _rawData;
-        private int? _Index;
+        private int? _index;
         private byte[] _body;
         private List<byte> _combinedChunkedData;
         private IHttpMessage _completeMessage;
@@ -39,6 +39,35 @@ namespace Gallatin.Core.Web
         }
 
         #region IHttpMessageParser Members
+
+        /// <summary>
+        /// Returns the message header only. The body may be invalid at this point.
+        /// </summary>
+        /// <param name="message"></param>
+        /// <returns></returns>
+        public bool TryGetHeader( out IHttpMessage message )
+        {
+            message = null;
+
+            // TODO: make the header a subclass of HttpMessage. This will save multiple parsings...
+            if(_index.HasValue)
+            {
+                message = CreateMessage();
+            }
+
+            return message != null;
+        }
+
+        /// <summary>
+        /// Gets an array of the raw data that has been appended to the internal buffer
+        /// </summary>
+        public byte[] RawData
+        {
+            get
+            {
+                return _rawData.ToArray();
+            }
+        }
 
         /// <summary>
         /// 	The intent of this method is to attempt to create an HTTP message
@@ -100,12 +129,12 @@ namespace Gallatin.Core.Web
         /// </summary>
         /// <param name = "rawData"></param>
         /// <returns>
-        /// 	A list of header lines or <c>null</c> if the header terminator was not found.
+        /// 	A list of header lines or <c>false</c> if the header terminator was not found.
         /// </returns>
         private bool FindHeaderLines()
         {
             // Return if we already read the complete header
-            if ( _Index.HasValue )
+            if ( _index.HasValue )
             {
                 return true;
             }
@@ -115,14 +144,14 @@ namespace Gallatin.Core.Web
             int startIndex = 0;
             bool headerIncomplete = false;
 
-            while ( !_Index.HasValue
+            while ( !_index.HasValue
                     && !headerIncomplete )
             {
                 int length = FindLengthOfLine( startIndex );
 
                 if ( length == 0 )
                 {
-                    _Index = startIndex + LengthOfCrlf;
+                    _index = startIndex + LengthOfCrlf;
                 }
                 else if ( length != -1 )
                 {
@@ -136,12 +165,12 @@ namespace Gallatin.Core.Web
                 }
             }
 
-            if ( _Index.HasValue )
+            if ( _index.HasValue )
             {
                 _headerLines = lines;
             }
 
-            return _Index.HasValue;
+            return _index.HasValue;
         }
 
         private IHttpMessage CreateMessage()
@@ -235,7 +264,7 @@ namespace Gallatin.Core.Web
             {
                 // TODO: research pre/post asserts in .NET 4
                 Trace.Assert( _headerPairs != null );
-                Trace.Assert( _Index.HasValue );
+                Trace.Assert( _index.HasValue );
 
                 KeyValuePair<string, string> transferEncoding =
                     _headerPairs.Where(
@@ -269,11 +298,11 @@ namespace Gallatin.Core.Web
                         int contentLengthValue = int.Parse( contentLength.Value );
 
                         if ( _rawData.Count
-                             == _Index + contentLengthValue )
+                             == _index + contentLengthValue )
                         {
                             hasReceivedCompleteMessage = true;
                             _body =
-                                _rawData.GetRange( _Index.Value, contentLengthValue )
+                                _rawData.GetRange( _index.Value, contentLengthValue )
                                     .ToArray();
                         }
                     }
@@ -335,7 +364,7 @@ namespace Gallatin.Core.Web
             _combinedChunkedData = new List<byte>();
 
             // Start of message body
-            int startingIndex = _Index.Value;
+            int startingIndex = _index.Value;
 
             // Find first chunk header
             int length = FindLengthOfLine( startingIndex );

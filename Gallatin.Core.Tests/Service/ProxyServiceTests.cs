@@ -176,27 +176,5 @@ namespace Gallatin.Core.Tests.Service
             Assert.That(remoteHost.Stop(), Is.True);
         }
 
-        [Test]
-        public void DownloadProblemPhoto()
-        {
-            var mockFactory = new Mock<IProxyClientFactory>();
-            mockFactory.Setup(s => s.CreateClient()).Returns(new MockProxyClient());
-
-            // Start proxy server under test
-            ProxyService service = new ProxyService(mockFactory.Object);
-            service.Start(8080);
-
-            TcpClient tcpClient = new TcpClient("127.0.0.1", 8080);
-            var stream = tcpClient.GetStream();
-
-            var buffer = File.ReadAllBytes( "testdata\\ProblemImageRequest.raw" );
-            stream.Write( buffer, 0, buffer.Length );
-
-            buffer = new byte[2000000];
-            int bytesRead = stream.Read( buffer, 0, buffer.Length );
-
-            Assert.That(bytesRead, Is.GreaterThan(10000));
-            Assert.That(buffer[0], Is.Not.EqualTo('\0'));
-        }
     }
 }
