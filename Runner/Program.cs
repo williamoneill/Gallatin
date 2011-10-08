@@ -12,10 +12,8 @@ namespace Runner
         {
             try
             {
-                foreach(var file in new DirectoryInfo(".").GetFiles("*.log"))
-                {
-                    file.Delete();
-                }
+                if(File.Exists("proxy.log.txt"))
+                    File.Delete("proxy.log.txt");
 
                 ProxyService server = new ProxyService( new ProxyClientFactory() );
                 server.Start( 8080 );

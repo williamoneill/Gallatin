@@ -21,6 +21,7 @@
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -40,11 +41,14 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Client\DefaultClientState.cs" />
+    <Compile Include="Client\DisconnectedState.cs" />
     <Compile Include="Client\IProxyClientFactory.cs" />
     <Compile Include="Client\ProxyClient.cs">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="Client\ProxyClientFactory.cs" />
+    <Compile Include="Client\SslClientState.cs" />
     <Compile Include="Web\HttpMessage.cs">
       <SubType>Code</SubType>
     </Compile>
