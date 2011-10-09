@@ -18,19 +18,21 @@ namespace Gallatin.Core.Client
 
         public void ClientSendComplete( ProxyClient context )
         {
-            Log.Error( "Proxy client notified of server send when the session was disconnecte" );
+            Log.Error( "Proxy client notified of server send when the session was disconnected" );
         }
 
-        public void NewDataFromServer( ProxyClient context, byte[] data )
+        public bool TryCompleteMessageFromServer( ProxyClient context, byte[] data )
         {
             Log.Error(
-                "Proxy client notified of new data from the server when the session was disconnecte" );
+                "Proxy client notified of new data from the server when the session was disconnected");
+            return true;
         }
 
-        public void NewDataFromClient( ProxyClient context, byte[] data )
+        public bool TryCompleteMessageFromClient( ProxyClient context, byte[] data )
         {
             Log.Error(
-                "Proxy client notified of new data from the client when the session was disconnecte" );
+                "Proxy client notified of new data from the client when the session was disconnected");
+            return true;
         }
 
         #endregion

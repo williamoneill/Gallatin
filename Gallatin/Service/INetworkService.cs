@@ -8,8 +8,8 @@ namespace Gallatin.Core.Service
     {
         void SendServerMessage(IProxyClient client, byte[] message, string host, int port);
         void SendClientMessage( IProxyClient client, byte[] message );
-        void GetDataFromClient( IProxyClient client );
-        void GetDataFromRemoteHost( IProxyClient client );
+        //void GetDataFromClient( IProxyClient client );
+        //void GetDataFromRemoteHost( IProxyClient client );
         void EndClientSession( IProxyClient client );
     }
 }

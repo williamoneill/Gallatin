@@ -165,42 +165,39 @@ namespace Gallatin.Core.Tests.Service
 
             public void ServerSendComplete()
             {
-                _networkService.GetDataFromRemoteHost( this );
             }
 
             public void ClientSendComplete()
             {
-                _networkService.GetDataFromRemoteHost( this );
-
-                if( _pairs[_counter].IsPersistent )
-                    _networkService.GetDataFromClient(this);
-
                 _counter++;
             }
 
-            public void NewDataAvailableFromServer( byte[] data )
+            public bool TryCompleteMessageFromServer( byte[] data )
             {
                 IHttpMessageParser parser = new HttpMessageParser();
-                IHttpMessage message = parser.AppendData( _pairs[_counter].Response );
+                IHttpMessage message = parser.AppendData(_pairs[_counter].Response);
                 IHttpResponseMessage responseMessage = message as IHttpResponseMessage;
-                _networkService.SendClientMessage( this, responseMessage.CreateHttpMessage() );
+                _networkService.SendClientMessage(this, responseMessage.CreateHttpMessage());
+
+                return false;
             }
 
-            public void NewDataAvailableFromClient( byte[] data )
+            public bool TryCompleteMessageFromClient( byte[] data )
             {
                 IHttpMessageParser parser = new HttpMessageParser();
-                IHttpMessage message = parser.AppendData( _pairs[_counter].Request );
+                IHttpMessage message = parser.AppendData(_pairs[_counter].Request);
                 IHttpRequestMessage requestMessage = message as IHttpRequestMessage;
-                _networkService.SendServerMessage( this,
+                _networkService.SendServerMessage(this,
                                                    requestMessage.CreateHttpMessage(),
                                                    requestMessage.Destination.Host,
-                                                   requestMessage.Destination.Port );
+                                                   requestMessage.Destination.Port);
+
+                return false;
             }
 
             public void StartSession( INetworkService networkService )
             {
                 _networkService = networkService;
-                _networkService.GetDataFromClient( this );
             }
 
             #endregion

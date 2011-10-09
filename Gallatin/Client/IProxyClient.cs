@@ -7,8 +7,8 @@ namespace Gallatin.Core.Client
     {
         void ServerSendComplete();
         void ClientSendComplete();
-        void NewDataAvailableFromServer(byte[] data);
-        void NewDataAvailableFromClient( byte[] data);
+        bool TryCompleteMessageFromServer(byte[] data);
+        bool TryCompleteMessageFromClient( byte[] data);
         void StartSession(INetworkService networkService);
     }
 }

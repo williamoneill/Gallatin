@@ -27,25 +27,22 @@ namespace Gallatin.Core.Tests.Client
                 Encoding.UTF8.GetBytes("GET / HTTP/1.1\r\nHost: www.cnn.com\r\n\r\n");
             var responseData2 = Encoding.UTF8.GetBytes("HTTP/1.1 304 Not Modified\r\n\r\n");
 
-            proxyClient.NewDataAvailableFromClient( requestData );
+            proxyClient.TryCompleteMessageFromClient( requestData );
 
             proxyClient.ServerSendComplete();
 
-            proxyClient.NewDataAvailableFromServer( responseData );
+            proxyClient.TryCompleteMessageFromServer( responseData );
 
             proxyClient.ClientSendComplete();
 
-            proxyClient.NewDataAvailableFromClient(requestData2 );
+            proxyClient.TryCompleteMessageFromClient(requestData2 );
 
             proxyClient.ServerSendComplete();
 
-            proxyClient.NewDataAvailableFromServer(responseData2 );
+            proxyClient.TryCompleteMessageFromServer(responseData2 );
 
             proxyClient.ClientSendComplete();
 
-            mockNetworkService.Verify( s => s.GetDataFromClient( proxyClient ), Times.Exactly( 2 ) );
-            mockNetworkService.Verify( s => s.GetDataFromRemoteHost( proxyClient ),
-                                       Times.Exactly( 2 ) );
             mockNetworkService.Verify(
                 s =>
                 s.SendServerMessage( proxyClient, requestData, "www.yahoo.com", 80 ),
@@ -67,50 +64,6 @@ namespace Gallatin.Core.Tests.Client
                 Times.Once() );
         }
 
-        //[Test]
-        //public void VerifyExceptionsInSpecificStates()
-        //{
-        //    Mock<INetworkService> mockNetworkService = new Mock<INetworkService>();
-
-        //    ProxyClient proxyClient = new ProxyClient();
-        //    Assert.Throws<InvalidOperationException>(
-        //        () => proxyClient.NewDataAvailableFromServer( new byte[200] ) );
-        //    Assert.Throws<InvalidOperationException>(
-        //        () => proxyClient.NewDataAvailableFromClient(new byte[200]));
-        //    Assert.Throws<InvalidOperationException>(
-        //        proxyClient.SendComplete );
-
-        //    proxyClient.StartSession( mockNetworkService.Object );
-
-        //    // Accept data from client state
-        //    Assert.Throws<InvalidOperationException>(
-        //        proxyClient.SendComplete);
-        //    Assert.Throws<InvalidOperationException>(
-        //        () => proxyClient.NewDataAvailableFromServer( new byte[200] ));
-        //    proxyClient.NewDataAvailableFromClient(Encoding.UTF8.GetBytes("GET / HTTP/1.1\r\nHost: www.yahoo.com\r\n\r\n"));
-
-        //    // Send request to server state
-        //    Assert.Throws<InvalidOperationException>(
-        //        () => proxyClient.NewDataAvailableFromServer(new byte[200]));
-        //    Assert.Throws<InvalidOperationException>(
-        //        () => proxyClient.NewDataAvailableFromClient(new byte[200]));
-        //    proxyClient.SendComplete();
-
-        //    // Get response from server state
-        //    Assert.Throws<InvalidOperationException>(
-        //        proxyClient.SendComplete);
-        //    Assert.Throws<InvalidOperationException>(
-        //        () => proxyClient.NewDataAvailableFromClient(new byte[200]));
-        //    proxyClient.NewDataAvailableFromServer(Encoding.UTF8.GetBytes("HTTP/1.1 200 OK\r\n\r\n"));
-
-        //    // Send response to client state
-        //    Assert.Throws<InvalidOperationException>(
-        //        () => proxyClient.NewDataAvailableFromServer(new byte[200]));
-        //    Assert.Throws<InvalidOperationException>(
-        //        () => proxyClient.NewDataAvailableFromClient(new byte[200]));
-        //    proxyClient.SendComplete();
-
-        //}
 
         [Test]
         public void VerifyErrorIfHttpResponseIsFirstMessage()
@@ -122,7 +75,7 @@ namespace Gallatin.Core.Tests.Client
             proxyClient.StartSession(mockNetworkService.Object);
 
             Assert.Throws<InvalidCastException>(
-                () => proxyClient.NewDataAvailableFromClient( Encoding.UTF8.GetBytes( "HTTP/1.1 200 OK\r\n\r\n" ) ) );
+                () => proxyClient.TryCompleteMessageFromClient( Encoding.UTF8.GetBytes( "HTTP/1.1 200 OK\r\n\r\n" ) ) );
         }
 
         [Test]
@@ -134,12 +87,12 @@ namespace Gallatin.Core.Tests.Client
 
             proxyClient.StartSession(mockNetworkService.Object);
 
-            proxyClient.NewDataAvailableFromClient(Encoding.UTF8.GetBytes("GET / HTTP/1.1\r\nHost: www.yahoo.com\r\n\r\n"));
+            proxyClient.TryCompleteMessageFromClient(Encoding.UTF8.GetBytes("GET / HTTP/1.1\r\nHost: www.yahoo.com\r\n\r\n"));
 
             proxyClient.ServerSendComplete();
 
             Assert.Throws<InvalidCastException>(
-                () => proxyClient.NewDataAvailableFromServer(Encoding.UTF8.GetBytes("GET / HTTP/1.1\r\nHost: www.yahoo.com\r\n\r\n")));
+                () => proxyClient.TryCompleteMessageFromServer(Encoding.UTF8.GetBytes("GET / HTTP/1.1\r\nHost: www.yahoo.com\r\n\r\n")));
         }
 
     }

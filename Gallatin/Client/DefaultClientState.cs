@@ -21,7 +21,6 @@ namespace Gallatin.Core.Client
         {
             // Prepare to receive the response from the remote host
             _serverMessageParser = new HttpMessageParser();
-            context.NetworkService.GetDataFromRemoteHost( context );
         }
 
         public void ClientSendComplete( ProxyClient context )
@@ -30,7 +29,6 @@ namespace Gallatin.Core.Client
             {
                 // Reset for the next request
                 _clientMessageParser = new HttpMessageParser();
-                context.NetworkService.GetDataFromClient( context );
             }
             else
             {
@@ -39,7 +37,7 @@ namespace Gallatin.Core.Client
             }
         }
 
-        public void NewDataFromServer( ProxyClient context, byte[] data )
+        public bool TryCompleteMessageFromServer(ProxyClient context, byte[] data)
         {
             // Evaluate the server response
             IHttpMessage message = _serverMessageParser.AppendData( data );
@@ -87,11 +85,8 @@ namespace Gallatin.Core.Client
                 context.NetworkService.SendClientMessage( context,
                                                           responseMessage.CreateHttpMessage() );
             }
-            else
-            {
-                // Get more data from the server to complete this message
-                context.NetworkService.GetDataFromRemoteHost( context );
-            }
+
+            return message != null;
 
             //// TODO: this can be more efficient. We are evaluating the same message twice...
             //IHttpMessage header;
@@ -118,7 +113,7 @@ namespace Gallatin.Core.Client
             //}
         }
 
-        public void NewDataFromClient( ProxyClient context, byte[] data )
+        public bool TryCompleteMessageFromClient(ProxyClient context, byte[] data)
         {
             IHttpMessage message = _clientMessageParser.AppendData( data );
 
@@ -149,11 +144,8 @@ namespace Gallatin.Core.Client
                         context, requestMessage.CreateHttpMessage(), context.Host, context.Port );
                 }
             }
-            else
-            {
-                // Not enough data. Get more to complete the message.
-                context.NetworkService.GetDataFromClient( context );
-            }
+
+            return message != null;
         }
 
         #endregion

@@ -20,12 +20,6 @@ namespace Gallatin.Core.Client
 
         public void ServerSendComplete( ProxyClient context )
         {
-            Log.Verbose("SSL--SERVER SEND COMPLETE");
-
-            // Prepare to read more data from the server
-            context.NetworkService.GetDataFromRemoteHost(context);
-            Thread.Sleep(500);
-
             // Notify the client that the send was complete
             //if (!_isFirstSendToServerComplete)
             //{
@@ -47,27 +41,20 @@ namespace Gallatin.Core.Client
 
         public void ClientSendComplete( ProxyClient context )
         {
-            Log.Verbose("SSL--CLIENT SEND COMPLETE");
-
-            context.NetworkService.GetDataFromClient(context);
-
-            Thread.Sleep(1000);
         }
 
-        public void NewDataFromServer( ProxyClient context, byte[] data )
+        public bool TryCompleteMessageFromServer(ProxyClient context, byte[] data)
         {
-            Log.Verbose("SSL--NEW DATA FROM SERVER");
-
             context.NetworkService.SendClientMessage(context, data);
-            Thread.Sleep(1000);
+
+            return false;
         }
 
-        public void NewDataFromClient( ProxyClient context, byte[] data )
+        public bool TryCompleteMessageFromClient(ProxyClient context, byte[] data)
         {   
-            Log.Verbose("SSL--NEW DATA FROM CLIENT");
-
             context.NetworkService.SendServerMessage(context, data, context.Host, context.Port);
-            Thread.Sleep(1000);
+
+            return false;
         }
 
         #endregion

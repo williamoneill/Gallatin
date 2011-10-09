@@ -7,8 +7,8 @@ namespace Gallatin.Core.Client
     {
         void ServerSendComplete( ProxyClient context );
         void ClientSendComplete( ProxyClient context );
-        void NewDataFromServer( ProxyClient context, byte[] data );
-        void NewDataFromClient( ProxyClient context, byte[] data );
+        bool TryCompleteMessageFromServer(ProxyClient context, byte[] data);
+        bool TryCompleteMessageFromClient(ProxyClient context, byte[] data);
     }
 
     internal class ProxyClient : IProxyClient
@@ -36,15 +36,14 @@ namespace Gallatin.Core.Client
             State.ClientSendComplete( this );
         }
 
-        public void NewDataAvailableFromServer( byte[] data )
+        public bool TryCompleteMessageFromServer( byte[] data )
         {
-            State.NewDataFromServer( this, data );
+            return State.TryCompleteMessageFromServer( this, data );
         }
 
-
-        public void NewDataAvailableFromClient( byte[] data )
+        public bool TryCompleteMessageFromClient( byte[] data )
         {
-            State.NewDataFromClient( this, data );
+            return State.TryCompleteMessageFromClient( this, data );
         }
 
         public void StartSession( INetworkService networkService )
@@ -61,7 +60,6 @@ namespace Gallatin.Core.Client
 
             State = new DefaultClientState();
             NetworkService = networkService;
-            NetworkService.GetDataFromClient( this );
         }
 
         #endregion

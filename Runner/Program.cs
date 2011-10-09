@@ -20,6 +20,8 @@ namespace Runner
 
                 Console.WriteLine( "Press any key to terminate" );
                 Console.ReadKey();
+
+                server.Stop();
             }
             catch ( Exception ex )
             {
