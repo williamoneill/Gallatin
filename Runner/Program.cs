@@ -15,7 +15,7 @@ namespace Runner
                 if(File.Exists("proxy.log.txt"))
                     File.Delete("proxy.log.txt");
 
-                ProxyService server = new ProxyService( new ProxyClientFactory() );
+                IProxyService server = new LeanProxyService( );
                 server.Start( 8080 );
 
                 Console.WriteLine( "Press any key to terminate" );

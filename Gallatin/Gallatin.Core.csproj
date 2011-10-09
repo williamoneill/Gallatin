@@ -49,6 +49,7 @@
     </Compile>
     <Compile Include="Client\ProxyClientFactory.cs" />
     <Compile Include="Client\SslClientState.cs" />
+    <Compile Include="Service\LeanProxyService.cs" />
     <Compile Include="Web\HttpMessage.cs">
       <SubType>Code</SubType>
     </Compile>

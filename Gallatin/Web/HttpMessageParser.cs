@@ -22,7 +22,7 @@ namespace Gallatin.Core.Web
         private static readonly Regex _splitRequestHeader =
             new Regex( @"(?<method>\w*)\s*(?<destination>\S*)\sHTTP/(?<version>.*)$" );
 
-        private readonly List<byte> _rawData;
+        private List<byte> _rawData;
         private int? _index;
         private byte[] _body;
         private List<byte> _combinedChunkedData;
@@ -47,15 +47,19 @@ namespace Gallatin.Core.Web
         /// <returns></returns>
         public bool TryGetHeader( out IHttpMessage message )
         {
-            message = null;
-
-            // TODO: make the header a subclass of HttpMessage. This will save multiple parsings...
-            if(_index.HasValue)
+            lock(_mutex)
             {
-                message = CreateMessage();
+                message = null;
+
+                // TODO: make the header a subclass of HttpMessage. This will save multiple parsings...
+                if (_index.HasValue)
+                {
+                    message = CreateMessage();
+                }
+
+                return message != null;
             }
 
-            return message != null;
         }
 
         /// <summary>
@@ -77,30 +81,56 @@ namespace Gallatin.Core.Web
         /// <returns></returns>
         public IHttpMessage AppendData( IEnumerable<byte> rawNetworkContent )
         {
-            _completeMessage = null;
-
-            _rawData.AddRange( rawNetworkContent );
-
-            if ( FindHeaderLines() )
+            lock(_mutex)
             {
-                PopulateHeaderPairs();
+                _completeMessage = null;
 
-                if ( IsReceiveComplete() )
+                _rawData.AddRange(rawNetworkContent);
+
+                if (FindHeaderLines())
                 {
-                    _completeMessage = CreateMessage();
+                    PopulateHeaderPairs();
+
+                    if (IsReceiveComplete())
+                    {
+                        _completeMessage = CreateMessage();
+                    }
                 }
+
+                return _completeMessage;
+                
             }
 
-            return _completeMessage;
         }
 
         #endregion
 
+        private object _mutex = new object();
+
+        public void Reset()
+        {
+            lock(_mutex)
+            {
+                _body = null;
+                _combinedChunkedData = null;
+                _completeMessage = null;
+                _hasBody = false;
+                _headerLines = null;
+                _headerPairs = null;
+                _index = null;
+                _rawData = new List<byte>(60000);
+            }
+        }
+
         public bool TryGetCompleteMessage( out IHttpMessage message )
         {
-            message = _completeMessage;
+            lock(_mutex)
+            {
+                message = _completeMessage;
 
-            return _completeMessage != null;
+                return _completeMessage != null;
+                
+            }
         }
 
         private int FindLengthOfLine( int startingIndex )
@@ -125,12 +155,6 @@ namespace Gallatin.Core.Web
             return length;
         }
 
-        /// <summary>
-        /// </summary>
-        /// <param name = "rawData"></param>
-        /// <returns>
-        /// 	A list of header lines or <c>false</c> if the header terminator was not found.
-        /// </returns>
         private bool FindHeaderLines()
         {
             // Return if we already read the complete header
