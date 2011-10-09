@@ -47,14 +47,14 @@ namespace Gallatin.Core.Client
         {
             context.NetworkService.SendClientMessage(context, data);
 
-            return false;
+            return true;
         }
 
         public bool TryCompleteMessageFromClient(ProxyClient context, byte[] data)
         {   
             context.NetworkService.SendServerMessage(context, data, context.Host, context.Port);
 
-            return false;
+            return true;
         }
 
         #endregion

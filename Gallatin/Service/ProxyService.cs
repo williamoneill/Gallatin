@@ -14,13 +14,18 @@ namespace Gallatin.Core.Service
     public class ProxyService : INetworkService, IProxyService
     {
         private readonly IProxyClientFactory _proxyClientFactory;
+        private readonly object _startStopMutex = new object();
+        private readonly ManualResetEvent _stopTheTroll = new ManualResetEvent( false );
         private List<Session> _activeSessions;
         private Socket _serverSocket;
+        private Thread _troll;
 
         public ProxyService( IProxyClientFactory proxyClientFactory )
         {
             if ( proxyClientFactory == null )
+            {
                 throw new ArgumentNullException( "proxyClientFactory" );
+            }
 
             _proxyClientFactory = proxyClientFactory;
         }
@@ -29,22 +34,34 @@ namespace Gallatin.Core.Service
 
         public void SendServerMessage( IProxyClient client, byte[] message, string host, int port )
         {
+            // TODO: research .NET 4 asserts/preconditions
             Session session = FindSessionByClientReference( client );
             if ( session == null )
+            {
                 throw new ArgumentException( "Invalid client session" );
+            }
 
             if ( client == null )
+            {
                 throw new ArgumentNullException( "client" );
+            }
             if ( message == null )
+            {
                 throw new ArgumentNullException( "message" );
+            }
             if ( host == null )
+            {
                 throw new ArgumentNullException( "host" );
+            }
             if ( port <= 0
                  || port > 65536 )
+            {
                 throw new ArgumentException( "Invalid port range" );
+            }
 
             if ( session.IsActive )
             {
+                // TODO: move the activity time update to setting the buffer property
                 session.LastActivityTime = DateTime.Now;
                 session.ServerBuffer = message;
 
@@ -81,11 +98,6 @@ namespace Gallatin.Core.Service
                                                        SocketType.Stream,
                                                        ProtocolType.Tcp );
 
-                    // TODO: re-evaluate
-                    session.ServerSocket.SetSocketOption( SocketOptionLevel.Socket,
-                                                          SocketOptionName.KeepAlive,
-                                                          1 );
-
                     session.ServerSocket.BeginConnect( host,
                                                        port,
                                                        HandleConnectToServer,
@@ -113,19 +125,25 @@ namespace Gallatin.Core.Service
         public void SendClientMessage( IProxyClient client, byte[] message )
         {
             if ( client == null )
+            {
                 throw new ArgumentNullException( "client" );
+            }
             if ( message == null )
+            {
                 throw new ArgumentNullException( "message" );
+            }
 
             Session session = FindSessionByClientReference( client );
             if ( session == null )
+            {
                 throw new ArgumentException( "Invalid client session" );
+            }
 
             if ( session.IsActive )
             {
                 session.LastActivityTime = DateTime.Now;
 
-                Log.Info("{0} ProxyServer::SendMessage -- Sending response to client",
+                Log.Info( "{0} ProxyServer::SendMessage -- Sending response to client",
                           session.Id );
 
                 session.ClientBuffer = message;
@@ -143,29 +161,34 @@ namespace Gallatin.Core.Service
         public void EndClientSession( IProxyClient client )
         {
             if ( client == null )
+            {
                 throw new ArgumentNullException( "client" );
+            }
 
             Session session = FindSessionByClientReference( client );
             if ( session == null )
+            {
                 throw new ArgumentException( "Invalid client session" );
+            }
 
             if ( session.IsActive )
+            {
                 EndSession( session, false );
+            }
         }
 
         #endregion
 
         #region IProxyService Members
 
-        private object _startStopMutex = new object();
-        private Thread _troll;
-
         public void Start( int port )
         {
-            if (_serverSocket != null)
+            if ( _serverSocket != null )
+            {
                 throw new InvalidOperationException( "Server has already been started" );
+            }
 
-            lock(_startStopMutex)
+            lock ( _startStopMutex )
             {
                 _troll = new Thread( SessionTrollMethod )
                          {
@@ -174,79 +197,80 @@ namespace Gallatin.Core.Service
                          };
                 _troll.Start();
 
-                Log.Info("Starting Proxy Server. Rock on, my friend, rock on!");
+                Log.Info( "Starting Proxy Server. Rock on, my friend, rock on!" );
 
                 _activeSessions = new List<Session>();
 
-                _serverSocket = new Socket(AddressFamily.InterNetwork,
+                _serverSocket = new Socket( AddressFamily.InterNetwork,
                                             SocketType.Stream,
-                                            ProtocolType.Tcp);
+                                            ProtocolType.Tcp );
 
                 IPAddress hostAddress =
-                    (Dns.GetHostEntry("127.0.0.1")).AddressList[0];
-                IPEndPoint endPoint = new IPEndPoint(hostAddress, port);
+                    ( Dns.GetHostEntry( "127.0.0.1" ) ).AddressList[0];
+                IPEndPoint endPoint = new IPEndPoint( hostAddress, port );
 
-                _serverSocket.Bind(endPoint);
+                _serverSocket.Bind( endPoint );
 
-                _serverSocket.Listen(30);
+                _serverSocket.Listen( 30 );
 
-                _serverSocket.BeginAccept(HandleNewConnect, null);
+                _serverSocket.BeginAccept( HandleNewConnect, null );
             }
-
-        }
-
-        private ManualResetEvent _stopTheTroll = new ManualResetEvent(false);
-
-        private void SessionTrollMethod()
-        {
-            while (!_stopTheTroll.WaitOne(30000))
-            {
-                Log.Verbose("Troll active");
-
-                // Trolling for little, dead sessions...
-                lock( _activeSessions )
-                {
-                    foreach(var session in _activeSessions.ToArray())
-                    {
-                        if(session.LastActivityTime < DateTime.Now.AddSeconds(-10))
-                        {
-                            Log.Warning("{0} Killing session due to inactivity.", session.Id);
-                            EndSession(session, true);
-                        }
-                    }
-                }
-
-                Log.Verbose("Troll sleeping...");
-            }
-
-            Log.Verbose("Troll stopped");
         }
 
         public void Stop()
         {
-            if (_serverSocket == null)
-                throw new InvalidOperationException( "Server has not been started" );
-
-            _stopTheTroll.Set();
-
-            lock (_startStopMutex)
+            if ( _serverSocket == null )
             {
-                if (_serverSocket.Connected)
-                    _serverSocket.Shutdown(SocketShutdown.Both);
+                throw new InvalidOperationException( "Server has not been started" );
+            }
+
+            lock ( _startStopMutex )
+            {
+                _stopTheTroll.Set();
+
+                if ( _serverSocket.Connected )
+                {
+                    _serverSocket.Shutdown( SocketShutdown.Both );
+                }
                 _serverSocket.Close();
                 _serverSocket = null;
             }
 
-            if (!_troll.Join(5000))
+            if ( !_troll.Join( 5000 ) )
             {
-                Log.Warning("Failed to terminate session monitor thread. Attempting to abort thread...");
+                Log.Warning(
+                    "Failed to terminate session monitor thread. Attempting to abort thread..." );
                 _troll.Abort();
             }
-
-
         }
 
         #endregion
+
+        private void SessionTrollMethod()
+        {
+            while ( !_stopTheTroll.WaitOne( 30000 ) )
+            {
+                Log.Verbose( "Troll active" );
+
+                lock ( _activeSessions )
+                {
+                    foreach ( Session session in _activeSessions.ToArray() )
+                    {
+                        // Kill all sessions that have been idle
+                        if ( session.LastActivityTime
+                             < DateTime.Now.AddSeconds( -30 ) )
+                        {
+                            Log.Warning( "{0} Killing session due to inactivity.", session.Id );
+                            EndSession( session, true );
+                        }
+                    }
+                }
+
+                Log.Verbose( "Troll sleeping..." );
+            }
+
+            Log.Verbose( "Troll stopped" );
+        }
 
         private Session FindSessionByClientReference( IProxyClient proxyClient )
         {
@@ -256,19 +280,20 @@ namespace Gallatin.Core.Service
         private void EndSession( Session session, bool inError )
         {
             Log.Info( "{0} Ending session", session.Id );
-            session.EndSession( inError );
 
-            lock(_activeSessions)
+            lock ( _activeSessions )
             {
-                _activeSessions.Remove(session);
+                _activeSessions.Remove( session );
             }
+
+            session.EndSession( inError );
         }
 
         private void HandleNewConnect( IAsyncResult ar )
         {
             try
             {
-                // Server may be in the process of shutting down. Ignore connections.
+                // Server may be in the process of shutting down. Ignore pending connect notifications.
                 if ( _serverSocket != null )
                 {
                     Socket clientSocket = _serverSocket.EndAccept( ar );
@@ -280,9 +305,9 @@ namespace Gallatin.Core.Service
 
                     Session session = new Session( clientSocket, proxyClient );
 
-                    lock(_activeSessions)
+                    lock ( _activeSessions )
                     {
-                        _activeSessions.Add(session);
+                        _activeSessions.Add( session );
                     }
 
                     Log.Info( "{0} New client connect", session.Id );
@@ -314,7 +339,7 @@ namespace Gallatin.Core.Service
             {
                 session.LastActivityTime = DateTime.Now;
 
-                int bytesReceived = session.ClientSocket.EndReceive(ar);
+                int bytesReceived = session.ClientSocket.EndReceive( ar );
 
                 if ( bytesReceived > 0 )
                 {
@@ -331,12 +356,14 @@ namespace Gallatin.Core.Service
 
                     if ( !session.ProxyClient.TryCompleteMessageFromClient(
                         session.ClientBuffer.Take( bytesReceived ).ToArray() ) )
+                    {
                         session.ClientSocket.BeginReceive( session.ClientBuffer,
                                                            0,
                                                            session.ClientBuffer.Length,
                                                            SocketFlags.None,
                                                            HandleDataFromClient,
                                                            session );
+                    }
                 }
                 else
                 {
@@ -368,7 +395,7 @@ namespace Gallatin.Core.Service
             {
                 session.LastActivityTime = DateTime.Now;
 
-                int bytesReceived = session.ServerSocket.EndReceive(ar);
+                int bytesReceived = session.ServerSocket.EndReceive( ar );
 
                 if ( bytesReceived > 0 )
                 {
@@ -385,12 +412,14 @@ namespace Gallatin.Core.Service
 
                     if ( !session.ProxyClient.TryCompleteMessageFromServer(
                         session.ServerBuffer.Take( bytesReceived ).ToArray() ) )
+                    {
                         session.ServerSocket.BeginReceive( session.ServerBuffer,
                                                            0,
                                                            session.ServerBuffer.Length,
                                                            SocketFlags.None,
                                                            HandleDataFromRemoteHost,
                                                            session );
+                    }
                 }
                 else
                 {
@@ -420,7 +449,7 @@ namespace Gallatin.Core.Service
             try
             {
                 session.LastActivityTime = DateTime.Now;
-                
+
                 SocketError socketError;
                 int dataSent = session.ClientSocket.EndSend( ar, out socketError );
 
@@ -438,6 +467,16 @@ namespace Gallatin.Core.Service
                 {
                     Log.Info( "{0} Completed data send to client.", session.Id );
                     session.ProxyClient.ClientSendComplete();
+
+                    // Prepare to read more data from the client socket
+                    session.ClientBuffer = new byte[Session.BufferSize];
+
+                    session.ClientSocket.BeginReceive(session.ClientBuffer,
+                                                       0,
+                                                       session.ClientBuffer.Length,
+                                                       SocketFlags.None,
+                                                       HandleDataFromClient,
+                                                       session);
                 }
             }
             catch ( Exception ex )
@@ -455,13 +494,13 @@ namespace Gallatin.Core.Service
         private void HandleConnectToServer( IAsyncResult ar )
         {
             Session session = ar.AsyncState as Session;
-            Trace.Assert(session != null);
+            Trace.Assert( session != null );
 
             try
             {
                 session.LastActivityTime = DateTime.Now;
 
-                session.ServerSocket.EndConnect(ar);
+                session.ServerSocket.EndConnect( ar );
 
                 Log.Info( "{0} Connection established. Sending data to remote host.", session.Id );
 
@@ -487,21 +526,35 @@ namespace Gallatin.Core.Service
         private void HandleSendToServer( IAsyncResult ar )
         {
             Session session = ar.AsyncState as Session;
-            Trace.Assert(session != null);
+            Trace.Assert( session != null );
 
             try
             {
                 session.LastActivityTime = DateTime.Now;
 
                 SocketError socketError;
-                session.ServerSocket.EndSend( ar, out socketError );
+                int dataSent = session.ServerSocket.EndSend( ar, out socketError );
 
+                if(socketError != SocketError.Success)
+                {
+                    Log.Error(session.Id
+                               + " An error occurred while sending data to the remote host. "
+                               + socketError);
+                    EndSession(session, true);
+                    
+                }
+                else if(dataSent == 0)
+                {
+                    Log.Warning("{0} 0 bytes sent to server. Closing session.", session.Id);
+                    EndSession(session, false);
+                }
                 if ( socketError == SocketError.Success )
                 {
-                    Log.Info("{0} Data sent to remote host", session.Id);
+                    Log.Info( "{0} Data sent to remote host", session.Id );
 
                     session.ProxyClient.ServerSendComplete();
 
+                    // Prepare to read more data from server socket
                     session.ServerBuffer = new byte[Session.BufferSize];
 
                     session.ServerSocket.BeginReceive( session.ServerBuffer,
@@ -510,13 +563,6 @@ namespace Gallatin.Core.Service
                                                        SocketFlags.None,
                                                        HandleDataFromRemoteHost,
                                                        session );
-                }
-                else
-                {
-                    Log.Error( session.Id
-                               + " An error occurred while sending data to the remote host. "
-                               + socketError );
-                    EndSession( session, true );
                 }
             }
             catch ( Exception ex )
@@ -574,9 +620,11 @@ namespace Gallatin.Core.Service
                             if ( ClientSocket.Connected )
                             {
                                 if ( inError )
+                                {
                                     ClientSocket.Send(
                                         Encoding.UTF8.GetBytes(
                                             "HTTP/1.0 500 Internal Server Error\r\nContent-Length: 11\r\n\r\nProxy error" ) );
+                                }
 
                                 ClientSocket.Shutdown( SocketShutdown.Both );
                             }
@@ -587,7 +635,9 @@ namespace Gallatin.Core.Service
                         if ( ServerSocket != null )
                         {
                             if ( ServerSocket.Connected )
+                            {
                                 ServerSocket.Shutdown( SocketShutdown.Both );
+                            }
 
                             ServerSocket.Close();
                         }
