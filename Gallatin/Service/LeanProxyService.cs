@@ -106,8 +106,8 @@ namespace Gallatin.Core.Service
             {
                 request.Session.ServerSocket.EndConnect( ar );
 
-                Log.Info( "{0} Connection established. Sending data to remote host.",
-                          request.Session.Id );
+                Log.Info("{0} Connection established. Sending data to remote host.",
+                            request.Session.Id);
 
                 ProxyRequest newRequest = new ProxyRequest(request.Session);
 
@@ -115,15 +115,23 @@ namespace Gallatin.Core.Service
                 if (newRequest.Session.ClientMessageParser.TryGetCompleteMessage(
                         out message))
                 {
-                    newRequest.Buffer = message.CreateHttpMessage();
+                    if(request.Session.IsSsl)
+                    {
+                        SslTunnel sslTunnel = new SslTunnel(request.Session.ClientSocket, request.Session.ServerSocket, message.Version, request.Session.Id);
+                        sslTunnel.EstablishTunnel();
+                    }
+                    else
+                    {
+                        newRequest.Buffer = message.CreateHttpMessage();
 
-                    newRequest.Session.ServerSocket.BeginSend(
-                        newRequest.Buffer,
-                        0,
-                        newRequest.Buffer.Length,
-                        SocketFlags.None,
-                        HandleDataSentToServer,
-                        newRequest);
+                        newRequest.Session.ServerSocket.BeginSend(
+                            newRequest.Buffer,
+                            0,
+                            newRequest.Buffer.Length,
+                            SocketFlags.None,
+                            HandleDataSentToServer,
+                            newRequest);
+                    }
                 }
             }
             catch ( Exception ex )
