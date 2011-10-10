@@ -17,15 +17,22 @@ namespace Gallatin.Core.Service
 
         #region IProxyService Members
 
+        private ICoreSettings _settings;
+
+        public LeanProxyService(ICoreSettings settings)
+        {
+            _settings = settings;
+        }
+
         public void Start( int port )
         {
             _serverSocket = new Socket( AddressFamily.InterNetwork,
                                         SocketType.Stream,
                                         ProtocolType.Tcp );
 
-            IPAddress hostAddress =
-                ( Dns.GetHostEntry( "127.0.0.1" ) ).AddressList[0];
-            IPEndPoint endPoint = new IPEndPoint( hostAddress, port );
+            var dnsEntry = Dns.GetHostEntry("localhost");
+
+            IPEndPoint endPoint = new IPEndPoint( dnsEntry.AddressList[_settings.NetworkAddressBindingOrdinal], port );
 
             _serverSocket.Bind( endPoint );
 

@@ -49,8 +49,11 @@
     </Compile>
     <Compile Include="Client\ProxyClientFactory.cs" />
     <Compile Include="Client\SslClientState.cs" />
+    <Compile Include="CoreSettings.cs" />
+    <Compile Include="ICoreSettings.cs" />
     <Compile Include="Service\LeanProxyService.cs" />
     <Compile Include="Service\SslTunnel.cs" />
+    <Compile Include="SharedAssemblyInfo.cs" />
     <Compile Include="Web\HttpMessage.cs">
       <SubType>Code</SubType>
     </Compile>
@@ -67,9 +70,6 @@
     <Compile Include="Util\Log.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Service\ProxyService.cs" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="ClassDiagram.cd" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Rules\" />
