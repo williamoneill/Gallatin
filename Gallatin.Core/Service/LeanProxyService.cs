@@ -1,4 +1,5 @@
 ﻿using System;
+using System.ComponentModel.Composition;
 using System.Diagnostics;
 using System.Linq;
 using System.Net;
@@ -12,13 +13,14 @@ namespace Gallatin.Core.Service
 {
     public class LeanProxyService : IProxyService
     {
-        private const int BufferSize = 8000;
+        private const int BufferSize = 8192;
         private Socket _serverSocket;
 
         #region IProxyService Members
 
         private ICoreSettings _settings;
 
+        [ImportingConstructor]
         public LeanProxyService(ICoreSettings settings)
         {
             _settings = settings;

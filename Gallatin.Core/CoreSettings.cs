@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.Composition;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -7,6 +8,7 @@ using System.Xml.Serialization;
 
 namespace Gallatin.Core
 {
+    [Export(typeof(ICoreSettings))]
     public class CoreSettings : ICoreSettings
     {
         private const string SettingsFileName = "settings.xml";

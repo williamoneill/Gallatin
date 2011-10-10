@@ -1,4 +1,5 @@
 ﻿using System;
+using System.ComponentModel.Composition.Hosting;
 using System.Reflection;
 using Gallatin.Core;
 using Gallatin.Core.Client;
@@ -16,6 +17,11 @@ namespace Runner
             {
                 if(File.Exists("proxy.log.txt"))
                     File.Delete("proxy.log.txt");
+
+                //http://msdn.microsoft.com/en-us/library/dd460648.aspx
+                //http://msdn.microsoft.com/en-us/magazine/ee291628.aspx
+                //var catalog = new AggregateCatalog();
+                //catalog.Catalogs.Add(new AssemblyCatalog(typeof()));
 
                 ICoreSettings settings = CoreSettings.Load();
 
