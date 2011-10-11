@@ -55,8 +55,6 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Client\ProxyClientTests.cs" />
-    <Compile Include="Service\ProxyServiceTests.cs" />
     <Compile Include="Web\HttpMessageParserTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
@@ -86,6 +84,9 @@
       <Project>{FFDB4E9F-EB29-42E5-AC61-2017FC358D86}</Project>
       <Name>Gallatin.Core</Name>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Service\" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
