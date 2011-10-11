@@ -24,10 +24,10 @@ namespace Gallatin.Core
                     return serializer.Deserialize(stream) as ICoreSettings;
                 }
             }
-            else
-            {
-                return new CoreSettings();
-            }
+
+            CoreSettings settings = new CoreSettings();
+            Save(settings);
+            return settings;
 
         }
 
