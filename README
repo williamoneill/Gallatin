@@ -1,1 +1,16 @@
-This is--or soon will be--a content filtering proxy written in .NET. It will resemble DansGuardian, which unfortunately does not run on Windows.
+Gallatin is a content filtering web proxy. It is currently in its infancy, but will damn sweet soon enough.
+
+Special thanks to Brandon Johnson for all of his efforts in the UI.
+
+==Developer notes==
+To build:
+1. Visual Studio 2010 with web developer and MVC3
+2. Install Nuget (http://nuget.org/) which will automatically install dependent packages (NUnit, Moq, etc.) during the build
+3. .NET 4.0
+
+
+
+Thanks and enjoy,
+
+Bill O'Neill
+william.w.oneill@gmail.com
