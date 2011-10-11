@@ -53,6 +53,9 @@
     <Compile Include="CoreSettings.cs" />
     <Compile Include="ICoreSettings.cs" />
     <Compile Include="Service\LeanProxyService.cs" />
+    <Compile Include="Service\ServerStream.cs">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="Service\SslTunnel.cs" />
     <Compile Include="SharedAssemblyInfo.cs" />
     <Compile Include="Web\HttpMessage.cs">

@@ -14,17 +14,17 @@ namespace Gallatin.Core.Service
     public class LeanProxyService : IProxyService
     {
         private const int BufferSize = 8192;
+
+        private readonly ICoreSettings _settings;
         private Socket _serverSocket;
 
-        #region IProxyService Members
-
-        private ICoreSettings _settings;
-
         [ImportingConstructor]
-        public LeanProxyService(ICoreSettings settings)
+        public LeanProxyService( ICoreSettings settings )
         {
             _settings = settings;
         }
+
+        #region IProxyService Members
 
         public void Start( int port )
         {
@@ -32,9 +32,10 @@ namespace Gallatin.Core.Service
                                         SocketType.Stream,
                                         ProtocolType.Tcp );
 
-            var dnsEntry = Dns.GetHostEntry("localhost");
+            IPHostEntry dnsEntry = Dns.GetHostEntry( "localhost" );
 
-            IPEndPoint endPoint = new IPEndPoint( dnsEntry.AddressList[_settings.NetworkAddressBindingOrdinal], port );
+            IPEndPoint endPoint =
+                new IPEndPoint( dnsEntry.AddressList[_settings.NetworkAddressBindingOrdinal], port );
 
             _serverSocket.Bind( endPoint );
 
@@ -115,18 +116,21 @@ namespace Gallatin.Core.Service
             {
                 request.Session.ServerSocket.EndConnect( ar );
 
-                Log.Info("{0} Connection established. Sending data to remote host.",
-                            request.Session.Id);
+                Log.Info( "{0} Connection established. Sending data to remote host.",
+                          request.Session.Id );
 
-                ProxyRequest newRequest = new ProxyRequest(request.Session);
+                ProxyRequest newRequest = new ProxyRequest( request.Session );
 
                 IHttpMessage message;
-                if (newRequest.Session.ClientMessageParser.TryGetCompleteMessage(
-                        out message))
+                if ( newRequest.Session.ClientMessageParser.TryGetCompleteMessage(
+                    out message ) )
                 {
-                    if(request.Session.IsSsl)
+                    if ( request.Session.IsSsl )
                     {
-                        SslTunnel sslTunnel = new SslTunnel(request.Session.ClientSocket, request.Session.ServerSocket, message.Version, request.Session.Id);
+                        SslTunnel sslTunnel = new SslTunnel( request.Session.ClientSocket,
+                                                             request.Session.ServerSocket,
+                                                             message.Version,
+                                                             request.Session.Id );
                         sslTunnel.EstablishTunnel();
                     }
                     else
@@ -139,7 +143,7 @@ namespace Gallatin.Core.Service
                             newRequest.Buffer.Length,
                             SocketFlags.None,
                             HandleDataSentToServer,
-                            newRequest);
+                            newRequest );
                     }
                 }
             }
@@ -181,6 +185,12 @@ namespace Gallatin.Core.Service
                 else
                 {
                     Log.Info( "{0} Completed data send to client.", request.Session.Id );
+
+                    if ( request.Session.ServerStream != null )
+                    {
+                        request.Session.ServerStream.Stop();
+                        request.Session.ServerStream = null;
+                    }
 
                     IHttpMessage message;
 
@@ -295,14 +305,41 @@ namespace Gallatin.Core.Service
                     }
                     else
                     {
-                        ProxyRequest newRequest = new ProxyRequest( request.Session );
-                        newRequest.Session.ServerSocket.BeginReceive(
-                            newRequest.Buffer,
-                            0,
-                            newRequest.Buffer.Length,
-                            SocketFlags.None,
-                            HandleDataFromServer,
-                            newRequest );
+                        // Evaluate for streaming data. Firehose the data from the server if it is binary content.
+                        IHttpMessage header;
+                        if ( request.Session.ServerMessageParser.TryGetHeader( out header )
+                            && header["content-type"] != null && !header["content-type"].StartsWith("text/"))
+                        {
+                            int? length = null;
+                            int contentLengthInt;
+                            string contentLength = header["content-length"];
+                            if(contentLength != null )
+                            {
+                                if(int.TryParse(contentLength, out contentLengthInt))
+                                {
+                                    length = contentLengthInt;
+                                }
+                            }
+
+                            request.Session.ServerStream =
+                                new ServerStream( request.Session.ClientSocket,
+                                                    request.Session.ServerSocket,
+                                                    request.Session.Id,
+                                                    request.Buffer.Take( bytesReceived ).ToArray(),
+                                                    length);
+                            request.Session.ServerStream.Start();
+                        }
+                        else
+                        {
+                            ProxyRequest newRequest = new ProxyRequest( request.Session );
+                            newRequest.Session.ServerSocket.BeginReceive(
+                                newRequest.Buffer,
+                                0,
+                                newRequest.Buffer.Length,
+                                SocketFlags.None,
+                                HandleDataFromServer,
+                                newRequest );
+                        }
                     }
                 }
                 else
@@ -406,14 +443,14 @@ namespace Gallatin.Core.Service
                         }
 
                         // TODO: remove --  for debug only
-                        if(host.Contains("127.0.0.1"))
+                        if ( host.Contains( "127.0.0.1" ) )
                         {
-                            Log.Verbose("{0} Found local host", request.Session.Id);
+                            Log.Verbose( "{0} Found local host", request.Session.Id );
 
                             IHttpMessage message;
                             request.Session.ClientMessageParser.TryGetCompleteMessage( out message );
-                            
-                            Log.Verbose(Encoding.UTF8.GetString(message.CreateHttpMessage()));
+
+                            Log.Verbose( Encoding.UTF8.GetString( message.CreateHttpMessage() ) );
                         }
 
                         request.Session.Host = host;
@@ -442,7 +479,7 @@ namespace Gallatin.Core.Service
 
                         IHttpMessage message;
                         if ( newRequest.Session.ClientMessageParser.TryGetCompleteMessage(
-                                out message ) )
+                            out message ) )
                         {
                             newRequest.Buffer = message.CreateHttpMessage();
 
@@ -580,6 +617,7 @@ namespace Gallatin.Core.Service
                 IsActive = true;
             }
 
+            public ServerStream ServerStream { get; set; }
             public Guid Id { get; private set; }
             public Socket ClientSocket { get; set; }
             public Socket ServerSocket { get; set; }
