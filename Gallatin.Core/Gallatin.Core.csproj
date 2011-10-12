@@ -52,6 +52,7 @@
     <Compile Include="Client\SslClientState.cs" />
     <Compile Include="CoreSettings.cs" />
     <Compile Include="ICoreSettings.cs" />
+    <Compile Include="Service\INetworkFacade.cs" />
     <Compile Include="Service\LeanProxyService.cs" />
     <Compile Include="Service\ServerStream.cs">
       <SubType>Code</SubType>
