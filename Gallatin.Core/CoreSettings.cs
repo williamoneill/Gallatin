@@ -26,6 +26,10 @@ namespace Gallatin.Core
             }
 
             CoreSettings settings = new CoreSettings();
+            
+            // Set up defaults
+            settings.ServerPort = 8080;
+            
             Save(settings);
             return settings;
 
@@ -46,5 +50,7 @@ namespace Gallatin.Core
         {
             get; set;
         }
+
+        public int ServerPort { get; set; }
     }
 }

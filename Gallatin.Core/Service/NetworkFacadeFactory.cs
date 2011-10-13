@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
 using Gallatin.Core.Util;
+using System.Diagnostics.Contracts;
 
 namespace Gallatin.Core.Service
 {
@@ -18,8 +19,10 @@ namespace Gallatin.Core.Service
 
         private void HandleConnect(IAsyncResult ar)
         {
+            Contract.Assert(ar != null);
+            Contract.Assert(ar.AsyncState is ConnectState);
+
             ConnectState state = ar.AsyncState as ConnectState;
-            Trace.Assert(state != null);
 
             try
             {
@@ -91,10 +94,8 @@ namespace Gallatin.Core.Service
 
         public void Listen(int hostInterfaceIndex, int port, Action<INetworkFacade> callback)
         {
-            if(_socket != null)
-            {
-                throw new InvalidOperationException( "Instance has already been started" );
-            }
+            if (_socket != null)
+                throw new InvalidOperationException( "Factory already listening for connections. Listen method called twice." );
 
             _clientConnectCallback = callback;
 

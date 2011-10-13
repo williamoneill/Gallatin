@@ -15,13 +15,18 @@ namespace Gallatin.Core.Service
 
         public NetworkFacade(Socket socket)
         {
+            Contract.Requires(socket != null);
+            Contract.Requires(socket.Connected);
+
             _socket = socket;
         }
 
         private void HandleSend(IAsyncResult ar)
         {
-            Action<bool> callback = ar.AsyncState as Action<bool>;
-            Trace.Assert(callback != null);
+            Contract.Requires(ar != null);
+            Contract.Requires(ar.AsyncState is Action<bool,INetworkFacade>);
+
+            Action<bool, INetworkFacade> callback = ar.AsyncState as Action<bool, INetworkFacade>;
 
             try
             {
@@ -31,27 +36,27 @@ namespace Gallatin.Core.Service
                 if( bytesSent == 0)
                 {
                     Log.Info("{0} Socket disconnected", _socket.GetHashCode());
-                    callback( false );
+                    callback( false, this );
                 }
                 else if(socketError != SocketError.Success)
                 {
                     Log.Error("{0} Socket error: {1}", _socket.GetHashCode(), socketError);
-                    callback( false );
+                    callback( false, this );
                 }
                 else
                 {
-                    callback( true );
+                    callback( true, this );
                 }
 
             }
             catch ( Exception ex )
             {
                 Log.Exception(string.Format("{0} Error receiving network data", _socket.GetHashCode()), ex );
-                callback( false );
+                callback( false, this );
             }
         }
 
-        public void BeginSend( byte[] buffer, Action<bool> callback )
+        public void BeginSend( byte[] buffer, Action<bool,INetworkFacade> callback )
         {
             _sendBuffer = buffer;
             _socket.BeginSend( _sendBuffer,
@@ -64,8 +69,10 @@ namespace Gallatin.Core.Service
 
         private void HandleReceive(IAsyncResult ar)
         {
-            Action<bool, byte[]> callback = ar.AsyncState as Action<bool, byte[]>;
-            Trace.Assert(callback!= null);
+            Contract.Requires(ar != null);
+            Contract.Requires(ar.AsyncState is Action<bool, byte[], INetworkFacade>);
+
+            Action<bool, byte[], INetworkFacade> callback = ar.AsyncState as Action<bool, byte[], INetworkFacade>;
 
             try
             {
@@ -75,27 +82,27 @@ namespace Gallatin.Core.Service
                 if(bytesReceived == 0)
                 {
                     Log.Info("{0} Lost connection while receiving data", _socket.GetHashCode());
-                    callback( false, null );
+                    callback( false, null, this );
                 }
                 else if(socketError != SocketError.Success)
                 {
                     Log.Info("{0} Network error encountered while receiving data: {1}", _socket.GetHashCode(), socketError);
-                    callback(false, null);
+                    callback(false, null, this);
                 }
                 else
                 {
-                    callback( true, _receiveBuffer.Take( bytesReceived ).ToArray() );
+                    callback( true, _receiveBuffer.Take( bytesReceived ).ToArray(), this );
                 }
             }
             catch ( Exception ex )
             {
                 Log.Exception(string.Format("{0} Unhandled exception while receiving data", _socket.GetHashCode()), ex);
-                callback( false, null );
+                callback( false, null, this );
             }
 
         }
 
-        public void BeginReceive( Action<bool, byte[]> callback )
+        public void BeginReceive(Action<bool, byte[], INetworkFacade> callback)
         {
             _receiveBuffer = new byte[8000];
             _socket.BeginReceive( _receiveBuffer,
@@ -108,26 +115,32 @@ namespace Gallatin.Core.Service
 
         private void HandleDisconnect(IAsyncResult ar)
         {
-            Contract.Assert(ar.AsyncState is Action<bool>);
+            Contract.Requires(ar.AsyncState is Action<bool, INetworkFacade>);
 
-            Action<bool> callback = ar.AsyncState as Action<bool>;
-            Trace.Assert(callback != null);
+            Action<bool, INetworkFacade> callback = ar.AsyncState as Action<bool, INetworkFacade>;
 
             try
             {
-
+                _socket.EndDisconnect(ar);
+                _socket.Close();
+                callback( true, this );
             }
             catch ( Exception ex )
             {
                 Log.Exception(string.Format("{0} Unhandled exception when shutting down connection", _socket.GetHashCode()), ex);
+                callback( false, this );
             }
         }
 
-        public void BeginClose( Action<bool> callback )
+        public void BeginClose(Action<bool, INetworkFacade> callback)
         {
-            Contract.Requires( callback != null );
-
+            _socket.Shutdown(SocketShutdown.Both);
             _socket.BeginDisconnect( false, HandleDisconnect, callback );
+        }
+
+        public object Context
+        {
+            get; set;
         }
     }
 }

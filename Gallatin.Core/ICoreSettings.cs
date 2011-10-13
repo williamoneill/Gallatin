@@ -15,5 +15,7 @@ namespace Gallatin.Core
             get;
             set;
         }
+
+        int ServerPort { get; set; }
     }
 }

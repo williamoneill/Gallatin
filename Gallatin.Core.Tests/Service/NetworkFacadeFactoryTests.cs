@@ -52,12 +52,19 @@ namespace Gallatin.Core.Tests.Service
         }
 
         [Test]
-        public void DuplicateListenTest()
+        [ExpectedException]
+        public void SanityVerifyInterFaceContract()
         {
             NetworkFacadeFactory factory = new NetworkFacadeFactory();
-            factory.Listen( 1, 8080, s => s.ToString() );
+            factory.Listen(-1,-1, null);
+        }
 
-            Assert.Throws<InvalidOperationException>( () => factory.Listen( 1, 8080, s => s.ToString() ) );
+        [Test]
+        public void DuplicateListenFails()
+        {
+            NetworkFacadeFactory factory = new NetworkFacadeFactory();
+            factory.Listen( 1, 20201, s => s.ToString());
+            Assert.Throws<InvalidOperationException>( () => factory.Listen( 1, 20202, s => s.ToString() ) );
         }
 
         [Test]
