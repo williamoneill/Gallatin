@@ -55,7 +55,7 @@ namespace Gallatin.Core.Service
         {
             Contract.Requires(sessionContext != null);
 
-            if(sessionContext.ServerConnection == null)
+            if(sessionContext.ServerConnection == null || sessionContext.Host)
             {
                 
             }

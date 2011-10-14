@@ -442,17 +442,6 @@ namespace Gallatin.Core.Service
                             request.Session.ServerSocket.Close();
                         }
 
-                        // TODO: remove --  for debug only
-                        if ( host.Contains( "127.0.0.1" ) )
-                        {
-                            Log.Verbose( "{0} Found local host", request.Session.Id );
-
-                            IHttpMessage message;
-                            request.Session.ClientMessageParser.TryGetCompleteMessage( out message );
-
-                            Log.Verbose( Encoding.UTF8.GetString( message.CreateHttpMessage() ) );
-                        }
-
                         request.Session.Host = host;
                         request.Session.Port = port;
                         request.Session.IsSsl = isSsl;

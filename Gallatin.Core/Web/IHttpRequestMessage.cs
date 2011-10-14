@@ -7,6 +7,22 @@ namespace Gallatin.Core.Web
     {
         string Method { get; }
 
+        // Deprecated
         Uri Destination { get; }
+
+        string Host
+        {
+            get; 
+        }
+
+        int Port
+        {
+            get;
+        }
+
+        bool IsSsl
+        {
+            get;
+        }
     }
 }

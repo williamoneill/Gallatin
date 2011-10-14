@@ -79,6 +79,7 @@
     <Compile Include="CoreSettings.cs" />
     <Compile Include="ICoreSettings.cs" />
     <Compile Include="Service\GallatinProxyService.cs" />
+    <Compile Include="Service\HostAddressParser.cs" />
     <Compile Include="Service\INetworkFacade.cs" />
     <Compile Include="Service\INetworkFacadeFactory.cs" />
     <Compile Include="Service\LeanProxyService.cs" />

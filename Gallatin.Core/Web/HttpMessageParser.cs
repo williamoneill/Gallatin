@@ -133,6 +133,17 @@ namespace Gallatin.Core.Web
             }
         }
 
+        // TODO: update unit tests
+        public bool TryGetCompleteResponseMessage(out IHttpResponseMessage message)
+        {
+            throw new NotImplementedException();
+        }
+
+        public bool TryGetCompleteRequestMessage(out IHttpRequestMessage message)
+        {
+            throw new NotImplementedException();
+        }
+
         private int FindLengthOfLine( int startingIndex )
         {
             const int NotFound = -1;
