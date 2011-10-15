@@ -17,5 +17,9 @@ namespace Gallatin.Core
         }
 
         int ServerPort { get; set; }
+
+        int MaxNumberClients { get; set; }
+
+        int ReceiveBufferSize { get; set; }
     }
 }
