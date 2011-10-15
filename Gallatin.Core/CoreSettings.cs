@@ -27,12 +27,25 @@ namespace Gallatin.Core
 
             CoreSettings settings = new CoreSettings();
             
-            // Set up defaults
-            settings.ServerPort = 8080;
+            // Set up defaults, also provide defaults for new values that were added since the 
+            // last serialization.
+
+            settings.ServerPort = SetDefaultValue(settings.ServerPort, 0, 8080);
+            settings.MaxNumberClients = SetDefaultValue(settings.MaxNumberClients, 0, 200 );
+            settings.ReceiveBufferSize = SetDefaultValue(settings.ReceiveBufferSize,0, 8192);
             
             Save(settings);
             return settings;
+        }
 
+        private static T SetDefaultValue<T>( T originalValue, T initialValue, T defaultValue )
+        {
+            if(originalValue.Equals(initialValue))
+            {
+                return defaultValue;
+            }
+
+            return originalValue;
         }
 
         public static void Save(ICoreSettings settings)
@@ -52,5 +65,15 @@ namespace Gallatin.Core
         }
 
         public int ServerPort { get; set; }
+
+        public int MaxNumberClients
+        {
+            get; set;
+        }
+
+        public int ReceiveBufferSize
+        {
+            get; set;
+        }
     }
 }
