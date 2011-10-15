@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.Contracts;
 using System.Linq;
 using System.Net.Sockets;
 using System.Text;
@@ -10,163 +11,160 @@ namespace Gallatin.Core.Service
 {
     public class SslTunnel
     {
-        private Socket _clientSocket;
-        private Socket _serverSocket;
+        private INetworkFacade _client;
+        private INetworkFacade _server;
         private string _httpVersion;
-        private Guid _sessionId;
 
-        private class TunnelSession
+        public SslTunnel( INetworkFacade client, INetworkFacade server, string httpVersion )
         {
-            public TunnelSession(SslTunnel tunnel)
-            {
-                Tunnel = tunnel;
-            }
-            public SslTunnel Tunnel { get; private set; }
-            public byte[] Data { get; set; }
+            Contract.Requires(client != null);
+            Contract.Requires(server != null);
+            Contract.Requires(!string.IsNullOrEmpty(httpVersion));
+
+            _client = client;
+            _server = server;
+            _httpVersion = httpVersion;
         }
 
-        public SslTunnel( Socket clientSocket, Socket serverSocket, string HttpVersion, Guid sessionId )
+        private void HandleServerReceive(bool success, byte[] data, INetworkFacade server)
         {
-            _clientSocket = clientSocket;
-            _serverSocket = serverSocket;
-            _httpVersion = HttpVersion;
-            _sessionId = sessionId;
+            if(success)
+            {
+                _client.BeginSend(data, HandleClientSend);
+            }
+            else
+            {
+                Log.Error("SSL failure: unable to receive data from server");
+            }
+        }
+
+        private void HandleClientReceive(bool success, byte[] data, INetworkFacade client)
+        {
+            if(success)
+            {
+                _server.BeginSend( data, HandleServerSend );
+            }
+            else
+            {
+                Log.Error("SSL failure: unable to receive data from client");
+            }
+        }
+
+        private void HandleClientSend(bool succes, INetworkFacade client)
+        {
+            if(succes)
+            {
+                _server.BeginReceive(HandleServerReceive);   
+            }
+            else
+            {
+                Log.Error("SSL failure: unable to send data to client");
+            }
+        }
+
+        private void HandleServerSend(bool succes, INetworkFacade server)
+        {
+            if(succes)
+            {
+                _client.BeginReceive(HandleClientReceive);
+            }
+            else
+            {
+                Log.Error("SSL failure: unable to send data to server");
+            }
         }
 
         public void EstablishTunnel()
         {
-            TunnelSession sendData = new TunnelSession(this);
+            Log.Info( "Starting SSL connection" );
 
-            Log.Info( "{0} Starting SSL connection", _sessionId );
+            _client.BeginReceive(HandleClientReceive);
 
-            sendData.Data = Encoding.UTF8.GetBytes( string.Format(
+            _client.BeginSend(
+                Encoding.UTF8.GetBytes(string.Format(
                 "HTTP/{0} 200 Connection established\r\n" +
                 "Proxy-agent: Gallatin-Proxy/1.1\r\n\r\n",
-                _httpVersion ) );
-
-            TunnelSession receiveData = new TunnelSession(this);
-            receiveData.Data = new byte[BufferSize];
-            _clientSocket.BeginReceive( receiveData.Data,
-                                        0,
-                                        receiveData.Data.Length,
-                                        SocketFlags.None,
-                                        HandleNewDataFromClient,
-                                        receiveData );
-
-            _clientSocket.BeginSend( sendData.Data,
-                                     0,
-                                     sendData.Data.Length,
-                                     SocketFlags.None,
-                                     HandleClientSendComplete,
-                                     sendData );
-        }
-
-        private const int BufferSize = 8000;
-
-        private void HandleClientSendComplete(IAsyncResult ar)
-        {
-            try
-            {
-                TunnelSession tunnel = ar.AsyncState as TunnelSession;
-                Trace.Assert(tunnel != null);
-
-                SocketError socketError;
-                int dataSent = _clientSocket.EndSend(ar, out socketError);
-
-                if (dataSent > 0 && socketError == SocketError.Success)
-                {
-                    TunnelSession receiveData = new TunnelSession(this);
-                    receiveData.Data = new byte[BufferSize];
-                    _serverSocket.BeginReceive( receiveData.Data,
-                                                0,
-                                                receiveData.Data.Length,
-                                                SocketFlags.None,
-                                                HandleNewDataFromServer,
-                                                receiveData );
-                }
-
-            }
-            catch ( Exception ex )
-            {
-                Log.Exception("{0} Error sending data to SSL client", ex);
-            }
-        }
-
-        private void HandleServerSendComplete(IAsyncResult ar)
-        {
-            try
-            {
-                TunnelSession tunnel = ar.AsyncState as TunnelSession;
-                Trace.Assert(tunnel != null);
-
-                SocketError socketError;
-                int dataSent = _serverSocket.EndSend(ar, out socketError);
-
-                if (dataSent > 0 && socketError == SocketError.Success)
-                {
-                    TunnelSession receiveData = new TunnelSession(this);
-                    receiveData.Data = new byte[BufferSize];
-                    _clientSocket.BeginReceive(receiveData.Data,
-                                                0,
-                                                receiveData.Data.Length,
-                                                SocketFlags.None,
-                                                HandleNewDataFromClient,
-                                                receiveData);
-                }
-
-            }
-            catch (Exception ex)
-            {
-                Log.Exception("{0} Error sending data to SSL host", ex);
-            }
+                _httpVersion)), HandleClientSend);
 
         }
 
-        private void HandleNewDataFromClient(IAsyncResult ar)
-        {
-            try
-            {
-                TunnelSession tunnel = ar.AsyncState as TunnelSession;
-                Trace.Assert(tunnel != null);
-
-                int dataReceived = _clientSocket.EndReceive(ar);
-
-                if (dataReceived > 0)
-                {
-                    _serverSocket.BeginSend(
-                        tunnel.Data, 0, dataReceived, SocketFlags.None, HandleServerSendComplete, tunnel);
-                }
-
-            }
-            catch ( Exception ex )
-            {
-                Log.Exception("{0} Error receiving data from SSL client", ex);
-            }
-        }
 
 
-        private void HandleNewDataFromServer(IAsyncResult ar)
-        {
-            try
-            {
-                TunnelSession tunnel = ar.AsyncState as TunnelSession;
-                Trace.Assert(tunnel != null);
+        //private void HandleServerSendComplete(IAsyncResult ar)
+        //{
+        //    try
+        //    {
+        //        TunnelSession tunnel = ar.AsyncState as TunnelSession;
+        //        Trace.Assert(tunnel != null);
 
-                int dataReceived = _serverSocket.EndReceive(ar);
+        //        SocketError socketError;
+        //        int dataSent = _server.EndSend(ar, out socketError);
 
-                if (dataReceived > 0)
-                {
-                    _clientSocket.BeginSend(
-                        tunnel.Data, 0, dataReceived, SocketFlags.None, HandleClientSendComplete, tunnel);
-                }
+        //        if (dataSent > 0 && socketError == SocketError.Success)
+        //        {
+        //            TunnelSession receiveData = new TunnelSession(this);
+        //            receiveData.Data = new byte[BufferSize];
+        //            _client.BeginReceive(receiveData.Data,
+        //                                        0,
+        //                                        receiveData.Data.Length,
+        //                                        SocketFlags.None,
+        //                                        HandleNewDataFromClient,
+        //                                        receiveData);
+        //        }
 
-            }
-            catch ( Exception ex )
-            {
-                Log.Exception("{0} Error receiving data from SSL host", ex);
-            }
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        Log.Exception("{0} Error sending data to SSL host", ex);
+        //    }
 
-        }
+        //}
+
+        //private void HandleNewDataFromClient(IAsyncResult ar)
+        //{
+        //    try
+        //    {
+        //        TunnelSession tunnel = ar.AsyncState as TunnelSession;
+        //        Trace.Assert(tunnel != null);
+
+        //        int dataReceived = _client.EndReceive(ar);
+
+        //        if (dataReceived > 0)
+        //        {
+        //            _server.BeginSend(
+        //                tunnel.Data, 0, dataReceived, SocketFlags.None, HandleServerSendComplete, tunnel);
+        //        }
+
+        //    }
+        //    catch ( Exception ex )
+        //    {
+        //        Log.Exception("{0} Error receiving data from SSL client", ex);
+        //    }
+        //}
+
+
+        //private void HandleNewDataFromServer(IAsyncResult ar)
+        //{
+        //    try
+        //    {
+        //        TunnelSession tunnel = ar.AsyncState as TunnelSession;
+        //        Trace.Assert(tunnel != null);
+
+        //        int dataReceived = _server.EndReceive(ar);
+
+        //        if (dataReceived > 0)
+        //        {
+        //            _client.BeginSend(
+        //                tunnel.Data, 0, dataReceived, SocketFlags.None, HandleClientSendComplete, tunnel);
+        //        }
+
+        //    }
+        //    catch ( Exception ex )
+        //    {
+        //        Log.Exception("{0} Error receiving data from SSL host", ex);
+        //    }
+
+        //}
 
 
     }

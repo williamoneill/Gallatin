@@ -127,11 +127,11 @@ namespace Gallatin.Core.Service
                 {
                     if ( request.Session.IsSsl )
                     {
-                        SslTunnel sslTunnel = new SslTunnel( request.Session.ClientSocket,
-                                                             request.Session.ServerSocket,
-                                                             message.Version,
-                                                             request.Session.Id );
-                        sslTunnel.EstablishTunnel();
+                        //SslTunnel sslTunnel = new SslTunnel( request.Session.ClientSocket,
+                        //                                     request.Session.ServerSocket,
+                        //                                     message.Version,
+                        //                                     request.Session.Id );
+                        //sslTunnel.EstablishTunnel();
                     }
                     else
                     {

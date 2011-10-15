@@ -25,7 +25,7 @@ namespace Runner
 
                 ICoreSettings settings = CoreSettings.Load();
 
-                IProxyService server = new LeanProxyService( settings );
+                IProxyService server = new GallatinProxyService( new NetworkFacadeFactory(), settings );
                 server.Start( 8080 );
 
                 Console.WriteLine("Gallatin Proxy (www.gallatinproxy.com) v.{0}", Assembly.GetExecutingAssembly().GetName().Version);

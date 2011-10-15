@@ -6,14 +6,14 @@ namespace Gallatin.Core.Service
     [ContractClass(typeof(INetworkFacadeFactoryContract))]
     public interface INetworkFacadeFactory
     {
-        void BeginConnect( string host, int port, Action<bool,INetworkFacade> callback );
+        void BeginConnect<T>( string host, int port, Action<bool,INetworkFacade,T> callback, T state );
         void Listen(int hostInterfaceIndex, int port, Action<INetworkFacade> callback);
     }
 
     [ContractClassFor(typeof(INetworkFacadeFactory))]
     abstract class INetworkFacadeFactoryContract : INetworkFacadeFactory
     {
-        public void BeginConnect( string host, int port, Action<bool, INetworkFacade> callback )
+        public void BeginConnect<T>( string host, int port, Action<bool, INetworkFacade,T> callback, T state )
         {
             Contract.Requires(!string.IsNullOrEmpty(host));
             Contract.Requires(port > 0);

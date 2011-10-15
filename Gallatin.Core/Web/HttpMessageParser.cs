@@ -136,12 +136,32 @@ namespace Gallatin.Core.Web
         // TODO: update unit tests
         public bool TryGetCompleteResponseMessage(out IHttpResponseMessage message)
         {
-            throw new NotImplementedException();
+            lock(_mutex)
+            {
+                if(_completeMessage != null && _completeMessage is IHttpResponseMessage)
+                {
+                    message = _completeMessage as IHttpResponseMessage;
+                    return true;
+                }
+
+                message = null;
+                return false;
+            }
         }
 
         public bool TryGetCompleteRequestMessage(out IHttpRequestMessage message)
         {
-            throw new NotImplementedException();
+            lock (_mutex)
+            {
+                if (_completeMessage != null && _completeMessage is IHttpRequestMessage)
+                {
+                    message = _completeMessage as IHttpRequestMessage;
+                    return true;
+                }
+
+                message = null;
+                return false;
+            }
         }
 
         private int FindLengthOfLine( int startingIndex )

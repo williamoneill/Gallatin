@@ -1,6 +1,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.Contracts;
 using Gallatin.Core.Util;
 
 namespace Gallatin.Core.Web
@@ -14,41 +15,30 @@ namespace Gallatin.Core.Web
                                    Uri destination )
             : base( body, version, headers )
         {
-            // TODO: assert parameters
+            Contract.Requires(!string.IsNullOrEmpty(version));
+            Contract.Requires(!string.IsNullOrEmpty(method));
+            Contract.Requires(destination != null);
+            Contract.Ensures(Port > 0);
+            Contract.Ensures(!string.IsNullOrEmpty(Host));
+            Contract.Ensures(!string.IsNullOrEmpty(Method));
+            Contract.Ensures(Destination != null);
 
             Method = method;
             Destination = destination;
+            Host = destination.Host;
+            Port = destination.Port;
 
-            if (method.Equals("connect", StringComparison.InvariantCultureIgnoreCase))
+            if (destination.Port == -1)
             {
-                IsSsl = true;
-                Host = destination.Host;
-                Port = destination.Port;
-
-                if (destination.Port == -1)
+                string[] tokens = destination.AbsoluteUri.Split(':');
+                if (tokens.Length == 2)
                 {
-                    const int HTTPS_PORT = 443;
-                    const int SNEWS_PORT = 563;
-
-                    string[] tokens = destination.AbsoluteUri.Split(':');
-                    if (tokens.Length == 2)
-                    {
-                        Host = tokens[0];
-                        Port = int.Parse(tokens[1]);
-                    }
-
-                    // Only allow SSL on well-known ports. This is the general guidance for HTTPS.
-                    if (Port != HTTPS_PORT
-                         && Port != SNEWS_PORT && IsSsl)
-                    {
-                        Log.Error(
-                            "{0} Client attempted to connect via SSL to an unsupported port {1}", Port);
-
-                        IsSsl = false;
-                    }
-                    
+                    Host = tokens[0];
+                    Port = int.Parse(tokens[1]);
                 }
             }
+
+            IsSsl = method.Equals( "connect", StringComparison.InvariantCultureIgnoreCase );
         }
 
         #region IHttpRequestMessage Members

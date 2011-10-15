@@ -42,11 +42,14 @@ namespace Gallatin.Core.Tests.Service
             NetworkFacadeFactory factory = new NetworkFacadeFactory();
             factory.BeginConnect( "localhost",
                                   8082,
-                                  ( b, s ) =>
+                                  ( b, s, state ) =>
                                   {
                                       Assert.That( b, Is.True );
                                       Assert.That( s, Is.Not.Null );
-                                  } );
+                                      Assert.That( state, Is.EqualTo("foo") );
+                                  }, 
+                                  "foo" );
+
             Assert.That( trigger.WaitOne( 2000 ), Is.True );
             Assert.That( isConnected, Is.True );
         }
