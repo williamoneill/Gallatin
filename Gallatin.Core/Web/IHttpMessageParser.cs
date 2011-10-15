@@ -11,5 +11,6 @@ namespace Gallatin.Core.Web
         bool TryGetCompleteMessage( out IHttpMessage message );
         bool TryGetCompleteResponseMessage(out IHttpResponseMessage message);
         bool TryGetCompleteRequestMessage(out IHttpRequestMessage message);
+        byte[] AllData { get; }
     }
 }

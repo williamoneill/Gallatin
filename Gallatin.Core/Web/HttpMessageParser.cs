@@ -164,6 +164,14 @@ namespace Gallatin.Core.Web
             }
         }
 
+        public byte[] AllData
+        {
+            get
+            {
+                return _rawData.ToArray();
+            }
+        }
+
         private int FindLengthOfLine( int startingIndex )
         {
             const int NotFound = -1;

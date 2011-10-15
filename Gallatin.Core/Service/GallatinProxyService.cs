@@ -98,7 +98,7 @@ namespace Gallatin.Core.Service
                     {
                         string connection = response["connection"];
                         if((connection != null && connection.Equals("close", StringComparison.InvariantCultureIgnoreCase)) 
-                            || response.StatusCode != 200 )
+                             )
                         {
                             Log.Verbose("{0} Ending HTTP/1.1 connection", connectionContext.Id);
                             EndSession(connectionContext);
@@ -146,10 +146,33 @@ namespace Gallatin.Core.Service
                 }
                 else
                 {
-                    // TODO: Streaming data from server?
-                    Log.Verbose("{0} Requesting more data from server", connectionContext.Id);
+                    ServerStream2 serverStream = null;
 
-                    connectionContext.ServerConnection.BeginReceive(HandleDataFromServer);
+                    // Evaluate streaming data from server. If streaming, switch modes (firehose)
+                    IHttpMessage header;
+                    if(connectionContext.ServerMessageParser.TryGetHeader(out header))
+                    {
+                        string contentLength = header["content-length"];
+                        string contentType = header["content-type"];
+                        if (contentType != null && contentLength != null
+                            && contentLength == "0"
+                            && ( contentType.StartsWith("application/") || contentType.StartsWith("video/") ))
+                        {
+                            Log.Verbose("{0} Switching to streaming mode", connectionContext.Id);
+                            serverStream = new ServerStream2(connectionContext.ClientConnection, connectionContext.ServerConnection);
+                            
+                            // Send everything we've read so far and then start streaming.
+                            serverStream.StartStreaming(connectionContext.ServerMessageParser.AllData);
+                        }
+                    }
+
+                    if(serverStream == null)
+                    {
+                        Log.Verbose("{0} Requesting more data from server", connectionContext.Id);
+
+                        connectionContext.ServerConnection.BeginReceive(HandleDataFromServer);
+                    }
+
                 }
             }
             else
