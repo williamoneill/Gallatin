@@ -1,10 +1,11 @@
 ﻿
 
 using System.Collections.Generic;
+using Gallatin.Core.Util;
 
 namespace Gallatin.Core.Web
 {
-    public interface IHttpMessageParser
+    public interface IHttpMessageParser : IPooledObject
     {
         IHttpMessage AppendData( IEnumerable<byte> rawNetworkContent );
         bool TryGetHeader( out IHttpMessage message );

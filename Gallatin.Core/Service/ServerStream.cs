@@ -21,6 +21,7 @@ namespace Gallatin.Core.Service
 
             _client = client;
             _server = server;
+
         }
 
         [ContractInvariantMethod]
@@ -64,6 +65,7 @@ namespace Gallatin.Core.Service
 
             _client.BeginSend(initialData,ClientSendComplete);
         }
+
     }
 
     public class ServerStream

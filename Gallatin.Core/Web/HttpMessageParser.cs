@@ -6,6 +6,7 @@ using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
+using Gallatin.Core.Util;
 
 namespace Gallatin.Core.Web
 {
@@ -22,7 +23,7 @@ namespace Gallatin.Core.Web
         private static readonly Regex _splitRequestHeader =
             new Regex( @"(?<method>\w*)\s*(?<destination>\S*)\sHTTP/(?<version>.*)$" );
 
-        private List<byte> _rawData;
+        private List<byte> _rawData = new List<byte>(60000);
         private int? _index;
         private byte[] _body;
         private List<byte> _combinedChunkedData;
@@ -34,8 +35,6 @@ namespace Gallatin.Core.Web
 
         public HttpMessageParser()
         {
-            _rawData = new List<byte>( 60000 );
-            _headerLines = null;
         }
 
         #region IHttpMessageParser Members
@@ -111,14 +110,27 @@ namespace Gallatin.Core.Web
         {
             lock(_mutex)
             {
+                Log.Verbose("Resetting HttpMessageParser");
+
+                _rawData.Clear();
+                
+                _index = null;
+                
                 _body = null;
-                _combinedChunkedData = null;
+
+                if (_combinedChunkedData != null)
+                    _combinedChunkedData.Clear();
+
                 _completeMessage = null;
-                _hasBody = false;
+                _hasBody = null;
                 _headerLines = null;
                 _headerPairs = null;
-                _index = null;
-                _rawData = new List<byte>(60000);
+
+                if (_headerLines != null)
+                    _headerLines.Clear();
+
+                if (_headerPairs != null)
+                    _headerPairs.Clear();
             }
         }
 

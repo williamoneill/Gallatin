@@ -15,26 +15,32 @@ namespace Gallatin.Core
 
         public static ICoreSettings Load()
         {
+            ICoreSettings settings;
+
             XmlSerializer serializer = new XmlSerializer(typeof(CoreSettings));
 
             if (File.Exists(SettingsFileName))
             {
                 using (FileStream stream = new FileStream(SettingsFileName, FileMode.Open))
                 {
-                    return serializer.Deserialize(stream) as ICoreSettings;
+                    settings = serializer.Deserialize(stream) as ICoreSettings;
                 }
             }
-
-            CoreSettings settings = new CoreSettings();
+            else
+            {
+                settings = new CoreSettings();                
+            }
+            
             
             // Set up defaults, also provide defaults for new values that were added since the 
             // last serialization.
-
             settings.ServerPort = SetDefaultValue(settings.ServerPort, 0, 8080);
             settings.MaxNumberClients = SetDefaultValue(settings.MaxNumberClients, 0, 200 );
             settings.ReceiveBufferSize = SetDefaultValue(settings.ReceiveBufferSize,0, 8192);
             
+            // Extra save...just in case we created a new instance
             Save(settings);
+
             return settings;
         }
 

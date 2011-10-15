@@ -103,6 +103,8 @@
     <Compile Include="Client\SslClientState.cs" />
     <Compile Include="CoreSettings.cs" />
     <Compile Include="ICoreSettings.cs" />
+    <Compile Include="Service\BufferManager.cs" />
+    <Compile Include="Service\ConnectionContext.cs" />
     <Compile Include="Service\GallatinProxyService.cs" />
     <Compile Include="Service\HostAddressParser.cs" />
     <Compile Include="Service\INetworkFacade.cs" />
@@ -115,6 +117,7 @@
     </Compile>
     <Compile Include="Service\SslTunnel.cs" />
     <Compile Include="SharedAssemblyInfo.cs" />
+    <Compile Include="Util\Pool.cs" />
     <Compile Include="Web\HttpMessage.cs">
       <SubType>Code</SubType>
     </Compile>
