@@ -11,6 +11,21 @@ namespace Gallatin.Core.Tests.Service
     public class NetworkFacadeFactoryTests
     {
         [Test]
+        public void FailedServerConnect()
+        {
+            // Connect to server that does not exist. Verify error.
+            NetworkFacadeFactory factory = new NetworkFacadeFactory();
+            factory.BeginConnect("localhost",
+                                  5150,
+                                  (b, s, state) =>
+                                  {
+                                      Assert.That(b, Is.False);
+                                  },
+                                  "foo");
+        }
+
+
+        [Test]
         public void ConnectTest()
         {
             ManualResetEvent trigger = new ManualResetEvent( false );

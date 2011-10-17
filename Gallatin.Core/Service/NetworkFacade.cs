@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Diagnostics.Contracts;
 using System.Linq;
 using System.Net.Sockets;
+using System.Threading;
 using Gallatin.Core.Util;
 
 namespace Gallatin.Core.Service
@@ -58,6 +59,8 @@ namespace Gallatin.Core.Service
 
         public void BeginSend( byte[] buffer, Action<bool,INetworkFacade> callback )
         {
+            LastActivityTime = DateTime.Now;
+
             _sendBuffer = buffer;
             _socket.BeginSend( _sendBuffer,
                                0,
@@ -104,6 +107,8 @@ namespace Gallatin.Core.Service
 
         public void BeginReceive(Action<bool, byte[], INetworkFacade> callback)
         {
+            LastActivityTime = DateTime.Now;
+
             _receiveBuffer = new byte[8000];
             _socket.BeginReceive( _receiveBuffer,
                                   0,
@@ -132,10 +137,27 @@ namespace Gallatin.Core.Service
             }
         }
 
+        private DateTime _lastAccessTime;
+
         public void BeginClose(Action<bool, INetworkFacade> callback)
         {
+            LastActivityTime = DateTime.Now;
+
             _socket.Shutdown(SocketShutdown.Both);
             _socket.BeginDisconnect( false, HandleDisconnect, callback );
+        }
+
+
+        public DateTime LastActivityTime
+        {
+            get
+            {
+                return _lastAccessTime;
+            }
+            private set
+            {
+                _lastAccessTime = value;
+            }
         }
 
         public object Context

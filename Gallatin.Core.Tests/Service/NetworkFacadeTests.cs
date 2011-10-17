@@ -56,6 +56,8 @@ namespace Gallatin.Core.Tests.Service
                                           resetEvent.Set();
                                       } );
 
+            Assert.That( facadeUnderTest.LastActivityTime, Is.LessThan(DateTime.Now.AddMilliseconds(10)) );
+
             // Wait for the class under test to send data
             Assert.That(resetEvent.WaitOne(5000), Is.True);
             
@@ -115,6 +117,8 @@ namespace Gallatin.Core.Tests.Service
 
             client.GetStream().Write(buffer, 0, buffer.Length);
 
+            Assert.That(facadeUnderTest.LastActivityTime, Is.LessThan(DateTime.Now.AddMilliseconds(10)));
+
             // Wait for the class under test to receive data
             Assert.That(resetEvent.WaitOne(5000), Is.True);
         }
@@ -159,6 +163,8 @@ namespace Gallatin.Core.Tests.Service
                                             Assert.That(b, Is.True);
                                             resetEvent.Set();
                                         } );
+
+            Assert.That( facadeUnderTest.LastActivityTime, Is.LessThan(DateTime.Now.AddMilliseconds(10)) );
 
             // Wait for close
             Assert.That(resetEvent.WaitOne(30000), Is.True);

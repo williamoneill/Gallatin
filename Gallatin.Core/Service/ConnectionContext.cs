@@ -31,7 +31,7 @@ namespace Gallatin.Core.Service
             }
         }
 
-        public ServerStream2 ServerStream { get; set; }
+        public ServerStream ServerStream { get; set; }
         public string Host { get; set; }
         public int Port { get; set; }
         public bool IsSsl { get; set; }

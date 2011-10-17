@@ -36,18 +36,13 @@ namespace Gallatin.Core.Service
             {
                 if (context.ServerConnection != null)
                 {
-                    context.ServerConnection.BeginClose(
-                        (success, facade) => context.ClientConnection.BeginClose(
-                            (success2, facade2) =>
-                            {
-                                if (success2)
-                                {
-                                    Log.Info("Successfully disconnected session");
+                    context.ServerConnection.BeginClose( ( s, f ) => Log.Verbose("{0} Server connection closed", context.Id) );
 
-                                    // Possible leak here if we cannot close the socket. I don't see that being a problem.
-                                    _connections.Put(context);
-                                }
-                            }));
+                    context.ClientConnection.BeginClose( (s,f) => Log.Verbose("{0} Client connection closed", context.Id) );
+
+                    // TODO: there are many places in this server where we don't call the containing method and the
+                    // reference is not put back in to the pool.
+                    _connections.Put(context);
                 }
 
             }
@@ -155,7 +150,7 @@ namespace Gallatin.Core.Service
                                 // which case we'll receive an error in the callback.
                                 ResetForNewMessageFromClient(connectionContext);
 
-                                connectionContext.ServerStream = new ServerStream2(connectionContext.ClientConnection, connectionContext.ServerConnection);
+                                connectionContext.ServerStream = new ServerStream(connectionContext.ClientConnection, connectionContext.ServerConnection);
 
                                 // Send everything we've read so far and then start streaming.
                                 connectionContext.ServerStream.StartStreaming(connectionContext.ServerMessageParser.AllData);

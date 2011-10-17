@@ -1,8 +1,6 @@
 ﻿using System;
-using System.ComponentModel.Composition.Hosting;
 using System.Reflection;
 using Gallatin.Core;
-using Gallatin.Core.Client;
 using Gallatin.Core.Service;
 using Gallatin.Core.Util;
 using System.IO;
@@ -23,7 +21,7 @@ namespace Runner
                 //var catalog = new AggregateCatalog();
                 //catalog.Catalogs.Add(new AssemblyCatalog(typeof()));
 
-                ICoreSettings settings = CoreSettings.Load();
+                ICoreSettings settings = SettingsMapper.Load();
 
                 IProxyService server = new GallatinProxyService( new NetworkFacadeFactory(), settings );
                 server.Start( 8080 );
@@ -37,7 +35,7 @@ namespace Runner
 
                 server.Stop();
 
-                CoreSettings.Save(settings);
+                SettingsMapper.Save(settings);
             }
             catch ( Exception ex )
             {

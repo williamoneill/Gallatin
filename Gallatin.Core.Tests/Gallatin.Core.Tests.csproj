@@ -52,10 +52,12 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Client\ProxyClientTests.cs" />
+    <Compile Include="CoreSettingsTests.cs" />
+    <Compile Include="Service\GallatinProxyServiceTests.cs" />
     <Compile Include="Service\NetworkFacadeFactoryTests.cs" />
     <Compile Include="Service\NetworkFacadeTests.cs" />
-    <Compile Include="Service\ProxyServiceTests.cs" />
+    <Compile Include="Service\ServerStreamTests.cs" />
+    <Compile Include="Service\SslTunnelTests.cs" />
     <Compile Include="Web\HttpMessageParserTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Web\HttpRequestMessageTests.cs" />

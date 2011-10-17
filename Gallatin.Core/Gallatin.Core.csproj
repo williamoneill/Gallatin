@@ -93,23 +93,13 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Client\DefaultClientState.cs" />
-    <Compile Include="Client\DisconnectedState.cs" />
-    <Compile Include="Client\IProxyClientFactory.cs" />
-    <Compile Include="Client\ProxyClient.cs">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="Client\ProxyClientFactory.cs" />
-    <Compile Include="Client\SslClientState.cs" />
     <Compile Include="CoreSettings.cs" />
     <Compile Include="ICoreSettings.cs" />
-    <Compile Include="Service\BufferManager.cs" />
     <Compile Include="Service\ConnectionContext.cs" />
     <Compile Include="Service\GallatinProxyService.cs" />
     <Compile Include="Service\HostAddressParser.cs" />
     <Compile Include="Service\INetworkFacade.cs" />
     <Compile Include="Service\INetworkFacadeFactory.cs" />
-    <Compile Include="Service\LeanProxyService.cs" />
     <Compile Include="Service\NetworkFacade.cs" />
     <Compile Include="Service\NetworkFacadeFactory.cs" />
     <Compile Include="Service\ServerStream.cs">
@@ -128,12 +118,9 @@
     <Compile Include="Web\IHttpMessageParser.cs" />
     <Compile Include="Web\IHttpRequestMessage.cs" />
     <Compile Include="Web\IHttpResponseMessage.cs" />
-    <Compile Include="Service\INetworkService.cs" />
-    <Compile Include="Client\IProxyClient.cs" />
     <Compile Include="Service\IProxyService.cs" />
     <Compile Include="Util\Log.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Service\ProxyService.cs" />
   </ItemGroup>
   <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

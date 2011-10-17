@@ -7,7 +7,15 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Gallatin.Core.Tests", "Gall
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Gallatin.Core", "Gallatin.Core\Gallatin.Core.csproj", "{FFDB4E9F-EB29-42E5-AC61-2017FC358D86}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{B3FBE6F3-AEC7-413F-9B27-36E9232303E4}"
+	ProjectSection(SolutionItems) = preProject
+		Gallatin.vsmdi = Gallatin.vsmdi
+	EndProjectSection
+EndProject
 Global
+	GlobalSection(TestCaseManagementSettings) = postSolution
+		CategoryFile = Gallatin.vsmdi
+	EndGlobalSection
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
 		Debug|Mixed Platforms = Debug|Mixed Platforms

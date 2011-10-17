@@ -8,10 +8,28 @@ using System.Xml.Serialization;
 
 namespace Gallatin.Core
 {
-    [Export(typeof(ICoreSettings))]
-    public class CoreSettings : ICoreSettings
+    public class SettingsMapper
     {
-        private const string SettingsFileName = "settings.xml";
+        private static T SetDefaultValue<T>(T originalValue, T initialValue, T defaultValue)
+        {
+            if (originalValue.Equals(initialValue))
+            {
+                return defaultValue;
+            }
+
+            return originalValue;
+        }
+
+        public static void Save(ICoreSettings settings)
+        {
+            XmlSerializer serializer = new XmlSerializer(typeof(CoreSettings));
+
+            using (FileStream stream = new FileStream(SettingsFileName, FileMode.Create))
+            {
+                serializer.Serialize(stream, settings);
+            }
+
+        }
 
         public static ICoreSettings Load()
         {
@@ -28,43 +46,27 @@ namespace Gallatin.Core
             }
             else
             {
-                settings = new CoreSettings();                
+                settings = new CoreSettings();
             }
-            
-            
+
             // Set up defaults, also provide defaults for new values that were added since the 
             // last serialization.
             settings.ServerPort = SetDefaultValue(settings.ServerPort, 0, 8080);
-            settings.MaxNumberClients = SetDefaultValue(settings.MaxNumberClients, 0, 200 );
-            settings.ReceiveBufferSize = SetDefaultValue(settings.ReceiveBufferSize,0, 8192);
-            
-            // Extra save...just in case we created a new instance
+            settings.MaxNumberClients = SetDefaultValue(settings.MaxNumberClients, 0, 200);
+            settings.ReceiveBufferSize = SetDefaultValue(settings.ReceiveBufferSize, 0, 8192);
+
+            // Extra save...just in case we created a new instance in the above else block
             Save(settings);
 
             return settings;
         }
 
-        private static T SetDefaultValue<T>( T originalValue, T initialValue, T defaultValue )
-        {
-            if(originalValue.Equals(initialValue))
-            {
-                return defaultValue;
-            }
+        public const string SettingsFileName = "settings.xml";
+    }
 
-            return originalValue;
-        }
-
-        public static void Save(ICoreSettings settings)
-        {
-            XmlSerializer serializer = new XmlSerializer(typeof (CoreSettings));
-
-            using (FileStream stream = new FileStream(SettingsFileName, FileMode.Create))
-            {
-                serializer.Serialize(stream, settings);
-            }
-            
-        }
-
+    [Export(typeof(ICoreSettings))]
+    public class CoreSettings : ICoreSettings
+    {
         public int NetworkAddressBindingOrdinal
         {
             get; set;
