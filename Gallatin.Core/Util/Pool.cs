@@ -14,6 +14,7 @@ namespace Gallatin.Core.Util
     internal class Pool<T> where T: class, IPooledObject, new()
     {
         private Stack<T> _pool;
+        private List<T> _outOfPoolList; 
         private object _mutex = new object();
         private bool _isInitialized;
         private int _poolSize;
@@ -37,7 +38,17 @@ namespace Gallatin.Core.Util
                     _pool.Push(new T());
                 }
 
+                _outOfPoolList = new List<T>(size);
+
                 _isInitialized = true;
+            }
+        }
+
+        public IEnumerable<T> OutlierCollection
+        {
+            get
+            {
+                return _outOfPoolList.AsEnumerable();
             }
         }
 
@@ -45,9 +56,13 @@ namespace Gallatin.Core.Util
         {
             lock(_mutex)
             {
-                return _pool.Pop();
+                var item = _pool.Pop();
+                _outOfPoolList.Add(item);
+                return item;
             }
         }
+
+
 
         public void Put(T item)
         {
@@ -58,6 +73,7 @@ namespace Gallatin.Core.Util
                 if(_pool.Count <= _poolSize)
                 {
                     item.Reset();
+                    _outOfPoolList.Remove( item );
                     _pool.Push(item);
                 }
                 else

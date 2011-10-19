@@ -20,12 +20,15 @@ namespace Gallatin.Core.Service
             Contract.Requires(socket.Connected);
 
             _socket = socket;
+            _lastAccessTime = DateTime.Now;
         }
 
         private void HandleSend(IAsyncResult ar)
         {
             Contract.Requires(ar != null);
             Contract.Requires(ar.AsyncState is Action<bool,INetworkFacade>);
+
+            LastActivityTime = DateTime.Now;
 
             Action<bool, INetworkFacade> callback = ar.AsyncState as Action<bool, INetworkFacade>;
 
@@ -74,6 +77,8 @@ namespace Gallatin.Core.Service
         {
             Contract.Requires(ar != null);
             Contract.Requires(ar.AsyncState is Action<bool, byte[], INetworkFacade>);
+
+            LastActivityTime = DateTime.Now;
 
             Action<bool, byte[], INetworkFacade> callback = ar.AsyncState as Action<bool, byte[], INetworkFacade>;
 
@@ -131,6 +136,8 @@ namespace Gallatin.Core.Service
         {
             Contract.Requires(ar.AsyncState is Action<bool, INetworkFacade>);
 
+            LastActivityTime = DateTime.Now;
+
             Action<bool, INetworkFacade> callback = ar.AsyncState as Action<bool, INetworkFacade>;
 
             try
@@ -175,6 +182,7 @@ namespace Gallatin.Core.Service
             {
                 if (_pendingReceiveHandle != null)
                 {
+                    Log.Verbose("{0} Cancelling pending receive", _socket.GetHashCode());
                     _socket.EndReceive(_pendingReceiveHandle);
                 }
             }

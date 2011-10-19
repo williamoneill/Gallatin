@@ -34,15 +34,16 @@ namespace Gallatin.Core.Service
 
             try
             {
-                if (context.ServerConnection != null)
+                lock(context)
                 {
-                    context.ServerConnection.BeginClose( ( s, f ) => Log.Verbose("{0} Server connection closed", context.Id) );
+                    if (context.ServerConnection != null)
+                    {
+                        context.ServerConnection.BeginClose((s, f) => Log.Verbose("{0} Server connection closed", context.Id));
 
-                    context.ClientConnection.BeginClose( (s,f) => Log.Verbose("{0} Client connection closed", context.Id) );
+                        context.ClientConnection.BeginClose((s, f) => Log.Verbose("{0} Client connection closed", context.Id));
 
-                    // TODO: there are many places in this server where we don't call the containing method and the
-                    // reference is not put back in to the pool.
-                    _connections.Put(context);
+                        _connections.Put(context);
+                    }
                 }
 
             }
@@ -54,11 +55,14 @@ namespace Gallatin.Core.Service
 
         private void HandleDataSentToClient( bool success, INetworkFacade clientConnection )
         {
+            Contract.Requires(clientConnection!=null);
+
             try
             {
+                ConnectionContext connectionContext = clientConnection.Context as ConnectionContext;
+
                 if (success)
                 {
-                    ConnectionContext connectionContext = clientConnection.Context as ConnectionContext;
 
                     Log.Verbose("{0} Handling data sent to client", connectionContext.Id);
 
@@ -67,6 +71,7 @@ namespace Gallatin.Core.Service
                 else
                 {
                     Log.Error("Unable to send data to client");
+                    EndSession(connectionContext);
                 }
 
             }
@@ -79,12 +84,14 @@ namespace Gallatin.Core.Service
 
         private void HandleDataFromServer( bool success, byte[] data, INetworkFacade serverConnection )
         {
+            Contract.Requires(serverConnection!=null);
+
             try
             {
+                ConnectionContext connectionContext = serverConnection.Context as ConnectionContext;
+
                 if (success)
                 {
-                    ConnectionContext connectionContext = serverConnection.Context as ConnectionContext;
-
                     Log.Verbose("{0} Handling data from server", connectionContext.Id);
 
                     connectionContext.ClientConnection.BeginSend( data, HandleDataSentToClient );
@@ -92,6 +99,9 @@ namespace Gallatin.Core.Service
                 else
                 {
                     Log.Error("Unable to receive data from server");
+
+                    // TODO: evaluate later
+                    //EndSession(connectionContext);
                 }
 
             }
@@ -104,12 +114,14 @@ namespace Gallatin.Core.Service
 
         private void HandleDataSentToServer(bool success, INetworkFacade serverConnection)
         {
+            Contract.Requires(serverConnection!= null);
+
             try
             {
+                var context = serverConnection.Context as ConnectionContext;
+
                 if (success)
                 {
-                    var context = serverConnection.Context as ConnectionContext;
-
                     Log.Verbose("{0} Data sent to server. Resetting client message parser. Data to be streamed to client.", context.Id);
                     context.ClientMessageParser.Reset();
 
@@ -118,6 +130,7 @@ namespace Gallatin.Core.Service
                 else
                 {
                     Log.Error("Unable to send request to server");
+                    EndSession(context);
                 }
             }
             catch ( Exception ex )
@@ -136,7 +149,6 @@ namespace Gallatin.Core.Service
 
             try
             {
-
                 if (success)
                 {
                     Log.Verbose("{0} Connected to server", state.Id);
@@ -167,6 +179,7 @@ namespace Gallatin.Core.Service
                 else
                 {
                     Log.Error("Unable to connect to remote host {0}  {1}", state.Host, state.Port);
+                    EndSession(state);
                 }
 
             }
@@ -253,13 +266,15 @@ namespace Gallatin.Core.Service
 
         private void HandleDataFromClient( bool success, byte[] data, INetworkFacade clientConnection )
         {
+            Contract.Requires(clientConnection!=null);
+
             try
             {
+                ConnectionContext context = clientConnection.Context as ConnectionContext;
+
                 if (success)
                 {
-                    ConnectionContext context = clientConnection.Context as ConnectionContext;
-
-                    Log.Verbose( () => string.Format( "{0} Processing data from client\r\n{1}", context.Id, Encoding.UTF8.GetString(data)));
+                    Log.Verbose( "{0} Processing data from client", context.Id );
 
                     IHttpMessage message = context.ClientMessageParser.AppendData(data);
                     if (message != null)
@@ -279,6 +294,7 @@ namespace Gallatin.Core.Service
                 else
                 {
                     Log.Info("{0} Failed to receive data from client. Client may have disconnected.");
+                    EndSession(context);
                 }
 
             }
@@ -293,13 +309,13 @@ namespace Gallatin.Core.Service
         {
             Contract.Requires(clientConnection!=null);
 
-            Log.Verbose("New client connection");
-
             try
             {
                 ConnectionContext connectionContext = _connections.Get();
                 connectionContext.ClientConnection = clientConnection;
                 clientConnection.Context = connectionContext;
+
+                Log.Verbose("{0} New client connection", connectionContext.Id);
 
                 clientConnection.BeginReceive(HandleDataFromClient);
             }
@@ -311,15 +327,85 @@ namespace Gallatin.Core.Service
             
         }
 
+        private ManualResetEvent _isActiveEvent;
+
+        private void WorkerMethod()
+        {
+            Log.Info("Starting worker thread in proxy server");
+
+            while(!_isActiveEvent.WaitOne(30000))
+            {
+                Log.Verbose("Running worker thread");
+
+                try
+                {
+                    DateTime cutoffTime = DateTime.Now.AddMinutes(-5);
+
+                    foreach (var connectionContext in _connections.OutlierCollection.ToArray())
+                    {
+                        if ( (connectionContext.ServerConnection == null || connectionContext.ServerConnection.LastActivityTime > cutoffTime) &&
+                            connectionContext.ClientConnection.LastActivityTime > cutoffTime)
+                        {
+                            Log.Warning("{0} Forcing close on hung session", connectionContext.Id);
+                            EndSession(connectionContext);
+                        }
+                    }
+                }
+                catch(Exception ex)
+                {
+                    Log.Exception("Exception in worker thread", ex);
+                }
+
+            }
+
+            Log.Info("Ending worker thread in proxy server");
+        }
+
+        private object _mutex = new object();
+        private Thread _worker;
+
         public void Start(int port)
         {
             Log.Verbose("Starting proxy server");
 
-            _facadeFactory.Listen( _settings.NetworkAddressBindingOrdinal, port, HandleClientConnected );
+            lock(_mutex)
+            {
+                if(_isActiveEvent == null )
+                {
+                    _isActiveEvent = new ManualResetEvent(false);
+
+                    _worker = new Thread(WorkerMethod);
+                    _worker.IsBackground = true;
+                    _worker.Name = "Gallatin proxy server worker";
+                    // TODO:
+                    //_worker.Start();
+
+                    _facadeFactory.Listen(_settings.NetworkAddressBindingOrdinal, port, HandleClientConnected);
+                }
+                else
+                {
+                    Log.Warning("Ignoring duplicate request to start proxy server");
+                }
+            }
         }
 
         public void Stop()
         {
+            lock(_mutex)
+            {
+                if(_isActiveEvent != null)
+                {
+                    _isActiveEvent.Set();
+
+                    if(!_worker.Join( 1000 ))
+                        Log.Error("Worker thread did not respond");
+
+                    _isActiveEvent = null;
+
+                    // TODO: stop factory from listening
+                    //_facadeFactory = null;
+                }
+            }
             
         }
     }
