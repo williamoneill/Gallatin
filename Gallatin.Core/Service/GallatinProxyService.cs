@@ -62,39 +62,7 @@ namespace Gallatin.Core.Service
 
                     Log.Verbose("{0} Handling data sent to client", connectionContext.Id);
 
-                    IHttpResponseMessage response;
-                    if (connectionContext.ServerMessageParser.TryGetCompleteResponseMessage(out response))
-                    {
-                        Log.Verbose(() => string.Format("{0}\r\n{1}", connectionContext.Id, response));
-
-                        // Evaluate connection persistence
-                        // According to the spec, HTTP 1.1 should remain persistent until told to close. Always close HTTP 1.0 connections.
-                        if (response.Version == "1.1")
-                        {
-                            string connection = response["connection"];
-                            if ((connection != null && connection.Equals("close", StringComparison.InvariantCultureIgnoreCase))
-                                 )
-                            {
-                                Log.Verbose("{0} Ending HTTP/1.1 connection", connectionContext.Id);
-                                EndSession(connectionContext);
-                            }
-                            else
-                            {
-                                Log.Verbose("{0} Maintaining persistent connection", connectionContext.Id);
-                                ResetForNewMessageFromClient(connectionContext);
-                            }
-                        }
-                        else
-                        {
-                            Log.Verbose("{0} Ending connection", connectionContext.Id);
-                            EndSession(connectionContext);
-                        }
-                    }
-                    else
-                    {
-                        Log.Error("Server did not return valid HTTP response");
-                    }
-
+                    connectionContext.ServerConnection.BeginReceive(HandleDataFromServer);
                 }
                 else
                 {
@@ -109,12 +77,6 @@ namespace Gallatin.Core.Service
 
         }
 
-        private void ResetForNewMessageFromClient( ConnectionContext connectionContext )
-        {
-            connectionContext.ClientMessageParser.Reset();
-            connectionContext.ClientConnection.BeginReceive(HandleDataFromClient);
-        }
-
         private void HandleDataFromServer( bool success, byte[] data, INetworkFacade serverConnection )
         {
             try
@@ -125,46 +87,7 @@ namespace Gallatin.Core.Service
 
                     Log.Verbose("{0} Handling data from server", connectionContext.Id);
 
-                    IHttpMessage message = connectionContext.ServerMessageParser.AppendData(data);
-                    if (message != null)
-                    {
-                        Log.Verbose("{0} All data received from server. Sending to client.", connectionContext.Id);
-
-                        // Received all data. Send message to client.
-                        connectionContext.ClientConnection.BeginSend(message.CreateHttpMessage(), HandleDataSentToClient);
-                    }
-                    else
-                    {
-                        // Evaluate streaming data from server. If streaming, switch modes (firehose)
-                        IHttpMessage header;
-                        if (connectionContext.ServerMessageParser.TryGetHeader(out header))
-                        {
-                            string contentType = header["content-type"];
-                            if (contentType != null 
-                                && !(contentType.StartsWith("text/")))
-                            {
-                                Log.Verbose("{0} Switching to streaming mode", connectionContext.Id);
-
-                                // Stream all binary content. Let the client interpret chunked data. The client
-                                // will call back when all data is read or will possibly close the connect, in 
-                                // which case we'll receive an error in the callback.
-                                ResetForNewMessageFromClient(connectionContext);
-
-                                connectionContext.ServerStream = new ServerStream(connectionContext.ClientConnection, connectionContext.ServerConnection);
-
-                                // Send everything we've read so far and then start streaming.
-                                connectionContext.ServerStream.StartStreaming(connectionContext.ServerMessageParser.AllData);
-                            }
-                        }
-
-                        if (connectionContext.ServerStream == null)
-                        {
-                            Log.Verbose("{0} Requesting more data from server", connectionContext.Id);
-
-                            connectionContext.ServerConnection.BeginReceive(HandleDataFromServer);
-                        }
-
-                    }
+                    connectionContext.ClientConnection.BeginSend( data, HandleDataSentToClient );
                 }
                 else
                 {
@@ -179,13 +102,18 @@ namespace Gallatin.Core.Service
 
         }
 
-        private void SendToServerComplete(bool success, INetworkFacade serverConnection)
+        private void HandleDataSentToServer(bool success, INetworkFacade serverConnection)
         {
             try
             {
                 if (success)
                 {
-                    serverConnection.BeginReceive(HandleDataFromServer);
+                    var context = serverConnection.Context as ConnectionContext;
+
+                    Log.Verbose("{0} Data sent to server. Resetting client message parser. Data to be streamed to client.", context.Id);
+                    context.ClientMessageParser.Reset();
+
+                    context.ClientConnection.BeginReceive(HandleDataFromClient);
                 }
                 else
                 {
@@ -227,7 +155,8 @@ namespace Gallatin.Core.Service
                         }
                         else
                         {
-                            serverConnection.BeginSend(request.CreateHttpMessage(), SendToServerComplete);
+                            serverConnection.BeginSend(request.CreateHttpMessage(), HandleDataSentToServer);
+                            serverConnection.BeginReceive(HandleDataFromServer);
                         }
                     }
                     else
@@ -257,8 +186,6 @@ namespace Gallatin.Core.Service
                 IHttpRequestMessage requestMessage;
                 if (sessionContext.ClientMessageParser.TryGetCompleteRequestMessage(out requestMessage))
                 {
-                    sessionContext.ServerMessageParser.Reset();
-
                     // If not connected, or if the host/port changes, connect to server
                     if (sessionContext.ServerConnection == null
                         || sessionContext.Host != requestMessage.Host
@@ -308,7 +235,7 @@ namespace Gallatin.Core.Service
 
                         Log.Verbose("{0} Sending request to server using open connection", sessionContext.Id);
 
-                        sessionContext.ServerConnection.BeginSend(requestMessage.CreateHttpMessage(), SendToServerComplete);
+                        sessionContext.ServerConnection.BeginSend(requestMessage.CreateHttpMessage(), HandleDataSentToServer);
                     }
                 }
                 else
@@ -332,12 +259,12 @@ namespace Gallatin.Core.Service
                 {
                     ConnectionContext context = clientConnection.Context as ConnectionContext;
 
-                    Log.Verbose("{0} Processing data from client", context.Id);
+                    Log.Verbose( () => string.Format( "{0} Processing data from client\r\n{1}", context.Id, Encoding.UTF8.GetString(data)));
 
                     IHttpMessage message = context.ClientMessageParser.AppendData(data);
                     if (message != null)
                     {
-                        Log.Verbose(() => string.Format("{0} {1}", context.Id, message));
+                        Log.Verbose(() => string.Format("{0} Read full message from client\r\n{1}", context.Id, message));
 
                         // Read full message. Send to server.
                         SendMessageToServer(context);
@@ -362,7 +289,7 @@ namespace Gallatin.Core.Service
 
         }
 
-        private void ClientConnected(INetworkFacade clientConnection)
+        private void HandleClientConnected(INetworkFacade clientConnection)
         {
             Contract.Requires(clientConnection!=null);
 
@@ -388,7 +315,7 @@ namespace Gallatin.Core.Service
         {
             Log.Verbose("Starting proxy server");
 
-            _facadeFactory.Listen( _settings.NetworkAddressBindingOrdinal, port, ClientConnected );
+            _facadeFactory.Listen( _settings.NetworkAddressBindingOrdinal, port, HandleClientConnected );
         }
 
         public void Stop()

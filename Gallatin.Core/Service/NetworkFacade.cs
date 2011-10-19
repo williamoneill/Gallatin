@@ -79,9 +79,14 @@ namespace Gallatin.Core.Service
 
             try
             {
+                lock (_socket)
+                {
+                    _pendingReceiveHandle = null;
+                }
+
                 SocketError socketError;
                 int bytesReceived = _socket.EndReceive( ar, out socketError );
-
+                
                 if(bytesReceived == 0)
                 {
                     Log.Info("{0} Lost connection while receiving data", _socket.GetHashCode());
@@ -105,12 +110,16 @@ namespace Gallatin.Core.Service
 
         }
 
+        private IAsyncResult _pendingReceiveHandle;
+
         public void BeginReceive(Action<bool, byte[], INetworkFacade> callback)
         {
             LastActivityTime = DateTime.Now;
 
             _receiveBuffer = new byte[8000];
-            _socket.BeginReceive( _receiveBuffer,
+            _pendingReceiveHandle =  
+                _socket.BeginReceive(
+                    _receiveBuffer,
                                   0,
                                   _receiveBuffer.Length,
                                   SocketFlags.None,
@@ -157,6 +166,17 @@ namespace Gallatin.Core.Service
             private set
             {
                 _lastAccessTime = value;
+            }
+        }
+
+        public void CancelPendingReceive()
+        {
+            lock(_socket)
+            {
+                if (_pendingReceiveHandle != null)
+                {
+                    _socket.EndReceive(_pendingReceiveHandle);
+                }
             }
         }
 

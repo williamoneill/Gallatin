@@ -23,11 +23,14 @@ namespace Gallatin.Core.Service
             Contract.Invariant(ServerMessageParser != null);
         }
 
-        public int Id
+        public string Id
         {
             get
             {
-                return ClientConnection == null ? 0 : ClientConnection.GetHashCode();
+                int client = ClientConnection == null ? 0 : ClientConnection.GetHashCode();
+                int server = ServerConnection == null ? 0 : ServerConnection.GetHashCode();
+
+                return string.Format( "[{0}.{1}]", client, server );
             }
         }
 

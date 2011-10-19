@@ -12,6 +12,7 @@ namespace Gallatin.Core.Service
         void BeginReceive(Action<bool, byte[], INetworkFacade> callback);
         void BeginClose(Action<bool, INetworkFacade> callback);
         DateTime LastActivityTime { get; }
+        void CancelPendingReceive();
         object Context { get; set; }
     }
 
@@ -36,6 +37,8 @@ namespace Gallatin.Core.Service
         }
 
         public abstract DateTime LastActivityTime { get; }
+
+        public abstract void CancelPendingReceive();
 
         public abstract object Context { get; set; }
     }

@@ -13,12 +13,15 @@ namespace Gallatin.Core.Service
     {
         private INetworkFacade _client;
         private INetworkFacade _server;
+        private bool _isRunning;
+        private object _mutex = new object();
 
         public ServerStream( INetworkFacade client, INetworkFacade server )
         {
             Contract.Requires( client != null );
             Contract.Requires( server != null );
 
+            _isRunning = false;
             _client = client;
             _server = server;
 
@@ -35,7 +38,11 @@ namespace Gallatin.Core.Service
         {
             if ( success )
             {
-                _client.BeginSend( data, ClientSendComplete );
+                if(_isRunning)
+                {
+                    Log.Verbose("Receiving streaming data from server");
+                    _client.BeginSend(data, ClientSendComplete);
+                }
             }
             else
             {
@@ -47,8 +54,11 @@ namespace Gallatin.Core.Service
         {
             if ( success )
             {
-                Log.Verbose( "Streaming data sent to client" );
-                _server.BeginReceive( ServerReceiveComplete );
+                if(_isRunning)
+                {
+                    Log.Verbose("Streaming data sent to client");
+                    _server.BeginReceive(ServerReceiveComplete);
+                }
             }
             else
             {
@@ -61,9 +71,24 @@ namespace Gallatin.Core.Service
             Contract.Requires( initialData != null );
             Contract.Requires( initialData.Length > 0 );
 
-            _client.BeginSend( initialData, ClientSendComplete );
+            lock(_mutex)
+            {
+                if(!_isRunning)
+                {
+                    _isRunning = true;
+                    _client.BeginSend(initialData, ClientSendComplete);
+                }
+            }
         }
 
+        public void Stop()
+        {
+            lock(_mutex)
+            {
+                _isRunning = false;
+                _server.CancelPendingReceive();
+            }
+        }
     }
 
 }

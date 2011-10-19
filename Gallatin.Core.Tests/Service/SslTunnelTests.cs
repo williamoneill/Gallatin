@@ -9,31 +9,6 @@ using NUnit.Framework;
 
 namespace Gallatin.Core.Tests.Service
 {
-    public class MockNetworkFacade : INetworkFacade
-    {
-        public void BeginSend( byte[] buffer, Action<bool, INetworkFacade> callback )
-        {
-        }
-
-        public void BeginReceive( Action<bool, byte[], INetworkFacade> callback )
-        {
-        }
-
-        public void BeginClose( Action<bool, INetworkFacade> callback )
-        {
-        }
-
-        public DateTime LastActivityTime
-        {
-            get; private set;
-        }
-
-        public object Context
-        {
-            get; set;
-        }
-    }
-
     [TestFixture]
     public class SslTunnelTests
     {
