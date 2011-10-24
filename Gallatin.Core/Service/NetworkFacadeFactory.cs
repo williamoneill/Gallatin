@@ -29,7 +29,48 @@ namespace Gallatin.Core.Service
             connectState.Socket.BeginConnect( host, port, HandleConnect<T>, connectState );
         }
 
-        public void Listen( int hostInterfaceIndex, int port, Action<INetworkFacade> callback )
+        private class ConnectState
+        {
+            public Action<bool, INetworkFacade> Callback { get; set; }
+            public Socket Socket { get; set; }
+        }
+
+        public void BeginConnect(string host, int port, Action<bool, INetworkFacade> callback)
+        {
+            ConnectState state = new ConnectState();
+
+            state.Callback = callback;
+            state.Socket = new Socket( AddressFamily.InterNetwork,
+                                        SocketType.Stream,
+                                        ProtocolType.Tcp );
+
+             state.Socket.BeginConnect(host, port, HandleConnect2, state);
+
+
+        }
+
+        private void HandleConnect2(IAsyncResult ar)
+        {
+            Contract.Requires(ar.AsyncState is ConnectState);
+
+            ConnectState state = ar.AsyncState as ConnectState;
+
+            try
+            {
+                state.Socket.EndConnect(ar);
+
+                state.Callback( true, new NetworkFacade(state.Socket));
+            }
+            catch (Exception ex)
+            {
+                Log.Logger.Exception( "Unable to connect to remote host", ex );
+
+                state.Callback( false, null );
+            }
+            
+        }
+
+        public void Listen(int hostInterfaceIndex, int port, Action<INetworkFacade> callback)
         {
             if ( _socket != null )
             {
@@ -71,7 +112,7 @@ namespace Gallatin.Core.Service
             }
             catch ( Exception ex )
             {
-                Log.Exception(
+                Log.Logger.Exception(
                     string.Format( "Unable to connect to remote host {0} port {1}",
                                    connectState.Host,
                                    connectState.Port ),
@@ -93,14 +134,14 @@ namespace Gallatin.Core.Service
                     // Immediately listen for the next clientSession
                     _socket.BeginAccept( HandleNewClientConnect, null );
 
-                    Log.Info( "{0} New client connect", _clientSocket.GetHashCode() );
+                    Log.Logger.Info( "{0} New client connect", _clientSocket.GetHashCode() );
 
                     _clientConnectCallback( new NetworkFacade( _clientSocket ) );
                 }
             }
             catch ( Exception ex )
             {
-                Log.Exception( "Error establishing client connect", ex );
+                Log.Logger.Exception( "Error establishing client connect", ex );
             }
         }
 

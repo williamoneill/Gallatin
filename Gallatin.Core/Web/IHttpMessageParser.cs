@@ -1,5 +1,6 @@
 ﻿
 
+using System;
 using System.Collections.Generic;
 using Gallatin.Core.Util;
 
@@ -13,5 +14,6 @@ namespace Gallatin.Core.Web
         bool TryGetCompleteResponseMessage(out IHttpResponseMessage message);
         bool TryGetCompleteRequestMessage(out IHttpRequestMessage message);
         byte[] AllData { get; }
+
     }
 }

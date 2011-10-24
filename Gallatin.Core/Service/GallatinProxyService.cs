@@ -30,7 +30,7 @@ namespace Gallatin.Core.Service
 
         private void EndSession( ConnectionContext context )
         {
-            Log.Info("{0} Closing proxy client session", context.Id);
+            Log.Logger.Info("{0} Closing proxy client session", context.Id);
 
             try
             {
@@ -38,9 +38,9 @@ namespace Gallatin.Core.Service
                 {
                     if (context.ServerConnection != null)
                     {
-                        context.ServerConnection.BeginClose((s, f) => Log.Verbose("{0} Server connection closed", context.Id));
+                        context.ServerConnection.BeginClose((s, f) => Log.Logger.Verbose("{0} Server connection closed", context.Id));
 
-                        context.ClientConnection.BeginClose((s, f) => Log.Verbose("{0} Client connection closed", context.Id));
+                        context.ClientConnection.BeginClose((s, f) => Log.Logger.Verbose("{0} Client connection closed", context.Id));
 
                         _connections.Put(context);
                     }
@@ -49,7 +49,7 @@ namespace Gallatin.Core.Service
             }
             catch ( Exception ex )
             {
-                Log.Exception("Unhandled exception closing socket", ex);
+                Log.Logger.Exception("Unhandled exception closing socket", ex);
             }
         }
 
@@ -64,20 +64,20 @@ namespace Gallatin.Core.Service
                 if (success)
                 {
 
-                    Log.Verbose("{0} Handling data sent to client", connectionContext.Id);
+                    Log.Logger.Verbose("{0} Handling data sent to client", connectionContext.Id);
 
                     connectionContext.ServerConnection.BeginReceive(HandleDataFromServer);
                 }
                 else
                 {
-                    Log.Error("Unable to send data to client");
+                    Log.Logger.Error("Unable to send data to client");
                     EndSession(connectionContext);
                 }
 
             }
             catch ( Exception ex )
             {
-                Log.Exception("Unhandled exception sending data to client", ex);
+                Log.Logger.Exception("Unhandled exception sending data to client", ex);
             }
 
         }
@@ -92,13 +92,13 @@ namespace Gallatin.Core.Service
 
                 if (success)
                 {
-                    Log.Verbose("{0} Handling data from server", connectionContext.Id);
+                    Log.Logger.Verbose("{0} Handling data from server", connectionContext.Id);
 
                     connectionContext.ClientConnection.BeginSend( data, HandleDataSentToClient );
                 }
                 else
                 {
-                    Log.Error("Unable to receive data from server");
+                    Log.Logger.Error("Unable to receive data from server");
 
                     // TODO: evaluate later
                     //EndSession(connectionContext);
@@ -107,7 +107,7 @@ namespace Gallatin.Core.Service
             }
             catch ( Exception ex )
             {
-                Log.Exception("Unhandled exception reading data from server", ex);
+                Log.Logger.Exception("Unhandled exception reading data from server", ex);
             }
 
         }
@@ -122,20 +122,20 @@ namespace Gallatin.Core.Service
 
                 if (success)
                 {
-                    Log.Verbose("{0} Data sent to server. Resetting client message parser. Data to be streamed to client.", context.Id);
+                    Log.Logger.Verbose("{0} Data sent to server. Resetting client message parser. Data to be streamed to client.", context.Id);
                     context.ClientMessageParser.Reset();
 
                     context.ClientConnection.BeginReceive(HandleDataFromClient);
                 }
                 else
                 {
-                    Log.Error("Unable to send request to server");
+                    Log.Logger.Error("Unable to send request to server");
                     EndSession(context);
                 }
             }
             catch ( Exception ex )
             {
-                Log.Exception("Unhandled exception sending data to server", ex);
+                Log.Logger.Exception("Unhandled exception sending data to server", ex);
             }
 
         }
@@ -151,7 +151,7 @@ namespace Gallatin.Core.Service
             {
                 if (success)
                 {
-                    Log.Verbose("{0} Connected to server", state.Id);
+                    Log.Logger.Verbose("{0} Connected to server", state.Id);
 
                     state.ServerConnection = serverConnection;
                     serverConnection.Context = state;
@@ -173,19 +173,19 @@ namespace Gallatin.Core.Service
                     }
                     else
                     {
-                        Log.Error("Connected to server and attempted to send request but unable to create request from HTTP data");
+                        Log.Logger.Error("Connected to server and attempted to send request but unable to create request from HTTP data");
                     }
                 }
                 else
                 {
-                    Log.Error("Unable to connect to remote host {0}  {1}", state.Host, state.Port);
+                    Log.Logger.Error("Unable to connect to remote host {0}  {1}", state.Host, state.Port);
                     EndSession(state);
                 }
 
             }
             catch ( Exception ex )
             {
-                Log.Exception("Unhandled exception connecting to server", ex);
+                Log.Logger.Exception("Unhandled exception connecting to server", ex);
             }
         }
 
@@ -211,7 +211,7 @@ namespace Gallatin.Core.Service
 
                         if (sessionContext.ServerConnection != null)
                         {
-                            Log.Verbose("{0} Resetting existing connection", sessionContext.Id);
+                            Log.Logger.Verbose("{0} Resetting existing connection", sessionContext.Id);
 
                             waitForServerDisconnectEvent.Reset();
 
@@ -220,7 +220,7 @@ namespace Gallatin.Core.Service
                                 {
                                     if (!success)
                                     {
-                                        Log.Error("An error occurred while disconnecting from remote host");
+                                        Log.Logger.Error("An error occurred while disconnecting from remote host");
                                     }
                                     waitForServerDisconnectEvent.Set();
                                 });
@@ -228,7 +228,7 @@ namespace Gallatin.Core.Service
 
                         if (waitForServerDisconnectEvent.WaitOne(10000))
                         {
-                            Log.Verbose("{0} Connecting to {1}:{2}", sessionContext.Id, sessionContext.Host, sessionContext.Port);
+                            Log.Logger.Verbose("{0} Connecting to {1}:{2}", sessionContext.Id, sessionContext.Host, sessionContext.Port);
 
                             _facadeFactory.BeginConnect(
                                 sessionContext.Host,
@@ -238,7 +238,7 @@ namespace Gallatin.Core.Service
                         }
                         else
                         {
-                            Log.Error("Unable to re-establish new server connection. Closing client session.");
+                            Log.Logger.Error("Unable to re-establish new server connection. Closing client session.");
                         }
                     }
                     else
@@ -246,20 +246,20 @@ namespace Gallatin.Core.Service
                         Contract.Assert(sessionContext.ServerConnection != null);
                         Contract.Assert(sessionContext.ServerConnection.Context != null);
 
-                        Log.Verbose("{0} Sending request to server using open connection", sessionContext.Id);
+                        Log.Logger.Verbose("{0} Sending request to server using open connection", sessionContext.Id);
 
                         sessionContext.ServerConnection.BeginSend(requestMessage.CreateHttpMessage(), HandleDataSentToServer);
                     }
                 }
                 else
                 {
-                    Log.Error("HTTP request expected from client. Invalid HTTP request.");
+                    Log.Logger.Error("HTTP request expected from client. Invalid HTTP request.");
                 }
 
             }
             catch ( Exception ex )
             {
-                Log.Exception("Unhandled exception sending data to server",ex);
+                Log.Logger.Exception("Unhandled exception sending data to server",ex);
             }
 
         }
@@ -274,12 +274,12 @@ namespace Gallatin.Core.Service
 
                 if (success)
                 {
-                    Log.Verbose( "{0} Processing data from client", context.Id );
+                    Log.Logger.Verbose( "{0} Processing data from client", context.Id );
 
                     IHttpMessage message = context.ClientMessageParser.AppendData(data);
                     if (message != null)
                     {
-                        Log.Verbose(() => string.Format("{0} Read full message from client\r\n{1}", context.Id, message));
+                        Log.Logger.Verbose(() => string.Format("{0} Read full message from client\r\n{1}", context.Id, message));
 
                         // Read full message. Send to server.
                         SendMessageToServer(context);
@@ -287,20 +287,20 @@ namespace Gallatin.Core.Service
                     else
                     {
                         // Not enough data to complete the message. Get more.
-                        Log.Verbose("{0} Requesting additional data from client", context.Id);
+                        Log.Logger.Verbose("{0} Requesting additional data from client", context.Id);
                         clientConnection.BeginReceive(HandleDataFromClient);
                     }
                 }
                 else
                 {
-                    Log.Info("{0} Failed to receive data from client. Client may have disconnected.");
+                    Log.Logger.Info("{0} Failed to receive data from client. Client may have disconnected.");
                     EndSession(context);
                 }
 
             }
             catch ( Exception ex )
             {
-                Log.Exception("Unhandled exception reading data from client", ex);
+                Log.Logger.Exception("Unhandled exception reading data from client", ex);
             }
 
         }
@@ -315,14 +315,14 @@ namespace Gallatin.Core.Service
                 connectionContext.ClientConnection = clientConnection;
                 clientConnection.Context = connectionContext;
 
-                Log.Verbose("{0} New client connection", connectionContext.Id);
+                Log.Logger.Verbose("{0} New client connection", connectionContext.Id);
 
                 clientConnection.BeginReceive(HandleDataFromClient);
             }
             catch
             {
-                Log.Error("Unable to accept new client connection. The maximum number of concurrent clients has been reached");
-                clientConnection.BeginClose( ( s, f ) => Log.Warning( "Closed client connection. Too many connections." ) );
+                Log.Logger.Error("Unable to accept new client connection. The maximum number of concurrent clients has been reached");
+                clientConnection.BeginClose( ( s, f ) => Log.Logger.Warning( "Closed client connection. Too many connections." ) );
             }
             
         }
@@ -331,42 +331,42 @@ namespace Gallatin.Core.Service
 
         private void WorkerMethod()
         {
-            Log.Info("Starting worker thread in proxy server");
+            Log.Logger.Info("Starting worker thread in proxy server");
 
             while(!_isActiveEvent.WaitOne(30000))
             {
-                Log.Verbose("Running worker thread");
+                Log.Logger.Verbose("Running worker thread");
 
-                try
-                {
-                    DateTime cutoffTime = DateTime.Now.AddMinutes(-5);
+                //try
+                //{
+                //    DateTime cutoffTime = DateTime.Now.AddMinutes(-5);
 
-                    foreach (var connectionContext in _connections.OutlierCollection.ToArray())
-                    {
-                        if ( (connectionContext.ServerConnection == null || connectionContext.ServerConnection.LastActivityTime > cutoffTime) &&
-                            connectionContext.ClientConnection.LastActivityTime > cutoffTime)
-                        {
-                            Log.Warning("{0} Forcing close on hung session", connectionContext.Id);
-                            EndSession(connectionContext);
-                        }
-                    }
-                }
-                catch(Exception ex)
-                {
-                    Log.Exception("Exception in worker thread", ex);
-                }
+                //    foreach (var connectionContext in _connections.OutlierCollection.ToArray())
+                //    {
+                //        if ( (connectionContext.ServerConnection == null || connectionContext.ServerConnection.LastActivityTime > cutoffTime) &&
+                //            connectionContext.ClientConnection.LastActivityTime > cutoffTime)
+                //        {
+                //            Log.Logger.Warning("{0} Forcing close on hung session", connectionContext.Id);
+                //            EndSession(connectionContext);
+                //        }
+                //    }
+                //}
+                //catch(Exception ex)
+                //{
+                //    Log.Logger.Exception("Exception in worker thread", ex);
+                //}
 
             }
 
-            Log.Info("Ending worker thread in proxy server");
+            Log.Logger.Info("Ending worker thread in proxy server");
         }
 
         private object _mutex = new object();
         private Thread _worker;
 
-        public void Start(int port)
+        public void Start()
         {
-            Log.Verbose("Starting proxy server");
+            Log.Logger.Verbose("Starting proxy server");
 
             lock(_mutex)
             {
@@ -380,11 +380,11 @@ namespace Gallatin.Core.Service
                     // TODO:
                     //_worker.Start();
 
-                    _facadeFactory.Listen(_settings.NetworkAddressBindingOrdinal, port, HandleClientConnected);
+                    _facadeFactory.Listen(_settings.NetworkAddressBindingOrdinal, _settings.ServerPort, HandleClientConnected);
                 }
                 else
                 {
-                    Log.Warning("Ignoring duplicate request to start proxy server");
+                    Log.Logger.Warning("Ignoring duplicate request to start proxy server");
                 }
             }
         }
@@ -398,7 +398,7 @@ namespace Gallatin.Core.Service
                     _isActiveEvent.Set();
 
                     if(!_worker.Join( 1000 ))
-                        Log.Error("Worker thread did not respond");
+                        Log.Logger.Error("Worker thread did not respond");
 
                     _isActiveEvent = null;
 

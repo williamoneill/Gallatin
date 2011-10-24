@@ -39,12 +39,12 @@ namespace Gallatin.Core.Service
 
                 if( bytesSent == 0)
                 {
-                    Log.Info("{0} Socket disconnected", _socket.GetHashCode());
+                    Log.Logger.Info("{0} Socket disconnected", _socket.GetHashCode());
                     callback( false, this );
                 }
                 else if(socketError != SocketError.Success)
                 {
-                    Log.Error("{0} Socket error: {1}", _socket.GetHashCode(), socketError);
+                    Log.Logger.Error("{0} Socket error: {1}", _socket.GetHashCode(), socketError);
                     callback( false, this );
                 }
                 else
@@ -55,7 +55,7 @@ namespace Gallatin.Core.Service
             }
             catch ( Exception ex )
             {
-                Log.Exception(string.Format("{0} Error receiving network data", _socket.GetHashCode()), ex );
+                Log.Logger.Exception(string.Format("{0} Error receiving network data", _socket.GetHashCode()), ex );
                 callback( false, this );
             }
         }
@@ -94,12 +94,12 @@ namespace Gallatin.Core.Service
                 
                 if(bytesReceived == 0)
                 {
-                    Log.Info("{0} Lost connection while receiving data", _socket.GetHashCode());
+                    Log.Logger.Info("{0} Lost connection while receiving data", _socket.GetHashCode());
                     callback( false, null, this );
                 }
                 else if(socketError != SocketError.Success)
                 {
-                    Log.Info("{0} Network error encountered while receiving data: {1}", _socket.GetHashCode(), socketError);
+                    Log.Logger.Info("{0} Network error encountered while receiving data: {1}", _socket.GetHashCode(), socketError);
                     callback(false, null, this);
                 }
                 else
@@ -109,7 +109,7 @@ namespace Gallatin.Core.Service
             }
             catch ( Exception ex )
             {
-                Log.Exception(string.Format("{0} Unhandled exception while receiving data", _socket.GetHashCode()), ex);
+                Log.Logger.Exception(string.Format("{0} Unhandled exception while receiving data", _socket.GetHashCode()), ex);
                 callback( false, null, this );
             }
 
@@ -148,7 +148,7 @@ namespace Gallatin.Core.Service
             }
             catch ( Exception ex )
             {
-                Log.Exception(string.Format("{0} Unhandled exception when shutting down connection", _socket.GetHashCode()), ex);
+                Log.Logger.Exception(string.Format("{0} Unhandled exception when shutting down connection", _socket.GetHashCode()), ex);
                 callback( false, this );
             }
         }
@@ -182,7 +182,7 @@ namespace Gallatin.Core.Service
             {
                 if (_pendingReceiveHandle != null)
                 {
-                    Log.Verbose("{0} Cancelling pending receive", _socket.GetHashCode());
+                    Log.Logger.Verbose("{0} Cancelling pending receive", _socket.GetHashCode());
                     _socket.EndReceive(_pendingReceiveHandle);
                 }
             }

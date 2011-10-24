@@ -7,6 +7,7 @@ namespace Gallatin.Core.Service
     public interface INetworkFacadeFactory
     {
         void BeginConnect<T>( string host, int port, Action<bool,INetworkFacade,T> callback, T state );
+        void BeginConnect( string host, int port, Action<bool, INetworkFacade> callback );
         void Listen(int hostInterfaceIndex, int port, Action<INetworkFacade> callback);
     }
 
@@ -19,6 +20,13 @@ namespace Gallatin.Core.Service
             Contract.Requires(port > 0);
             Contract.Requires(callback != null);
 
+        }
+
+        public void BeginConnect( string host, int port, Action<bool, INetworkFacade> callback )
+        {
+            Contract.Requires(!string.IsNullOrEmpty(host));
+            Contract.Requires(port > 0);
+            Contract.Requires(callback!=null);
         }
 
         public void Listen( int hostInterfaceIndex, int port, Action<INetworkFacade> callback )

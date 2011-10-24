@@ -34,7 +34,7 @@ namespace Gallatin.Core.Service
             }
         }
 
-        public ServerStream ServerStream { get; set; }
+        //public ServerStream ServerStream { get; set; }
         public string Host { get; set; }
         public int Port { get; set; }
         public bool IsSsl { get; set; }
@@ -46,7 +46,7 @@ namespace Gallatin.Core.Service
         
         public void Reset()
         {
-            ServerStream = null;
+            //ServerStream = null;
             ClientMessageParser.Reset();
             ServerMessageParser.Reset();
             Host = null;

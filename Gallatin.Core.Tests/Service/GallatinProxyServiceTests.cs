@@ -53,7 +53,7 @@ namespace Gallatin.Core.Tests.Service
                 .Callback<byte[], Action<bool, INetworkFacade>>((b, d) => d(true, client.Object));
 
             GallatinProxyService serviceUnderTest = new GallatinProxyService(mockFactory.Object, mockSettings.Object);
-            serviceUnderTest.Start(8080);
+            serviceUnderTest.Start();
 
             client.Verify(m=>m.BeginClose( It.IsAny<Action<bool,INetworkFacade>>() ));
             server.Verify(m => m.BeginClose(It.IsAny<Action<bool, INetworkFacade>>()));
@@ -112,7 +112,7 @@ namespace Gallatin.Core.Tests.Service
                 .Callback<byte[], Action<bool, INetworkFacade>>((b, d) => d(true, client.Object));
 
             GallatinProxyService serviceUnderTest = new GallatinProxyService(mockFactory.Object, mockSettings.Object);
-            serviceUnderTest.Start(8080);
+            serviceUnderTest.Start();
 
             client.Verify(m => m.BeginClose(It.IsAny<Action<bool, INetworkFacade>>()), Times.Once());
             server.Verify(m => m.BeginClose(It.IsAny<Action<bool, INetworkFacade>>()), Times.Once());

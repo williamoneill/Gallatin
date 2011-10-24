@@ -70,6 +70,48 @@ namespace Gallatin.Core.Tests.Service
         }
 
         [Test]
+        public void ConnectTestWithoutState()
+        {
+            ManualResetEvent trigger = new ManualResetEvent(false);
+            bool isConnected = false;
+
+            Socket socket = new Socket(AddressFamily.InterNetwork,
+                                        SocketType.Stream,
+                                        ProtocolType.Tcp);
+
+            IPHostEntry dnsEntry = Dns.GetHostEntry("localhost");
+
+            // If this fails, consider changing the index. This could fail depending on the
+            // physical configuration of the host system.
+            IPEndPoint endPoint =
+                new IPEndPoint(dnsEntry.AddressList[1], 8089);
+
+            socket.Bind(endPoint);
+
+            socket.Listen(30);
+
+            socket.BeginAccept(s =>
+            {
+                socket.EndAccept(s);
+                isConnected = true;
+                trigger.Set();
+            },
+                                null);
+
+            NetworkFacadeFactory factory = new NetworkFacadeFactory();
+            factory.BeginConnect("localhost",
+                                  8089,
+                                  (b, s) =>
+                                  {
+                                      Assert.That(b, Is.True);
+                                      Assert.That(s, Is.Not.Null);
+                                  });
+
+            Assert.That(trigger.WaitOne(2000), Is.True);
+            Assert.That(isConnected, Is.True);
+        }
+
+        [Test]
         [ExpectedException]
         public void SanityVerifyInterFaceContract()
         {

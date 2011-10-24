@@ -34,7 +34,7 @@ namespace Gallatin.Core.Service
             }
             else
             {
-                Log.Error("SSL failure: unable to receive data from server");
+                Log.Logger.Error("SSL failure: unable to receive data from server");
             }
         }
 
@@ -46,7 +46,7 @@ namespace Gallatin.Core.Service
             }
             else
             {
-                Log.Error("SSL failure: unable to receive data from client");
+                Log.Logger.Error("SSL failure: unable to receive data from client");
             }
         }
 
@@ -58,7 +58,7 @@ namespace Gallatin.Core.Service
             }
             else
             {
-                Log.Error("SSL failure: unable to send data to client");
+                Log.Logger.Error("SSL failure: unable to send data to client");
             }
         }
 
@@ -70,13 +70,13 @@ namespace Gallatin.Core.Service
             }
             else
             {
-                Log.Error("SSL failure: unable to send data to server");
+                Log.Logger.Error("SSL failure: unable to send data to server");
             }
         }
 
         public void EstablishTunnel()
         {
-            Log.Info( "Starting SSL connection" );
+            Log.Logger.Info( "Starting SSL connection" );
 
             _client.BeginSend(
                 Encoding.UTF8.GetBytes(string.Format(

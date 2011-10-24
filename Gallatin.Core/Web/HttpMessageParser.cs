@@ -110,7 +110,7 @@ namespace Gallatin.Core.Web
         {
             lock(_mutex)
             {
-                Log.Verbose("Resetting HttpMessageParser");
+                Log.Logger.Verbose("Resetting HttpMessageParser");
 
                 _rawData.Clear();
                 
