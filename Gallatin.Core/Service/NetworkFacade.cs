@@ -114,7 +114,9 @@ namespace Gallatin.Core.Service
                 }
                 else
                 {
-                    callback( true, _receiveBuffer.Take( bytesReceived ).ToArray(), this );
+                    byte[] buffer = new byte[bytesReceived];
+                    Array.Copy( _receiveBuffer, buffer, bytesReceived  );
+                    callback( true, buffer, this );
                 }
             }
             catch ( Exception ex )

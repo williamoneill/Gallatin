@@ -56,7 +56,21 @@ namespace Gallatin.Core.Web
             StatusText = statusText;
         }
 
+        public bool IsPersistent
+        {
+            get
+            {
+                // HTTP 1.1, assume persistent connection
+                if (Version == "1.1")
+                {
+                    string persistentConnection = Headers["connection"];
 
+                    return ( persistentConnection != null
+                             && persistentConnection.Equals( "close", StringComparison.InvariantCultureIgnoreCase ) );
+                }
+                return false;
+            }
+        }
         public int StatusCode { get; private set; }
         public string StatusText { get; private set; }
 

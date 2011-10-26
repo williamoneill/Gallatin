@@ -130,7 +130,7 @@ namespace Gallatin.Core.Web
                 }
             }
 
-            OnAdditionalDataRequested();
+            //OnAdditionalDataRequested();
         }
 
         public void OnBodyAvailable()

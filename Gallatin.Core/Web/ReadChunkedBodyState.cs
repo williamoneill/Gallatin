@@ -1,3 +1,4 @@
+using System;
 using System.Diagnostics.Contracts;
 using System.IO;
 using System.Linq;
@@ -26,24 +27,33 @@ namespace Gallatin.Core.Web
             _chunkSize = chunkSize;
         }
 
-        public void AcceptData(byte[] buffer)
+        public void AcceptData(byte[] data)
         {
-            _body.Write(buffer,0,buffer.Length);
-            _remainingDataNeeded -= buffer.Length;
+            _body.Write(data,0,data.Length);
+            _remainingDataNeeded -= data.Length;
 
             if (_remainingDataNeeded <= 0)
             {
                 // The chunk will have a terminating CRLF that is not part of the actual body. Trim this
                 // before appending to the body. The raw data must keep this intact.
 
-                _context.AppendBodyData( _body.ToArray().Take(_chunkSize).ToArray() );
-                _context.OnPartialDataAvailable( _body.ToArray().Take(_chunkSize+LengthOfCrLf).ToArray() );
+                var sourceArray = _body.ToArray();
+
+                byte[] buffer = new byte[_chunkSize];
+                Array.Copy( sourceArray, buffer, _chunkSize );
+                _context.AppendBodyData( buffer );
+
+                buffer = new byte[_chunkSize + LengthOfCrLf];
+                Array.Copy(sourceArray, buffer, _chunkSize + LengthOfCrLf);
+                _context.OnPartialDataAvailable( buffer );
 
                 _context.State = new ReadChunkedHeaderState(_context);
 
                 if (_remainingDataNeeded < 0)
                 {
-                    _context.State.AcceptData( _body.ToArray().Skip(_chunkSize+LengthOfCrLf).Take(_remainingDataNeeded * -1).ToArray() );
+                    buffer = new byte[_remainingDataNeeded * -1];
+                    Array.Copy(sourceArray, _chunkSize + LengthOfCrLf, buffer, 0, buffer.Length);
+                    _context.State.AcceptData( buffer );
                 }
                 else
                 {

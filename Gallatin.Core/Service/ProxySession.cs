@@ -312,29 +312,17 @@ namespace Gallatin.Core.Service
             try
             {
                 Log.Logger.Verbose( "{0} Complete message sent to client. Evaluating persistent connection.", ToString() );
-                // Evaluate persistent connections
 
-                // HTTP 1.1, assume persistent connection
-                if ( _responseHeader.Version == "1.1" )
+                if (!_responseHeader.IsPersistent)
                 {
-                    string persistentConnection = _responseHeader.Headers["connection"];
-
-                    if ( persistentConnection != null
-                         && persistentConnection.Equals( "close", StringComparison.InvariantCultureIgnoreCase ) )
-                    {
-                        Log.Logger.Verbose("{0} Ending connection (explicit close)", ToString());
-                        EndSession();
-                    }
-                    else
-                    {
-                        Log.Logger.Verbose("{0} Maintaining persistent connection", ToString());
-                    }
+                    Log.Logger.Verbose("{0} Ending connection (explicit close)", ToString());
+                    EndSession();
                 }
                 else
                 {
-                    Log.Logger.Verbose("{0} Ending connection (not HTTP 1.1)", ToString());
-                    EndSession();
+                    Log.Logger.Verbose("{0} Maintaining persistent connection", ToString());
                 }
+
             }
             catch ( Exception ex )
             {

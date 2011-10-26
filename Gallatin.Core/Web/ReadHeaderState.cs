@@ -51,7 +51,8 @@ namespace Gallatin.Core.Web
                     // Write any remaining data to the body memory buffer
                     if (data.Length > i + 1)
                     {
-                        _bodyData = new MemoryStream( data.Skip(i + 1).Take(data.Length - i - 1).ToArray() );
+                        _bodyData = new MemoryStream( data.Length - i - 1 );
+                        _bodyData.Write(data, i + 1, data.Length - i - 1);
                     }
                 }
             }
