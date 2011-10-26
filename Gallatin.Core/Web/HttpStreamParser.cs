@@ -25,9 +25,12 @@ namespace Gallatin.Core.Web
             WebLog.Logger.Verbose("ReadRequestHeaderComplete event raised");
 
             var requestEvent = ReadRequestHeaderComplete;
-            if (requestEvent != null)
+            lock (_mutex)
             {
-                requestEvent( this, new HttpRequestHeaderEventArgs( version, headers, method, path ) );
+                if (requestEvent != null)
+                {
+                    requestEvent(this, new HttpRequestHeaderEventArgs(version, headers, method, path));
+                }
             }
             
         }
@@ -37,9 +40,12 @@ namespace Gallatin.Core.Web
             WebLog.Logger.Verbose("ReadResponseHeaderComplete event raised");
 
             var responseEvent = ReadResponseHeaderComplete;
-            if (responseEvent != null)
+            lock (_mutex)
             {
-                responseEvent( this, new HttpResponseHeaderEventArgs( version, headers, statusCode, statusMessage ) );
+                if (responseEvent != null)
+                {
+                    responseEvent(this, new HttpResponseHeaderEventArgs(version, headers, statusCode, statusMessage));
+                }
             }
         }
 
@@ -57,9 +63,12 @@ namespace Gallatin.Core.Web
             // Only write to the memory stream if someone is subscribed to the event. The profiler
             // showed this was an expensive operation. Avoid this work if possible.
             var bodyAvailable = BodyAvailable;
-            if (bodyAvailable != null)
+            lock (_mutex)
             {
-                _bodyData.Write(data, 0, data.Length);
+                if (bodyAvailable != null)
+                {
+                    _bodyData.Write(data, 0, data.Length);
+                }
             }
         }
 
@@ -68,9 +77,12 @@ namespace Gallatin.Core.Web
             WebLog.Logger.Verbose("AdditionalDataRequested event raised");
 
             var needMoreData = AdditionalDataRequested;
-            if (needMoreData != null)
+            lock ( _mutex )
             {
-                needMoreData(this, new EventArgs());
+                if (needMoreData != null)
+                {
+                    needMoreData(this, new EventArgs());
+                }
             }
         }
 
@@ -79,9 +91,12 @@ namespace Gallatin.Core.Web
             WebLog.Logger.Verbose("PartialDataAvailable event raised");
 
             var partialDataAvailable = PartialDataAvailable;
-            if (partialDataAvailable != null)
+            lock (_mutex)
             {
-                partialDataAvailable(this, new HttpDataEventArgs(partialData));
+                if (partialDataAvailable != null)
+                {
+                    partialDataAvailable(this, new HttpDataEventArgs(partialData));
+                }
             }
         }
 
@@ -106,12 +121,16 @@ namespace Gallatin.Core.Web
             WebLog.Logger.Verbose("MessageReadComplete event raised");
 
             var readComplete = MessageReadComplete;
-            if (readComplete != null)
+
+            lock (_mutex)
             {
-                readComplete(this, new EventArgs());
+                if (readComplete != null)
+                {
+                    readComplete(this, new EventArgs());
+                }
             }
 
-            _bodyData = new MemoryStream();
+            OnAdditionalDataRequested();
         }
 
         public void OnBodyAvailable()
@@ -119,9 +138,15 @@ namespace Gallatin.Core.Web
             WebLog.Logger.Verbose("BodyAvailable event raised");
 
             var bodyAvailable = BodyAvailable;
-            if (bodyAvailable != null)
+            lock (_mutex)
             {
-                bodyAvailable(this, new HttpDataEventArgs(_bodyData.ToArray()));
+                if (bodyAvailable != null)
+                {
+                    bodyAvailable(this, new HttpDataEventArgs(_bodyData.ToArray()));
+                }
+
+                // Reset contents after raising the event
+                _bodyData = new MemoryStream();
             }
         }
 

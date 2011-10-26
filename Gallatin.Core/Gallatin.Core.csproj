@@ -96,9 +96,9 @@
     <Compile Include="CoreSettings.cs" />
     <Compile Include="ICoreSettings.cs" />
     <Compile Include="Service\ConnectionContext.cs" />
-    <Compile Include="Service\GallatinProxyService.cs" />
     <Compile Include="Service\ProxyService.cs" />
     <Compile Include="Service\ProxySession.cs" />
+    <Compile Include="Util\DelayedWriter.cs" />
     <Compile Include="Util\Logger.cs" />
     <Compile Include="Web\HttpHeaders.cs" />
     <Compile Include="Web\HttpStreamParser.cs" />

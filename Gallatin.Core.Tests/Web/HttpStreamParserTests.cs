@@ -33,7 +33,12 @@ namespace Gallatin.Core.Tests.Web
             parser.AdditionalDataRequested += ( s, a ) =>
                                               {
                                                   i++;
-                                                  parser.AppendData( msg.Skip( i * 5 ).Take( 5 ).ToArray() );
+
+                                                  // This will get fired once after reading all data
+                                                  if (i < 12)
+                                                  {
+                                                      parser.AppendData(msg.Skip(i * 5).Take(5).ToArray());
+                                                  }
                                               };
 
             parser.MessageReadComplete += (s, a) => bodyReadCompleteCalled++;
@@ -50,7 +55,7 @@ namespace Gallatin.Core.Tests.Web
             Assert.That(partialReceiveBuffer, Is.EqualTo(Encoding.UTF8.GetBytes("123456789012345678901")));
             Assert.That(bodyAvailableCalled, Is.EqualTo(1));
             Assert.That(bodyReadCompleteCalled, Is.EqualTo(1));
-            
+            Assert.That(i, Is.EqualTo(12));
         }
 
         [Test]
@@ -101,7 +106,7 @@ namespace Gallatin.Core.Tests.Web
             Assert.That(bodyReadCompleteCalled, Is.EqualTo(1));
             Assert.That(partialDataAvailableCalled, Is.EqualTo(10));
             Assert.That(readResponseCompleteCalled, Is.EqualTo(1));
-            Assert.That(additionalDataRequestedCalled, Is.EqualTo(1));
+            Assert.That(additionalDataRequestedCalled, Is.EqualTo(2));
             
         }
 
@@ -149,7 +154,7 @@ namespace Gallatin.Core.Tests.Web
             Assert.That(bodyReadCompleteCalled, Is.EqualTo(1));
             Assert.That(partialDataAvailableCalled, Is.EqualTo(1));
             Assert.That(readResponseCompleteCalled, Is.EqualTo(1));
-            Assert.That(additionalDataRequestedCalled, Is.EqualTo(1));
+            Assert.That(additionalDataRequestedCalled, Is.EqualTo(2));
         }
 
         [Test]
@@ -157,6 +162,7 @@ namespace Gallatin.Core.Tests.Web
         {
             bool bodyReadCompleteCalled = false;
             bool readCompleteCalled = false;
+            int additionalDataRequestedCount = 0;
 
             byte[] data = File.ReadAllBytes( "testdata\\request.raw" );
 
@@ -164,7 +170,7 @@ namespace Gallatin.Core.Tests.Web
 
             parser.BodyAvailable += ( s, e ) => Assert.Fail( "Method should not have been called" );
 
-            parser.AdditionalDataRequested += ( s, a ) => Assert.Fail( "Should not be invoked" );
+            parser.AdditionalDataRequested += ( s, a ) => additionalDataRequestedCount++;
 
             parser.MessageReadComplete += ( s, a ) => bodyReadCompleteCalled = true;
 
@@ -185,6 +191,7 @@ namespace Gallatin.Core.Tests.Web
 
             Assert.IsTrue( bodyReadCompleteCalled );
             Assert.IsTrue( readCompleteCalled );
+            Assert.That(additionalDataRequestedCount, Is.EqualTo(1));
         }
     }
 }

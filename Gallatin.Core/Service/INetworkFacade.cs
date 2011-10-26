@@ -11,9 +11,9 @@ namespace Gallatin.Core.Service
         void BeginSend( byte[] buffer, Action<bool, INetworkFacade> callback );
         void BeginReceive(Action<bool, byte[], INetworkFacade> callback);
         void BeginClose(Action<bool, INetworkFacade> callback);
-        DateTime LastActivityTime { get; }
         void CancelPendingReceive();
         object Context { get; set; }
+        int Id { get; }
     }
 
     [ContractClassFor(typeof(INetworkFacade))]
@@ -41,5 +41,7 @@ namespace Gallatin.Core.Service
         public abstract void CancelPendingReceive();
 
         public abstract object Context { get; set; }
+
+        public abstract int Id { get; }
     }
 }

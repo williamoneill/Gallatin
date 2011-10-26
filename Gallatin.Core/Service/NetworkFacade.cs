@@ -20,7 +20,6 @@ namespace Gallatin.Core.Service
             Contract.Requires(socket.Connected);
 
             _socket = socket;
-            _lastAccessTime = DateTime.Now;
         }
 
         private void HandleSend(IAsyncResult ar)
@@ -28,9 +27,11 @@ namespace Gallatin.Core.Service
             Contract.Requires(ar != null);
             Contract.Requires(ar.AsyncState is Action<bool,INetworkFacade>);
 
-            LastActivityTime = DateTime.Now;
-
             Action<bool, INetworkFacade> callback = ar.AsyncState as Action<bool, INetworkFacade>;
+
+            if(_shutdown)
+                return;
+            
 
             try
             {
@@ -39,12 +40,12 @@ namespace Gallatin.Core.Service
 
                 if( bytesSent == 0)
                 {
-                    Log.Logger.Info("{0} Socket disconnected", _socket.GetHashCode());
+                    Log.Logger.Info("{0} Socket disconnected", Id);
                     callback( false, this );
                 }
                 else if(socketError != SocketError.Success)
                 {
-                    Log.Logger.Error("{0} Socket error: {1}", _socket.GetHashCode(), socketError);
+                    Log.Logger.Error("{0} Socket error: {1}", Id, socketError);
                     callback( false, this );
                 }
                 else
@@ -55,14 +56,22 @@ namespace Gallatin.Core.Service
             }
             catch ( Exception ex )
             {
-                Log.Logger.Exception(string.Format("{0} Error receiving network data", _socket.GetHashCode()), ex );
+                Log.Logger.Exception(string.Format("{0} Unhandled exception while sending network data", Id), ex);
                 callback( false, this );
+            }
+        }
+
+        public int Id
+        {
+            get
+            {
+                return _socket.GetHashCode();
             }
         }
 
         public void BeginSend( byte[] buffer, Action<bool,INetworkFacade> callback )
         {
-            LastActivityTime = DateTime.Now;
+            Log.Logger.Info("{0} Sending data {1}", Id, buffer.Length);
 
             _sendBuffer = buffer;
             _socket.BeginSend( _sendBuffer,
@@ -78,9 +87,10 @@ namespace Gallatin.Core.Service
             Contract.Requires(ar != null);
             Contract.Requires(ar.AsyncState is Action<bool, byte[], INetworkFacade>);
 
-            LastActivityTime = DateTime.Now;
-
             Action<bool, byte[], INetworkFacade> callback = ar.AsyncState as Action<bool, byte[], INetworkFacade>;
+
+            if (_shutdown)
+                return;
 
             try
             {
@@ -94,12 +104,12 @@ namespace Gallatin.Core.Service
                 
                 if(bytesReceived == 0)
                 {
-                    Log.Logger.Info("{0} Lost connection while receiving data", _socket.GetHashCode());
+                    Log.Logger.Info("{0} Lost connection while receiving data", Id);
                     callback( false, null, this );
                 }
                 else if(socketError != SocketError.Success)
                 {
-                    Log.Logger.Info("{0} Network error encountered while receiving data: {1}", _socket.GetHashCode(), socketError);
+                    Log.Logger.Info("{0} Network error encountered while receiving data: {1}", Id, socketError);
                     callback(false, null, this);
                 }
                 else
@@ -109,7 +119,7 @@ namespace Gallatin.Core.Service
             }
             catch ( Exception ex )
             {
-                Log.Logger.Exception(string.Format("{0} Unhandled exception while receiving data", _socket.GetHashCode()), ex);
+                Log.Logger.Exception(string.Format("{0} Unhandled exception while receiving data", Id), ex);
                 callback( false, null, this );
             }
 
@@ -119,7 +129,7 @@ namespace Gallatin.Core.Service
 
         public void BeginReceive(Action<bool, byte[], INetworkFacade> callback)
         {
-            LastActivityTime = DateTime.Now;
+            Log.Logger.Info("{0} Receiving data", Id);
 
             _receiveBuffer = new byte[8000];
             _pendingReceiveHandle =  
@@ -136,8 +146,6 @@ namespace Gallatin.Core.Service
         {
             Contract.Requires(ar.AsyncState is Action<bool, INetworkFacade>);
 
-            LastActivityTime = DateTime.Now;
-
             Action<bool, INetworkFacade> callback = ar.AsyncState as Action<bool, INetworkFacade>;
 
             try
@@ -148,33 +156,21 @@ namespace Gallatin.Core.Service
             }
             catch ( Exception ex )
             {
-                Log.Logger.Exception(string.Format("{0} Unhandled exception when shutting down connection", _socket.GetHashCode()), ex);
+                Log.Logger.Exception(string.Format("{0} Unhandled exception when shutting down connection", Id), ex);
                 callback( false, this );
             }
         }
 
-        private DateTime _lastAccessTime;
+        // Implement idisposable
+        private bool _shutdown = false;
 
         public void BeginClose(Action<bool, INetworkFacade> callback)
         {
-            LastActivityTime = DateTime.Now;
-
+            _shutdown = true;
             _socket.Shutdown(SocketShutdown.Both);
             _socket.BeginDisconnect( false, HandleDisconnect, callback );
         }
 
-
-        public DateTime LastActivityTime
-        {
-            get
-            {
-                return _lastAccessTime;
-            }
-            private set
-            {
-                _lastAccessTime = value;
-            }
-        }
 
         public void CancelPendingReceive()
         {
@@ -182,7 +178,7 @@ namespace Gallatin.Core.Service
             {
                 if (_pendingReceiveHandle != null)
                 {
-                    Log.Logger.Verbose("{0} Cancelling pending receive", _socket.GetHashCode());
+                    Log.Logger.Verbose("{0} Cancelling pending receive", Id);
                     _socket.EndReceive(_pendingReceiveHandle);
                 }
             }
