@@ -41,12 +41,12 @@ namespace Gallatin.Core.Web
                     _consecutiveLfCount = 0;
                 }
 
-                _headerData.WriteByte(data[i]);
-
                 if (_consecutiveCrCount == 2
                     && _consecutiveLfCount == 2)
                 {
                     _foundHeaderTerminator = true;
+
+                    _headerData.Write(data,0,i+1);
 
                     // Write any remaining data to the body memory buffer
                     if (data.Length > i + 1)
@@ -55,6 +55,11 @@ namespace Gallatin.Core.Web
                         _bodyData.Write(data, i + 1, data.Length - i - 1);
                     }
                 }
+            }
+
+            if (!_foundHeaderTerminator)
+            {
+                _headerData.Write(data, 0, data.Length);
             }
 
             // TODO: research why this fires the event too many times

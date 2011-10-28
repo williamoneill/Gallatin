@@ -133,7 +133,7 @@ namespace Gallatin.Core.Service
         {
             Log.Logger.Info("{0} Receiving data", Id);
 
-            _receiveBuffer = new byte[8000];
+            _receiveBuffer = new byte[8192];
             _pendingReceiveHandle =  
                 _socket.BeginReceive(
                     _receiveBuffer,
@@ -169,7 +169,7 @@ namespace Gallatin.Core.Service
         public void BeginClose(Action<bool, INetworkFacade> callback)
         {
             _shutdown = true;
-            _socket.Shutdown(SocketShutdown.Both);
+            //_socket.Shutdown(SocketShutdown.Both);
             _socket.BeginDisconnect( false, HandleDisconnect, callback );
         }
 

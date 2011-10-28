@@ -12,12 +12,12 @@ namespace Gallatin.Core.Web
         public IEnumerable<KeyValuePair<string,string>> AsEnumerable()
         {
             return _headers.AsEnumerable();
+
         }
 
         public HttpHeaders( List<KeyValuePair<string,string>> headers )
         {
             Contract.Requires(headers != null);
-
             _headers = headers;
         }
 

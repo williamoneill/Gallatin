@@ -92,6 +92,12 @@ namespace Gallatin.Core.Web
             Method = method;
         }
 
+        public bool IsSsl { 
+            get
+            {
+                return Method.Equals( "connect", StringComparison.InvariantCultureIgnoreCase );
+            }
+        }
         public string Method { get; private set; }
         public string Path { get; private set; }
 

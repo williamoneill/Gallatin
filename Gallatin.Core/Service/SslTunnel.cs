@@ -26,6 +26,17 @@ namespace Gallatin.Core.Service
             _httpVersion = httpVersion;
         }
 
+        public event EventHandler TunnelClosed;
+
+        private void OnTunnelClosed()
+        {
+            EventHandler tunnelClosed = TunnelClosed;
+            if (tunnelClosed != null)
+            {
+                tunnelClosed(this, new EventArgs());
+            }
+        }
+
         private void HandleServerReceive(bool success, byte[] data, INetworkFacade server)
         {
             if(success)
@@ -34,6 +45,7 @@ namespace Gallatin.Core.Service
             }
             else
             {
+                OnTunnelClosed();
                 Log.Logger.Error("SSL failure: unable to receive data from server");
             }
         }
@@ -46,6 +58,7 @@ namespace Gallatin.Core.Service
             }
             else
             {
+                OnTunnelClosed();
                 Log.Logger.Error("SSL failure: unable to receive data from client");
             }
         }
@@ -58,6 +71,7 @@ namespace Gallatin.Core.Service
             }
             else
             {
+                OnTunnelClosed();
                 Log.Logger.Error("SSL failure: unable to send data to client");
             }
         }
@@ -70,6 +84,7 @@ namespace Gallatin.Core.Service
             }
             else
             {
+                OnTunnelClosed();
                 Log.Logger.Error("SSL failure: unable to send data to server");
             }
         }

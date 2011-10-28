@@ -44,7 +44,16 @@ namespace Gallatin.Core.Service
                                         SocketType.Stream,
                                         ProtocolType.Tcp );
 
-             state.Socket.BeginConnect(host, port, HandleConnect2, state);
+            state.Socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.DontLinger, false);
+            state.Socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, true);
+            state.Socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReceiveBuffer, 8192);
+            state.Socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.SendBuffer, 8192);
+            //state.Socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.NoDelay, true);
+            
+            //string[] ipSplit = "207.299.75.17".Split('.');
+            //long ip = 16777216 * long.Parse(ipSplit[0]) + 65536 * long.Parse(ipSplit[1]) + 256 * long.Parse(ipSplit[2]) + long.Parse(ipSplit[3]);
+
+            state.Socket.BeginConnect(host, port, HandleConnect2, state);
 
 
         }
