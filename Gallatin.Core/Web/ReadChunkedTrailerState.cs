@@ -57,6 +57,10 @@ namespace Gallatin.Core.Web
                     {
                         _context.OnPartialDataAvailable(data.Skip((int)_trailerData.Length).Take(data.Length - (int)_trailerData.Length).ToArray());
                     }
+                    else
+                    {
+                        _context.OnAdditionalDataRequested();
+                    }
 
                     break;
                 }

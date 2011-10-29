@@ -423,7 +423,7 @@ namespace Gallatin.Core.Service
             }
             else
             {
-                Log.Logger.Error( "{0} Failed to receive data from server", ToString() );
+                Log.Logger.Info( "{0} Server closed connection", ToString() );
                 EndSession();
             }
         }

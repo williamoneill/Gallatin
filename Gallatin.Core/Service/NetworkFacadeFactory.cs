@@ -44,7 +44,7 @@ namespace Gallatin.Core.Service
                                         SocketType.Stream,
                                         ProtocolType.Tcp );
 
-            state.Socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.DontLinger, false);
+            state.Socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.Linger, true);
             state.Socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, true);
             state.Socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReceiveBuffer, 8192);
             state.Socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.SendBuffer, 8192);

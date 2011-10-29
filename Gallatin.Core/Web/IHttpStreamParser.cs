@@ -64,9 +64,18 @@ namespace Gallatin.Core.Web
                 if (Version == "1.1")
                 {
                     string persistentConnection = Headers["connection"];
+                    if (persistentConnection != null && persistentConnection.Equals("close", StringComparison.InvariantCultureIgnoreCase))
+                    {
+                        return false;
+                    }
 
-                    return ( persistentConnection != null
-                             && persistentConnection.Equals( "close", StringComparison.InvariantCultureIgnoreCase ) );
+                    string proxyConnection = Headers["proxy-connection"];
+                    if (proxyConnection != null && proxyConnection.Equals("close", StringComparison.InvariantCultureIgnoreCase))
+                    {
+                        return false;
+                    }
+
+                    return true;
                 }
                 return false;
             }

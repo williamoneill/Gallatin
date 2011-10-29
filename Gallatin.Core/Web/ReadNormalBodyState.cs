@@ -40,6 +40,7 @@ namespace Gallatin.Core.Web
                     _context.OnMessageReadComplete();
 
                     _context.State = new ReadHeaderState(_context);
+                    _context.OnAdditionalDataRequested();
                 }
                 else
                 {

@@ -111,6 +111,7 @@ namespace Gallatin.Core.Web
 
                 // 0-byte message. Start reading the next header.
                 _context.State = new ReadHeaderState(_context);
+                _context.OnAdditionalDataRequested();
             }
 
         }
