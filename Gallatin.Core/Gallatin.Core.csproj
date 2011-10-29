@@ -95,10 +95,8 @@
   <ItemGroup>
     <Compile Include="CoreSettings.cs" />
     <Compile Include="ICoreSettings.cs" />
-    <Compile Include="Service\ConnectionContext.cs" />
     <Compile Include="Service\ProxyService.cs" />
     <Compile Include="Service\ProxySession.cs" />
-    <Compile Include="Util\DelayedWriter.cs" />
     <Compile Include="Util\Logger.cs" />
     <Compile Include="Web\HttpHeaders.cs" />
     <Compile Include="Web\HttpStreamParser.cs" />
@@ -112,16 +110,6 @@
     <Compile Include="SharedAssemblyInfo.cs" />
     <Compile Include="Util\IPooledObject.cs" />
     <Compile Include="Util\Pool.cs" />
-    <Compile Include="Web\HttpMessage.cs">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="Web\HttpMessageParser.cs" />
-    <Compile Include="Web\HttpRequestMessage.cs" />
-    <Compile Include="Web\HttpResponseMessage.cs" />
-    <Compile Include="Web\IHttpMessage.cs" />
-    <Compile Include="Web\IHttpMessageParser.cs" />
-    <Compile Include="Web\IHttpRequestMessage.cs" />
-    <Compile Include="Web\IHttpResponseMessage.cs" />
     <Compile Include="Service\IProxyService.cs" />
     <Compile Include="Util\Log.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
@@ -134,7 +122,9 @@
     <Compile Include="Web\ReadNormalBodyState.cs" />
     <Compile Include="Web\WebLog.cs" />
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <None Include="packages.config" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
