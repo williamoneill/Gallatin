@@ -34,9 +34,7 @@ namespace Gallatin.Core.Service
 
             _connectingToServer = new ManualResetEvent( true );
 
-            _clientParser.AdditionalDataRequested += HandleClientParserAdditionalDataRequested;
-            _clientParser.ReadRequestHeaderComplete += HandleClientParserReadRequestHeaderComplete;
-            _clientParser.PartialDataAvailable += HandleClientParserPartialDataAvailable;
+            WireClientEvents();
         }
 
         public string Id
@@ -62,15 +60,52 @@ namespace Gallatin.Core.Service
             _clientConnection.BeginReceive( HandleClientReceive );
         }
 
+        private void WireClientEvents()
+        {
+            _clientParser.AdditionalDataRequested += HandleClientParserAdditionalDataRequested;
+            _clientParser.ReadRequestHeaderComplete += HandleClientParserReadRequestHeaderComplete;
+            _clientParser.PartialDataAvailable += HandleClientParserPartialDataAvailable;
+            
+        }
+
+        private void UnwireClientEvents()
+        {
+            if (_clientParser != null)
+            {
+                _clientParser.AdditionalDataRequested -= HandleClientParserAdditionalDataRequested;
+                _clientParser.ReadRequestHeaderComplete -= HandleClientParserReadRequestHeaderComplete;
+                _clientParser.PartialDataAvailable -= HandleClientParserPartialDataAvailable;
+                
+            }
+            
+        }
+
+        private void WireServerEvents()
+        {
+            _serverParser.AdditionalDataRequested += HandleServerParserAdditionalDataRequested;
+            _serverParser.ReadResponseHeaderComplete += HandleServerParserReadResponseHeaderComplete;
+            _serverParser.PartialDataAvailable += HandleServerParserPartialDataAvailable;
+            _serverParser.MessageReadComplete += HandleServerParserMessageReadComplete;
+        }
+
+        private void UnwireServerEvents()
+        {
+            if (_serverParser != null)
+            {
+                _serverParser.AdditionalDataRequested -= HandleServerParserAdditionalDataRequested;
+                _serverParser.ReadResponseHeaderComplete -= HandleServerParserReadResponseHeaderComplete;
+                _serverParser.PartialDataAvailable -= HandleServerParserPartialDataAvailable;
+                _serverParser.MessageReadComplete -= HandleServerParserMessageReadComplete;
+            }
+        }
+
         private void EndSession()
         {
             ServiceLog.Logger.Verbose( "{0} Ending session", Id );
 
             try
             {
-                _clientParser.AdditionalDataRequested -= HandleClientParserAdditionalDataRequested;
-                _clientParser.ReadRequestHeaderComplete -= HandleClientParserReadRequestHeaderComplete;
-                _clientParser.PartialDataAvailable -= HandleClientParserPartialDataAvailable;
+                UnwireClientEvents();
 
                 if ( _clientConnection != null )
                 {
@@ -84,13 +119,7 @@ namespace Gallatin.Core.Service
                         } );
                 }
 
-                if ( _serverParser != null )
-                {
-                    _serverParser.AdditionalDataRequested -= HandleServerParserAdditionalDataRequested;
-                    _serverParser.ReadResponseHeaderComplete -= HandleServerParserReadResponseHeaderComplete;
-                    _serverParser.PartialDataAvailable -= HandleServerParserPartialDataAvailable;
-                    _serverParser.MessageReadComplete -= HandleServerParserMessageReadComplete;
-                }
+                UnwireServerEvents();
 
                 if ( _serverConnection != null )
                 {
@@ -127,7 +156,12 @@ namespace Gallatin.Core.Service
                     // Wait for pending server connection
                     if ( _connectingToServer.WaitOne( 30000 ) )
                     {
-                        _serverConnection.BeginSend( e.Data, HandleServerSendComplete );
+                        // Do not forward the header to the server when SSL. The SSL stream class will
+                        // send the appropriate headers for a proxy server.
+                        if (!_requestHeader.IsSsl)
+                        {
+                            _serverConnection.BeginSend(e.Data, HandleServerSendComplete);
+                        }
                     }
                     else
                     {
@@ -227,10 +261,12 @@ namespace Gallatin.Core.Service
 
                     _host = host;
                     _port = port;
+                    ServiceLog.Logger.Info("{0} Connecting to remote host {1}:{2}", Id, _host, _port);
                     _networkFacadeFactory.BeginConnect( _host, _port, HandleServerConnect );
                 }
                 else
                 {
+                    // Already connected. Send request.
                     SendRequestHeaderToServer();
                 }
             }
@@ -264,27 +300,22 @@ namespace Gallatin.Core.Service
 
                     if ( _requestHeader.IsSsl )
                     {
+                        UnwireClientEvents();
+
+                        _connectingToServer.Set();
+
+                        ServiceLog.Logger.Info("{0} Chaning to SSL tunnel", Id);
+
                         SslTunnel tunnel = new SslTunnel( _clientConnection, _serverConnection, _requestHeader.Version );
                         tunnel.TunnelClosed += HandleSslTunnelClosed;
                         tunnel.EstablishTunnel();
                     }
                     else
                     {
-                        if ( _serverParser != null )
-                        {
-                            _serverParser.AdditionalDataRequested -= HandleServerParserAdditionalDataRequested;
-                            _serverParser.ReadResponseHeaderComplete -= HandleServerParserReadResponseHeaderComplete;
-                            _serverParser.PartialDataAvailable -= HandleServerParserPartialDataAvailable;
-                            _serverParser.MessageReadComplete -= HandleServerParserMessageReadComplete;
-                        }
+                        UnwireServerEvents();
 
                         _serverParser = new HttpStreamParser();
-                        _serverParser.AdditionalDataRequested += HandleServerParserAdditionalDataRequested;
-                        _serverParser.ReadResponseHeaderComplete += HandleServerParserReadResponseHeaderComplete;
-                        _serverParser.PartialDataAvailable += HandleServerParserPartialDataAvailable;
-                        _serverParser.MessageReadComplete += HandleServerParserMessageReadComplete;
-
-                        // Send initial data to server
+                        WireServerEvents();
 
                         _serverConnection.BeginReceive( HandleDataFromServer );
 
@@ -403,7 +434,19 @@ namespace Gallatin.Core.Service
         private void HandleClientParserAdditionalDataRequested( object sender, EventArgs e )
         {
             ServiceLog.Logger.Verbose( "{0} Additional data needed from client to complete request", Id );
-            _clientConnection.BeginReceive( HandleClientReceive );
+            if (_connectingToServer.WaitOne(30000))
+            {
+                // Ignore the event the parser requires requesting more data if we are changing over to an SSL tunnel
+                if (!_requestHeader.IsSsl)
+                {
+                    _clientConnection.BeginReceive(HandleClientReceive);
+                }
+            }
+            else
+            {
+                ServiceLog.Logger.Verbose("{0} Timed out waiting for server connection", Id);
+                EndSession();
+            }
         }
 
         private void HandleClientReceive( bool success, byte[] data, INetworkFacade client )

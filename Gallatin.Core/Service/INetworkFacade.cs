@@ -33,7 +33,11 @@ namespace Gallatin.Core.Service
         /// </summary>
         /// <param name="callback">Delegate to invoke when the connection has been closed</param>
         void BeginClose( Action<bool, INetworkFacade> callback );
-        
+
+        /// <summary>
+        /// Cancels any pending receive requests
+        /// </summary>
+        void CancelPendingReceive();
     }
 
     [ContractClassFor( typeof (INetworkFacade) )]
@@ -59,6 +63,8 @@ namespace Gallatin.Core.Service
         {
             Contract.Requires( callback != null );
         }
+
+        public abstract void CancelPendingReceive();
 
         public abstract int Id { get; }
 

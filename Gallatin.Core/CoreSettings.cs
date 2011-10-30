@@ -40,6 +40,11 @@ namespace Gallatin.Core
         /// </summary>
         public int SessionInactivityTimeout { get; set; }
 
+        /// <summary>
+        /// Gets and sets the timeout in seconds to wait for a server connection
+        /// </summary>
+        public int ConnectTimeout { get; set; }
+
         #endregion
     }
 }

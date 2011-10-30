@@ -35,5 +35,10 @@
         /// Maximum age in seconds an inactive session remains in memory before it is released.
         /// </summary>
         int SessionInactivityTimeout { get; set; }
+
+        /// <summary>
+        /// Gets and sets the timeout in seconds to wait for a server connection
+        /// </summary>
+        int ConnectTimeout { get; set; }
     }
 }

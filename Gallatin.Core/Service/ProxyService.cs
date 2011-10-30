@@ -28,6 +28,7 @@ namespace Gallatin.Core.Service
 
         private bool _isRunning;
         private object _mutex = new object();
+        //private Pool<IProxySession> _sessionPool = new Pool<IProxySession>(); 
 
         public void Start()
         {

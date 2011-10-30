@@ -52,6 +52,7 @@ namespace Gallatin.Core
             settings.ReceiveBufferSize = SetDefaultValue( settings.ReceiveBufferSize, 0, 8192 );
             settings.MonitorThreadSleepInterval = SetDefaultValue(settings.MonitorThreadSleepInterval, 0, 10000);
             settings.SessionInactivityTimeout = SetDefaultValue( settings.SessionInactivityTimeout, 0, 30000 );
+            settings.ConnectTimeout = SetDefaultValue(settings.SessionInactivityTimeout, 0, 30000);
 
             // Extra save...just in case we created a new instance in the above else block
             Save( settings );
