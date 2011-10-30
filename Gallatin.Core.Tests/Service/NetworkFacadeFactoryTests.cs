@@ -17,60 +17,15 @@ namespace Gallatin.Core.Tests.Service
             NetworkFacadeFactory factory = new NetworkFacadeFactory();
             factory.BeginConnect("localhost",
                                   5150,
-                                  (b, s, state) =>
+                                  (b, s) =>
                                   {
                                       Assert.That(b, Is.False);
-                                  },
-                                  "foo");
+                                  });
         }
 
 
         [Test]
         public void ConnectTest()
-        {
-            ManualResetEvent trigger = new ManualResetEvent( false );
-            bool isConnected = false;
-
-            Socket socket = new Socket( AddressFamily.InterNetwork,
-                                        SocketType.Stream,
-                                        ProtocolType.Tcp );
-
-            IPHostEntry dnsEntry = Dns.GetHostEntry( "localhost" );
-
-            // If this fails, consider changing the index. This could fail depending on the
-            // physical configuration of the host system.
-            IPEndPoint endPoint =
-                new IPEndPoint( dnsEntry.AddressList[1], 8082 );
-
-            socket.Bind( endPoint );
-
-            socket.Listen( 30 );
-
-            socket.BeginAccept( s =>
-                                {
-                                    socket.EndAccept( s );
-                                    isConnected = true;
-                                    trigger.Set();
-                                },
-                                null );
-
-            NetworkFacadeFactory factory = new NetworkFacadeFactory();
-            factory.BeginConnect( "localhost",
-                                  8082,
-                                  ( b, s, state ) =>
-                                  {
-                                      Assert.That( b, Is.True );
-                                      Assert.That( s, Is.Not.Null );
-                                      Assert.That( state, Is.EqualTo("foo") );
-                                  }, 
-                                  "foo" );
-
-            Assert.That( trigger.WaitOne( 2000 ), Is.True );
-            Assert.That( isConnected, Is.True );
-        }
-
-        [Test]
-        public void ConnectTestWithoutState()
         {
             ManualResetEvent trigger = new ManualResetEvent(false);
             bool isConnected = false;
@@ -145,8 +100,22 @@ namespace Gallatin.Core.Tests.Service
 
             TcpClient client = new TcpClient( "localhost", 8081 );
 
-            Assert.That( trigger.WaitOne( 2000 ), Is.True );
+            Assert.That( trigger.WaitOne( 10000 ), Is.True );
             Assert.That( isConnected, Is.True, "The callback delegate was not invoked when a client connected" );
+        }
+
+        [Test]
+        public void EndListenTest()
+        {
+            NetworkFacadeFactory factory = new NetworkFacadeFactory();
+            factory.Listen(1, 4587, s => Assert.Pass());
+
+            Assert.Throws<InvalidOperationException>( () => factory.Listen(1, 4588, s => Assert.Fail()) );
+
+            factory.EndListen();
+
+            factory.Listen(1, 4588, s => Assert.Pass());
+            factory.EndListen();
         }
     }
 }

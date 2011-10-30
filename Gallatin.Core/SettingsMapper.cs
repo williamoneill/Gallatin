@@ -3,7 +3,7 @@ using System.Xml.Serialization;
 
 namespace Gallatin.Core
 {
-    public class SettingsMapper
+    internal class SettingsMapper
     {
         public const string SettingsFileName = "settings.xml";
 
@@ -50,7 +50,7 @@ namespace Gallatin.Core
             settings.ServerPort = SetDefaultValue( settings.ServerPort, 0, 8080 );
             settings.MaxNumberClients = SetDefaultValue( settings.MaxNumberClients, 0, 500 );
             settings.ReceiveBufferSize = SetDefaultValue( settings.ReceiveBufferSize, 0, 8192 );
-            settings.WatchdogThreadSleepInterval = SetDefaultValue( settings.WatchdogThreadSleepInterval, 0, 10000 );
+            settings.MonitorThreadSleepInterval = SetDefaultValue(settings.MonitorThreadSleepInterval, 0, 10000);
             settings.SessionInactivityTimeout = SetDefaultValue( settings.SessionInactivityTimeout, 0, 30000 );
 
             // Extra save...just in case we created a new instance in the above else block

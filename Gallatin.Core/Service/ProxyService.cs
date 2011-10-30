@@ -1,53 +1,91 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+using System.Diagnostics.Contracts;
+using Gallatin.Core.Util;
 
 namespace Gallatin.Core.Service
 {
-    public class ProxyService : IProxyService
+    internal class ProxyService : IProxyService
     {
-        private ICoreSettings _settings;
         private INetworkFacadeFactory _factory;
+        private readonly List<IProxySession> _sessions = new List<IProxySession>();
+        private readonly ICoreSettings _settings;
 
-        public ProxyService(ICoreSettings settings, INetworkFacadeFactory factory)
+        public ProxyService() : this( CoreFactory.Create<ICoreSettings>(), CoreFactory.Create<INetworkFacadeFactory>() )
         {
+        }
+
+        internal ProxyService( ICoreSettings settings, INetworkFacadeFactory factory )
+        {
+            Contract.Requires(settings!=null);
+            Contract.Requires(factory!=null);
+
             _settings = settings;
             _factory = factory;
         }
 
+        #region IProxyService Members
+
+        private bool _isRunning;
+        private object _mutex = new object();
+
         public void Start()
         {
-            _factory.Listen(_settings.NetworkAddressBindingOrdinal, _settings.ServerPort, HandleClientConnected);
-        }
-
-        private List<ProxySession> _sessions = new List<ProxySession>();
-
-        private void HandleClientConnected(INetworkFacade clientConnection)
-        {
-            ProxySession session = new ProxySession(clientConnection, _factory);
-            
-            session.SessionEnded += new EventHandler(session_SessionEnded);
-
-            session.Start();
-
-            _sessions.Add(session);
-        }
-
-        void session_SessionEnded(object sender, EventArgs e)
-        {
-            ProxySession proxySession = sender as ProxySession;
-
-            if (proxySession != null)
+            lock (_mutex)
             {
-                _sessions.Remove( proxySession );
+                if (_isRunning)
+                {
+                    throw new InvalidOperationException( "Service has already been started" );
+                }
+
+                _factory.Listen(_settings.NetworkAddressBindingOrdinal, _settings.ServerPort, HandleClientConnected);
+                _isRunning = true;
             }
         }
 
-
         public void Stop()
         {
-            throw new NotImplementedException();
+            lock (_mutex)
+            {
+                if (!_isRunning)
+                {
+                    throw new InvalidOperationException("Service has not been started");
+                }
+
+                _factory.EndListen();
+                _isRunning = false;
+            }
+        }
+
+        public int ActiveClients
+        {
+            get
+            {
+                return _sessions.Count;
+            }
+        }
+
+        #endregion
+
+        private void HandleClientConnected( INetworkFacade clientConnection )
+        {
+            IProxySession session = CoreFactory.Create<IProxySession>();
+
+            session.SessionEnded += HandleSessionEnded;
+
+            session.Start(clientConnection);
+
+            _sessions.Add( session );
+        }
+
+        private void HandleSessionEnded( object sender, EventArgs e )
+        {
+            IProxySession proxySession = sender as IProxySession;
+
+            if ( proxySession != null )
+            {
+                _sessions.Remove( proxySession );
+            }
         }
     }
 }

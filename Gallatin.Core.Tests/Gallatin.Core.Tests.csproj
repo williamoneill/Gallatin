@@ -55,6 +55,7 @@
     <Compile Include="CoreSettingsTests.cs" />
     <Compile Include="Service\NetworkFacadeFactoryTests.cs" />
     <Compile Include="Service\NetworkFacadeTests.cs" />
+    <Compile Include="Service\ProxyServiceTests.cs" />
     <Compile Include="Service\ProxySessionTests.cs" />
     <Compile Include="Service\SslTunnelTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

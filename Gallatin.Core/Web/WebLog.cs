@@ -7,7 +7,7 @@ using Gallatin.Core.Util;
 
 namespace Gallatin.Core.Web
 {
-    public static class WebLog
+    internal static class WebLog
     {
         public static Logger Logger { get; private set; }
 

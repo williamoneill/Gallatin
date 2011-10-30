@@ -48,6 +48,7 @@
     <CodeContractsRuntimeCheckingLevel>Full</CodeContractsRuntimeCheckingLevel>
     <CodeContractsReferenceAssembly>%28none%29</CodeContractsReferenceAssembly>
     <CodeContractsAnalysisWarningLevel>0</CodeContractsAnalysisWarningLevel>
+    <DocumentationFile>..\bin\debug\Gallatin.Core.XML</DocumentationFile>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -95,10 +96,16 @@
   <ItemGroup>
     <Compile Include="CoreSettings.cs" />
     <Compile Include="ICoreSettings.cs" />
+    <Compile Include="Service\IProxySession.cs" />
     <Compile Include="Service\ProxyService.cs" />
     <Compile Include="Service\ProxySession.cs" />
+    <Compile Include="Util\CoreFactory.cs" />
     <Compile Include="Util\Logger.cs" />
+    <Compile Include="Web\HttpDataEventArgs.cs" />
+    <Compile Include="Web\HttpHeaderEventArgs.cs" />
     <Compile Include="Web\HttpHeaders.cs" />
+    <Compile Include="Web\HttpRequestHeaderEventArgs.cs" />
+    <Compile Include="Web\HttpResponseHeaderEventArgs.cs" />
     <Compile Include="Web\HttpStreamParser.cs" />
     <Compile Include="Web\IHttpStreamParser.cs" />
     <Compile Include="Service\INetworkFacade.cs" />
@@ -108,10 +115,8 @@
     <Compile Include="Service\SslTunnel.cs" />
     <Compile Include="SettingsMapper.cs" />
     <Compile Include="SharedAssemblyInfo.cs" />
-    <Compile Include="Util\IPooledObject.cs" />
-    <Compile Include="Util\Pool.cs" />
     <Compile Include="Service\IProxyService.cs" />
-    <Compile Include="Util\Log.cs" />
+    <Compile Include="Service\ServiceLog.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Web\IHttpStreamParserContext.cs" />
     <Compile Include="Web\IHttpStreamParserState.cs" />

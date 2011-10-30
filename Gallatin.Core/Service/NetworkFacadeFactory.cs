@@ -6,80 +6,34 @@ using Gallatin.Core.Util;
 
 namespace Gallatin.Core.Service
 {
-    public class NetworkFacadeFactory : INetworkFacadeFactory
+    internal class NetworkFacadeFactory : INetworkFacadeFactory
     {
+        public const int DefaultBufferSize = 8192;
+
         private Action<INetworkFacade> _clientConnectCallback;
         private Socket _socket;
 
         #region INetworkFacadeFactory Members
 
-        public void BeginConnect<T>( string host, int port, Action<bool, INetworkFacade, T> callback, T state )
+        public void BeginConnect( string host, int port, Action<bool, INetworkFacade> callback )
         {
-            ConnectState<T> connectState = new ConnectState<T>
-                                           {
-                                               Socket = new Socket( AddressFamily.InterNetwork,
-                                                                    SocketType.Stream,
-                                                                    ProtocolType.Tcp ),
-                                               Callback = callback,
-                                               Host = host,
-                                               Port = port,
-                                               State = state
-                                           };
+            ConnectState state = new ConnectState
+                                 {
+                                     Callback = callback,
+                                     Socket = new Socket( AddressFamily.InterNetwork,
+                                                          SocketType.Stream,
+                                                          ProtocolType.Tcp )
+                                 };
 
-            connectState.Socket.BeginConnect( host, port, HandleConnect<T>, connectState );
+            state.Socket.SetSocketOption( SocketOptionLevel.Socket, SocketOptionName.Linger, false );
+            state.Socket.SetSocketOption( SocketOptionLevel.Socket, SocketOptionName.KeepAlive, false );
+            state.Socket.SetSocketOption( SocketOptionLevel.Socket, SocketOptionName.ReceiveBuffer, DefaultBufferSize );
+            state.Socket.SetSocketOption( SocketOptionLevel.Socket, SocketOptionName.SendBuffer, DefaultBufferSize );
+
+            state.Socket.BeginConnect( host, port, HandleConnect, state );
         }
 
-        private class ConnectState
-        {
-            public Action<bool, INetworkFacade> Callback { get; set; }
-            public Socket Socket { get; set; }
-        }
-
-        public void BeginConnect(string host, int port, Action<bool, INetworkFacade> callback)
-        {
-            ConnectState state = new ConnectState();
-
-            state.Callback = callback;
-            state.Socket = new Socket( AddressFamily.InterNetwork,
-                                        SocketType.Stream,
-                                        ProtocolType.Tcp );
-
-            state.Socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.Linger, true);
-            state.Socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, true);
-            state.Socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReceiveBuffer, 8192);
-            state.Socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.SendBuffer, 8192);
-            //state.Socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.NoDelay, true);
-            
-            //string[] ipSplit = "207.299.75.17".Split('.');
-            //long ip = 16777216 * long.Parse(ipSplit[0]) + 65536 * long.Parse(ipSplit[1]) + 256 * long.Parse(ipSplit[2]) + long.Parse(ipSplit[3]);
-
-            state.Socket.BeginConnect(host, port, HandleConnect2, state);
-
-
-        }
-
-        private void HandleConnect2(IAsyncResult ar)
-        {
-            Contract.Requires(ar.AsyncState is ConnectState);
-
-            ConnectState state = ar.AsyncState as ConnectState;
-
-            try
-            {
-                state.Socket.EndConnect(ar);
-
-                state.Callback( true, new NetworkFacade(state.Socket));
-            }
-            catch (Exception ex)
-            {
-                Log.Logger.Exception( "Unable to connect to remote host", ex );
-
-                state.Callback( false, null );
-            }
-            
-        }
-
-        public void Listen(int hostInterfaceIndex, int port, Action<INetworkFacade> callback)
+        public void Listen( int hostInterfaceIndex, int port, Action<INetworkFacade> callback )
         {
             if ( _socket != null )
             {
@@ -104,35 +58,43 @@ namespace Gallatin.Core.Service
             _socket.BeginAccept( HandleNewClientConnect, null );
         }
 
+        public void EndListen()
+        {
+            Contract.Ensures( _socket == null );
+
+            if ( _socket == null )
+            {
+                throw new InvalidOperationException( "Factory is not listening for connections. Unable to end listening." );
+            }
+
+            _socket.Close();
+            _socket = null;
+        }
+
         #endregion
 
-        private void HandleConnect<T>( IAsyncResult ar )
+        private void HandleConnect( IAsyncResult ar )
         {
-            Contract.Assert( ar != null );
-            Contract.Assert( ar.AsyncState is ConnectState<T> );
-
-            ConnectState<T> connectState = ar.AsyncState as ConnectState<T>;
+            Contract.Requires( ar != null );
+            Contract.Requires( ar.AsyncState is ConnectState );
+            ConnectState state = ar.AsyncState as ConnectState;
 
             try
             {
-                connectState.Socket.EndConnect( ar );
-
-                connectState.Callback( true, new NetworkFacade( connectState.Socket ), connectState.State );
+                state.Socket.EndConnect( ar );
+                state.Callback( true, new NetworkFacade( state.Socket ) );
             }
             catch ( Exception ex )
             {
-                Log.Logger.Exception(
-                    string.Format( "Unable to connect to remote host {0} port {1}",
-                                   connectState.Host,
-                                   connectState.Port ),
-                    ex );
-
-                connectState.Callback( false, null, default( T ) );
+                ServiceLog.Logger.Exception( "Unable to connect to remote host", ex );
+                state.Callback( false, null );
             }
         }
 
         private void HandleNewClientConnect( IAsyncResult ar )
         {
+            Contract.Requires( ar != null );
+
             try
             {
                 // Server may be in the process of shutting down. Ignore pending connect notifications.
@@ -143,26 +105,23 @@ namespace Gallatin.Core.Service
                     // Immediately listen for the next clientSession
                     _socket.BeginAccept( HandleNewClientConnect, null );
 
-                    Log.Logger.Info( "{0} New client connect", _clientSocket.GetHashCode() );
+                    ServiceLog.Logger.Info( "{0} New client connect", _clientSocket.GetHashCode() );
 
                     _clientConnectCallback( new NetworkFacade( _clientSocket ) );
                 }
             }
             catch ( Exception ex )
             {
-                Log.Logger.Exception( "Error establishing client connect", ex );
+                ServiceLog.Logger.Exception( "Error establishing client connect", ex );
             }
         }
 
         #region Nested type: ConnectState
 
-        private class ConnectState<T>
+        private class ConnectState
         {
+            public Action<bool, INetworkFacade> Callback { get; set; }
             public Socket Socket { get; set; }
-            public Action<bool, INetworkFacade, T> Callback { get; set; }
-            public string Host { get; set; }
-            public int Port { get; set; }
-            public T State { get; set; }
         }
 
         #endregion

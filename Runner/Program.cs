@@ -13,19 +13,7 @@ namespace Runner
         {
             try
             {
-                if(File.Exists("proxy.Log.txt"))
-                    File.Delete("proxy.Log.txt");
-
-                //http://msdn.microsoft.com/en-us/library/dd460648.aspx
-                //http://msdn.microsoft.com/en-us/magazine/ee291628.aspx
-                //var catalog = new AggregateCatalog();
-                //cataLog.Logger.Catalogs.Add(new AssemblyCatalog(typeof()));
-
-                ICoreSettings settings = SettingsMapper.Load();
-
-                //IProxyService server = new GallatinProxyService( new NetworkFacadeFactory(), settings );
-
-                IProxyService server = new ProxyService(settings, new NetworkFacadeFactory());
+                IProxyService server = CoreFactory.Create<IProxyService>();
                 server.Start();
 
                 Console.WriteLine("Gallatin Proxy (www.gallatinproxy.com) v.{0}", Assembly.GetExecutingAssembly().GetName().Version);
@@ -37,11 +25,10 @@ namespace Runner
 
                 server.Stop();
 
-                SettingsMapper.Save(settings);
             }
             catch ( Exception ex )
             {
-                Log.Logger.Exception( "app exception", ex );
+                Console.WriteLine("Unhandled exception: " + ex.Message);
             }
         }
 

@@ -6,9 +6,9 @@ using Gallatin.Core.Web;
 
 namespace Gallatin.Core.Service
 {
-    public class ProxySession
+    internal class ProxySession : IProxySession
     {
-        private readonly INetworkFacade _clientConnection;
+        private INetworkFacade _clientConnection;
         private readonly IHttpStreamParser _clientParser;
         private readonly ManualResetEvent _connectingToServer;
         private readonly INetworkFacadeFactory _networkFacadeFactory;
@@ -19,48 +19,58 @@ namespace Gallatin.Core.Service
         private INetworkFacade _serverConnection;
         private IHttpStreamParser _serverParser;
 
-        public ProxySession( INetworkFacade clientConnection, INetworkFacadeFactory factory )
+        public ProxySession() : this(CoreFactory.Create<INetworkFacadeFactory>())
         {
-            Contract.Requires( clientConnection != null );
+            
+        }
+
+        public ProxySession(  INetworkFacadeFactory factory )
+        {
             Contract.Requires( factory != null );
 
             _networkFacadeFactory = factory;
 
-            _clientConnection = clientConnection;
             _clientParser = new HttpStreamParser();
 
             _connectingToServer = new ManualResetEvent( true );
 
-            _clientParser.AdditionalDataRequested += _clientParser_AdditionalDataRequested;
-            _clientParser.ReadRequestHeaderComplete += _clientParser_ReadRequestHeaderComplete;
-            _clientParser.PartialDataAvailable += _clientParser_PartialDataAvailable;
+            _clientParser.AdditionalDataRequested += HandleClientParserAdditionalDataRequested;
+            _clientParser.ReadRequestHeaderComplete += HandleClientParserReadRequestHeaderComplete;
+            _clientParser.PartialDataAvailable += HandleClientParserPartialDataAvailable;
         }
 
-        public override string ToString()
+        public string Id
         {
-            return string.Format( "C {0} S {1} ",
-                                  _clientConnection == null ? 0 : _clientConnection.Id,
-                                  _serverConnection == null ? 0 : _serverConnection.Id );
+            get
+            {
+                return string.Format("C {0} S {1} ",
+                                      _clientConnection == null ? 0 : _clientConnection.Id,
+                                      _serverConnection == null ? 0 : _serverConnection.Id);
+            }
         }
 
         public event EventHandler SessionEnded;
 
-        public void Start()
+        public void Start(INetworkFacade clientConnection)
         {
-            Log.Logger.Verbose( "{0} Starting proxy session", ToString() );
+            Contract.Requires(clientConnection!=null);
 
-            _clientConnection.BeginReceive( ClientReceive );
+            _clientConnection = clientConnection;
+
+            ServiceLog.Logger.Verbose("{0} Starting proxy session", Id);
+
+            _clientConnection.BeginReceive( HandleClientReceive );
         }
 
         private void EndSession()
         {
-            Log.Logger.Verbose( "{0} Ending session", ToString() );
+            ServiceLog.Logger.Verbose( "{0} Ending session", Id );
 
             try
             {
-                _clientParser.AdditionalDataRequested -= _clientParser_AdditionalDataRequested;
-                _clientParser.ReadRequestHeaderComplete -= _clientParser_ReadRequestHeaderComplete;
-                _clientParser.PartialDataAvailable -= _clientParser_PartialDataAvailable;
+                _clientParser.AdditionalDataRequested -= HandleClientParserAdditionalDataRequested;
+                _clientParser.ReadRequestHeaderComplete -= HandleClientParserReadRequestHeaderComplete;
+                _clientParser.PartialDataAvailable -= HandleClientParserPartialDataAvailable;
 
                 if ( _clientConnection != null )
                 {
@@ -69,17 +79,17 @@ namespace Gallatin.Core.Service
                         {
                             if ( !s )
                             {
-                                Log.Logger.Error( "Error closing client connection" );
+                                ServiceLog.Logger.Error( "Error closing client connection" );
                             }
                         } );
                 }
 
-                if (_serverParser != null)
+                if ( _serverParser != null )
                 {
-                    _serverParser.AdditionalDataRequested -= _serverParser_AdditionalDataRequested;
-                    _serverParser.ReadResponseHeaderComplete -= _serverParser_ReadResponseHeaderComplete;
-                    _serverParser.PartialDataAvailable -= _serverParser_PartialDataAvailable;
-                    _serverParser.MessageReadComplete -= _serverParser_MessageReadComplete;
+                    _serverParser.AdditionalDataRequested -= HandleServerParserAdditionalDataRequested;
+                    _serverParser.ReadResponseHeaderComplete -= HandleServerParserReadResponseHeaderComplete;
+                    _serverParser.PartialDataAvailable -= HandleServerParserPartialDataAvailable;
+                    _serverParser.MessageReadComplete -= HandleServerParserMessageReadComplete;
                 }
 
                 if ( _serverConnection != null )
@@ -89,14 +99,14 @@ namespace Gallatin.Core.Service
                         {
                             if ( !s )
                             {
-                                Log.Logger.Error( "Error closing server connection" );
+                                ServiceLog.Logger.Error( "Error closing server connection" );
                             }
                         } );
                 }
             }
             catch ( Exception ex )
             {
-                Log.Logger.Exception( string.Format( "{0} Unhandled exception ending session", ToString() ), ex );
+                ServiceLog.Logger.Exception( string.Format( "{0} Unhandled exception ending session", Id ), ex );
             }
 
             EventHandler sessionEnded = SessionEnded;
@@ -106,63 +116,63 @@ namespace Gallatin.Core.Service
             }
         }
 
-        private void _clientParser_PartialDataAvailable( object sender, HttpDataEventArgs e )
+        private void HandleClientParserPartialDataAvailable( object sender, HttpDataEventArgs e )
         {
             try
             {
-                Log.Logger.Info( "{0} Receiving partial data from client", ToString() );
+                ServiceLog.Logger.Info( "{0} Receiving partial data from client", Id );
 
                 if ( _connectingToServer.WaitOne( 30000 ) )
                 {
                     // Wait for pending server connection
                     if ( _connectingToServer.WaitOne( 30000 ) )
                     {
-                        _serverConnection.BeginSend( e.Data, ServerSendComplete );
+                        _serverConnection.BeginSend( e.Data, HandleServerSendComplete );
                     }
                     else
                     {
-                        Log.Logger.Error( "Unable to connect to remote host" );
+                        ServiceLog.Logger.Error( "Unable to connect to remote host" );
                         EndSession();
                     }
                 }
                 else
                 {
-                    Log.Logger.Error( "{0} Timed out waiting to connect to server", ToString() );
+                    ServiceLog.Logger.Error( "{0} Timed out waiting to connect to server", Id );
                 }
             }
             catch ( Exception ex )
             {
-                Log.Logger.Exception( string.Format( "{0} Unhandled exception receiving partial data from client", ToString() ), ex );
+                ServiceLog.Logger.Exception( string.Format( "{0} Unhandled exception receiving partial data from client", Id ), ex );
                 EndSession();
             }
         }
 
-        private void ServerSendComplete( bool success, INetworkFacade serverSocket )
+        private void HandleServerSendComplete( bool success, INetworkFacade serverSocket )
         {
             try
             {
-                Log.Logger.Verbose( "{0} Server send complete", ToString() );
+                ServiceLog.Logger.Verbose( "{0} Server send complete", Id );
 
                 if ( !success )
                 {
-                    Log.Logger.Error( "Unable to send data to server" );
+                    ServiceLog.Logger.Error( "Unable to send data to server" );
                     EndSession();
                 }
             }
             catch ( Exception ex )
             {
-                Log.Logger.Exception( string.Format( "{0} Unhandled exception sending data to server", ToString() ), ex );
+                ServiceLog.Logger.Exception( string.Format( "{0} Unhandled exception sending data to server", Id ), ex );
                 EndSession();
             }
         }
 
-        private void _clientParser_ReadRequestHeaderComplete( object sender, HttpRequestHeaderEventArgs e )
+        private void HandleClientParserReadRequestHeaderComplete( object sender, HttpRequestHeaderEventArgs e )
         {
             const int HttpPort = 80;
 
             try
             {
-                Log.Logger.Verbose( "{0} Read request header from client.", ToString() );
+                ServiceLog.Logger.Verbose( "{0} Read request header from client.", Id );
 
                 // Block all threads until we connect
                 _connectingToServer.Reset();
@@ -172,13 +182,13 @@ namespace Gallatin.Core.Service
                 string host = e.Headers["Host"];
                 int port = HttpPort;
 
-                if (_requestHeader.IsSsl)
+                if ( _requestHeader.IsSsl )
                 {
-                    string[] tokens = _requestHeader.Path.Split(':');
+                    string[] tokens = _requestHeader.Path.Split( ':' );
 
-                    if (tokens.Length == 2)
+                    if ( tokens.Length == 2 )
                     {
-                        port = int.Parse(tokens[1]);
+                        port = int.Parse( tokens[1] );
                         host = tokens[0];
                     }
                 }
@@ -192,7 +202,7 @@ namespace Gallatin.Core.Service
                     // if host/port changes
                     if ( _serverConnection != null )
                     {
-                        Log.Logger.Verbose( "{0} Closing existing server connection", ToString() );
+                        ServiceLog.Logger.Verbose( "{0} Closing existing server connection", Id );
 
                         ManualResetEvent waitForServerDisconnectEvent = new ManualResetEvent( true );
 
@@ -210,7 +220,7 @@ namespace Gallatin.Core.Service
 
                         if ( !waitForServerDisconnectEvent.WaitOne( 10000 ) )
                         {
-                            Log.Logger.Error( "Unable to disconnect new server connection." );
+                            ServiceLog.Logger.Error( "Unable to disconnect new server connection." );
                             EndSession();
                         }
                     }
@@ -227,16 +237,16 @@ namespace Gallatin.Core.Service
             catch ( Exception ex )
             {
                 _connectingToServer.Set();
-                Log.Logger.Exception( string.Format( "{0} Unhandled exception evaluating server connection", ToString() ), ex );
+                ServiceLog.Logger.Exception( string.Format( "{0} Unhandled exception evaluating server connection", Id ), ex );
                 EndSession();
             }
         }
 
         private void SendRequestHeaderToServer()
         {
-            Log.Logger.Info( "{0} Sending header to server", ToString() );
+            ServiceLog.Logger.Info( "{0} Sending header to server", Id );
 
-            _serverConnection.BeginSend( _requestHeader.GetBuffer(), ServerSendComplete );
+            _serverConnection.BeginSend( _requestHeader.GetBuffer(), HandleServerSendComplete );
             _connectingToServer.Set();
         }
 
@@ -244,37 +254,35 @@ namespace Gallatin.Core.Service
         {
             Contract.Requires( serverConnection != null );
 
-            // TODO: tweak socket settings
-
             try
             {
-                Log.Logger.Verbose( "{0} Connected to server", ToString() );
+                ServiceLog.Logger.Verbose( "{0} Connected to server", Id );
 
                 if ( success )
                 {
                     _serverConnection = serverConnection;
 
-                    if (_requestHeader.IsSsl)
+                    if ( _requestHeader.IsSsl )
                     {
                         SslTunnel tunnel = new SslTunnel( _clientConnection, _serverConnection, _requestHeader.Version );
-                        tunnel.TunnelClosed += new EventHandler(tunnel_TunnelClosed);
+                        tunnel.TunnelClosed += HandleSslTunnelClosed;
                         tunnel.EstablishTunnel();
                     }
                     else
                     {
                         if ( _serverParser != null )
                         {
-                            _serverParser.AdditionalDataRequested -= _serverParser_AdditionalDataRequested;
-                            _serverParser.ReadResponseHeaderComplete -= _serverParser_ReadResponseHeaderComplete;
-                            _serverParser.PartialDataAvailable -= _serverParser_PartialDataAvailable;
-                            _serverParser.MessageReadComplete -= _serverParser_MessageReadComplete;
+                            _serverParser.AdditionalDataRequested -= HandleServerParserAdditionalDataRequested;
+                            _serverParser.ReadResponseHeaderComplete -= HandleServerParserReadResponseHeaderComplete;
+                            _serverParser.PartialDataAvailable -= HandleServerParserPartialDataAvailable;
+                            _serverParser.MessageReadComplete -= HandleServerParserMessageReadComplete;
                         }
 
                         _serverParser = new HttpStreamParser();
-                        _serverParser.AdditionalDataRequested += _serverParser_AdditionalDataRequested;
-                        _serverParser.ReadResponseHeaderComplete += _serverParser_ReadResponseHeaderComplete;
-                        _serverParser.PartialDataAvailable += _serverParser_PartialDataAvailable;
-                        _serverParser.MessageReadComplete += _serverParser_MessageReadComplete;
+                        _serverParser.AdditionalDataRequested += HandleServerParserAdditionalDataRequested;
+                        _serverParser.ReadResponseHeaderComplete += HandleServerParserReadResponseHeaderComplete;
+                        _serverParser.PartialDataAvailable += HandleServerParserPartialDataAvailable;
+                        _serverParser.MessageReadComplete += HandleServerParserMessageReadComplete;
 
                         // Send initial data to server
 
@@ -285,17 +293,17 @@ namespace Gallatin.Core.Service
                 }
                 else
                 {
-                    Log.Logger.Error( "Unable to connect to {0} {1}", _host, _port );
+                    ServiceLog.Logger.Error( "Unable to connect to {0} {1}", _host, _port );
                 }
             }
             catch ( Exception ex )
             {
-                Log.Logger.Exception( string.Format( "{0} Unhandled exception handling server connection", ToString() ), ex );
+                ServiceLog.Logger.Exception( string.Format( "{0} Unhandled exception handling server connection", Id ), ex );
                 EndSession();
             }
         }
 
-        void tunnel_TunnelClosed(object sender, EventArgs e)
+        private void HandleSslTunnelClosed( object sender, EventArgs e )
         {
             EndSession();
         }
@@ -304,7 +312,7 @@ namespace Gallatin.Core.Service
         {
             try
             {
-                Log.Logger.Verbose( "{0} Processing data from server", ToString() );
+                ServiceLog.Logger.Verbose( "{0} Processing data from server", Id );
 
                 if ( success )
                 {
@@ -317,30 +325,30 @@ namespace Gallatin.Core.Service
             }
             catch ( Exception ex )
             {
-                Log.Logger.Exception( string.Format( "{0} Unhandled exception handling data from server", ToString() ), ex );
+                ServiceLog.Logger.Exception( string.Format( "{0} Unhandled exception handling data from server", Id ), ex );
                 EndSession();
             }
         }
 
-        private void _serverParser_MessageReadComplete( object sender, EventArgs e )
+        private void HandleServerParserMessageReadComplete( object sender, EventArgs e )
         {
             try
             {
-                Log.Logger.Verbose( "{0} Complete message sent to client. Evaluating persistent connection.", ToString() );
+                ServiceLog.Logger.Verbose( "{0} Complete message sent to client. Evaluating persistent connection.", Id );
 
                 if ( !_responseHeader.IsPersistent )
                 {
-                    Log.Logger.Verbose( "{0} Ending connection (explicit close)", ToString() );
+                    ServiceLog.Logger.Verbose( "{0} Ending connection (explicit close)", Id );
                     EndSession();
                 }
                 else
                 {
-                    Log.Logger.Verbose( "{0} Maintaining persistent connection", ToString() );
+                    ServiceLog.Logger.Verbose( "{0} Maintaining persistent connection", Id );
                 }
             }
             catch ( Exception ex )
             {
-                Log.Logger.Exception( string.Format( "{0} Unhandled exception handling complete message from server", ToString() ), ex );
+                ServiceLog.Logger.Exception( string.Format( "{0} Unhandled exception handling complete message from server", Id ), ex );
                 EndSession();
             }
         }
@@ -349,58 +357,58 @@ namespace Gallatin.Core.Service
         {
             try
             {
-                Log.Logger.Verbose( "{0} Data sent to client", ToString() );
+                ServiceLog.Logger.Verbose( "{0} Data sent to client", Id );
 
                 if ( !success )
                 {
-                    Log.Logger.Error( "Unable to send data to client" );
+                    ServiceLog.Logger.Error( "Unable to send data to client" );
                     EndSession();
                 }
             }
             catch ( Exception ex )
             {
-                Log.Logger.Exception( string.Format( "{0} Unhandled exception sending data to client", ToString() ), ex );
+                ServiceLog.Logger.Exception( string.Format( "{0} Unhandled exception sending data to client", Id ), ex );
                 EndSession();
             }
         }
 
-        private void _serverParser_PartialDataAvailable( object sender, HttpDataEventArgs e )
+        private void HandleServerParserPartialDataAvailable( object sender, HttpDataEventArgs e )
         {
             try
             {
-                Log.Logger.Info( "{0} Partial data available from server {1}", ToString(), e.Data.Length );
+                ServiceLog.Logger.Info( "{0} Partial data available from server {1}", Id, e.Data.Length );
                 _clientConnection.BeginSend( e.Data, HandleDataSentToClient );
             }
             catch ( Exception ex )
             {
-                Log.Logger.Exception( string.Format( "{0} Unhandled exception receiving partial data from server", ToString() ), ex );
+                ServiceLog.Logger.Exception( string.Format( "{0} Unhandled exception receiving partial data from server", Id ), ex );
                 EndSession();
             }
         }
 
-        private void _serverParser_ReadResponseHeaderComplete( object sender, HttpResponseHeaderEventArgs e )
+        private void HandleServerParserReadResponseHeaderComplete( object sender, HttpResponseHeaderEventArgs e )
         {
-            Log.Logger.Info( "{0} Read response header from server", ToString() );
+            ServiceLog.Logger.Info( "{0} Read response header from server", Id );
             _responseHeader = e;
 
             _clientConnection.BeginSend( e.GetBuffer(), HandleDataSentToClient );
         }
 
-        private void _serverParser_AdditionalDataRequested( object sender, EventArgs e )
+        private void HandleServerParserAdditionalDataRequested( object sender, EventArgs e )
         {
-            Log.Logger.Verbose( "{0} Additional data needed from server to complete request", ToString() );
-            _serverConnection.BeginReceive( ServerReceive );
+            ServiceLog.Logger.Verbose( "{0} Additional data needed from server to complete request", Id );
+            _serverConnection.BeginReceive( HandleServerReceive );
         }
 
-        private void _clientParser_AdditionalDataRequested( object sender, EventArgs e )
+        private void HandleClientParserAdditionalDataRequested( object sender, EventArgs e )
         {
-            Log.Logger.Verbose( "{0} Additional data needed from client to complete request", ToString() );
-            _clientConnection.BeginReceive( ClientReceive );
+            ServiceLog.Logger.Verbose( "{0} Additional data needed from client to complete request", Id );
+            _clientConnection.BeginReceive( HandleClientReceive );
         }
 
-        private void ClientReceive( bool success, byte[] data, INetworkFacade client )
+        private void HandleClientReceive( bool success, byte[] data, INetworkFacade client )
         {
-            Log.Logger.Verbose( "{0} Receiving client data", ToString() );
+            ServiceLog.Logger.Verbose( "{0} Receiving client data", Id );
 
             if ( success )
             {
@@ -408,14 +416,14 @@ namespace Gallatin.Core.Service
             }
             else
             {
-                Log.Logger.Error( "{0} Failed to receive data from client", ToString() );
+                ServiceLog.Logger.Error( "{0} Failed to receive data from client", Id );
                 EndSession();
             }
         }
 
-        private void ServerReceive( bool success, byte[] data, INetworkFacade server )
+        private void HandleServerReceive( bool success, byte[] data, INetworkFacade server )
         {
-            Log.Logger.Verbose( "{0} Receiving server data", ToString() );
+            ServiceLog.Logger.Verbose( "{0} Receiving server data", Id );
 
             if ( success )
             {
@@ -423,7 +431,7 @@ namespace Gallatin.Core.Service
             }
             else
             {
-                Log.Logger.Info( "{0} Server closed connection", ToString() );
+                ServiceLog.Logger.Info( "{0} Server closed connection", Id );
                 EndSession();
             }
         }

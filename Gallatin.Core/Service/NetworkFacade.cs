@@ -8,18 +8,17 @@ using Gallatin.Core.Util;
 
 namespace Gallatin.Core.Service
 {
-    public class NetworkFacade : INetworkFacade
+    internal class NetworkFacade : INetworkFacade
     {
         private byte[] _sendBuffer;
         private byte[] _receiveBuffer;
-        private Socket _socket;
 
         public NetworkFacade(Socket socket)
         {
             Contract.Requires(socket != null);
             Contract.Requires(socket.Connected);
 
-            _socket = socket;
+            Socket = socket;
         }
 
         private void HandleSend(IAsyncResult ar)
@@ -36,16 +35,16 @@ namespace Gallatin.Core.Service
             try
             {
                 SocketError socketError;
-                int bytesSent = _socket.EndSend( ar, out socketError );
+                int bytesSent = Socket.EndSend( ar, out socketError );
 
                 if( bytesSent == 0)
                 {
-                    Log.Logger.Info("{0} Socket disconnected", Id);
+                    ServiceLog.Logger.Info("{0} Socket disconnected", Id);
                     callback( false, this );
                 }
                 else if(socketError != SocketError.Success)
                 {
-                    Log.Logger.Error("{0} Socket error: {1}", Id, socketError);
+                    ServiceLog.Logger.Error("{0} Socket error: {1}", Id, socketError);
                     callback( false, this );
                 }
                 else
@@ -56,7 +55,7 @@ namespace Gallatin.Core.Service
             }
             catch ( Exception ex )
             {
-                Log.Logger.Exception(string.Format("{0} Unhandled exception while sending network data", Id), ex);
+                ServiceLog.Logger.Exception(string.Format("{0} Unhandled exception while sending network data", Id), ex);
                 callback( false, this );
             }
         }
@@ -65,16 +64,16 @@ namespace Gallatin.Core.Service
         {
             get
             {
-                return _socket.GetHashCode();
+                return Socket.GetHashCode();
             }
         }
 
         public void BeginSend( byte[] buffer, Action<bool,INetworkFacade> callback )
         {
-            Log.Logger.Info("{0} Sending data {1}", Id, buffer.Length);
+            ServiceLog.Logger.Info("{0} Sending data {1}", Id, buffer.Length);
 
             _sendBuffer = buffer;
-            _socket.BeginSend( _sendBuffer,
+            Socket.BeginSend( _sendBuffer,
                                0,
                                _sendBuffer.Length,
                                SocketFlags.None,
@@ -94,22 +93,22 @@ namespace Gallatin.Core.Service
 
             try
             {
-                lock (_socket)
+                lock (Socket)
                 {
                     _pendingReceiveHandle = null;
                 }
 
                 SocketError socketError;
-                int bytesReceived = _socket.EndReceive( ar, out socketError );
+                int bytesReceived = Socket.EndReceive( ar, out socketError );
                 
                 if(bytesReceived == 0)
                 {
-                    Log.Logger.Info("{0} Lost connection while receiving data", Id);
+                    ServiceLog.Logger.Info("{0} Lost connection while receiving data", Id);
                     callback( false, null, this );
                 }
                 else if(socketError != SocketError.Success)
                 {
-                    Log.Logger.Info("{0} Network error encountered while receiving data: {1}", Id, socketError);
+                    ServiceLog.Logger.Info("{0} Network error encountered while receiving data: {1}", Id, socketError);
                     callback(false, null, this);
                 }
                 else
@@ -121,7 +120,7 @@ namespace Gallatin.Core.Service
             }
             catch ( Exception ex )
             {
-                Log.Logger.Exception(string.Format("{0} Unhandled exception while receiving data", Id), ex);
+                ServiceLog.Logger.Exception(string.Format("{0} Unhandled exception while receiving data", Id), ex);
                 callback( false, null, this );
             }
 
@@ -131,11 +130,11 @@ namespace Gallatin.Core.Service
 
         public void BeginReceive(Action<bool, byte[], INetworkFacade> callback)
         {
-            Log.Logger.Info("{0} Receiving data", Id);
+            ServiceLog.Logger.Info("{0} Receiving data", Id);
 
             _receiveBuffer = new byte[8192];
             _pendingReceiveHandle =  
-                _socket.BeginReceive(
+                Socket.BeginReceive(
                     _receiveBuffer,
                                   0,
                                   _receiveBuffer.Length,
@@ -152,13 +151,13 @@ namespace Gallatin.Core.Service
 
             try
             {
-                _socket.EndDisconnect(ar);
-                _socket.Close();
+                Socket.EndDisconnect(ar);
+                Socket.Close();
                 callback( true, this );
             }
             catch ( Exception ex )
             {
-                Log.Logger.Exception(string.Format("{0} Unhandled exception when shutting down connection", Id), ex);
+                ServiceLog.Logger.Exception(string.Format("{0} Unhandled exception when shutting down connection", Id), ex);
                 callback( false, this );
             }
         }
@@ -169,19 +168,23 @@ namespace Gallatin.Core.Service
         public void BeginClose(Action<bool, INetworkFacade> callback)
         {
             _shutdown = true;
+            
+            // After further reseach, this is not needed despite MSDN documentation.
             //_socket.Shutdown(SocketShutdown.Both);
-            _socket.BeginDisconnect( false, HandleDisconnect, callback );
+            
+            Socket.BeginDisconnect( false, HandleDisconnect, callback );
         }
 
+        internal Socket Socket { get; set; }
 
         public void CancelPendingReceive()
         {
-            lock(_socket)
+            lock(Socket)
             {
                 if (_pendingReceiveHandle != null)
                 {
-                    Log.Logger.Verbose("{0} Cancelling pending receive", Id);
-                    _socket.EndReceive(_pendingReceiveHandle);
+                    ServiceLog.Logger.Verbose("{0} Cancelling pending receive", Id);
+                    Socket.EndReceive(_pendingReceiveHandle);
                 }
             }
         }

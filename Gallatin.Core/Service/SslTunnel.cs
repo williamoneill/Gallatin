@@ -9,7 +9,7 @@ using Gallatin.Core.Util;
 
 namespace Gallatin.Core.Service
 {
-    public class SslTunnel
+    internal class SslTunnel
     {
         private INetworkFacade _client;
         private INetworkFacade _server;
@@ -46,7 +46,7 @@ namespace Gallatin.Core.Service
             else
             {
                 OnTunnelClosed();
-                Log.Logger.Error("SSL failure: unable to receive data from server");
+                ServiceLog.Logger.Error("SSL failure: unable to receive data from server");
             }
         }
 
@@ -59,7 +59,7 @@ namespace Gallatin.Core.Service
             else
             {
                 OnTunnelClosed();
-                Log.Logger.Error("SSL failure: unable to receive data from client");
+                ServiceLog.Logger.Error("SSL failure: unable to receive data from client");
             }
         }
 
@@ -72,7 +72,7 @@ namespace Gallatin.Core.Service
             else
             {
                 OnTunnelClosed();
-                Log.Logger.Error("SSL failure: unable to send data to client");
+                ServiceLog.Logger.Error("SSL failure: unable to send data to client");
             }
         }
 
@@ -85,13 +85,13 @@ namespace Gallatin.Core.Service
             else
             {
                 OnTunnelClosed();
-                Log.Logger.Error("SSL failure: unable to send data to server");
+                ServiceLog.Logger.Error("SSL failure: unable to send data to server");
             }
         }
 
         public void EstablishTunnel()
         {
-            Log.Logger.Info( "Starting SSL connection" );
+            ServiceLog.Logger.Info( "Starting SSL connection" );
 
             _client.BeginSend(
                 Encoding.UTF8.GetBytes(string.Format(

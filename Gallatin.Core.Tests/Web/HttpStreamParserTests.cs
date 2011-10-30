@@ -33,7 +33,10 @@ namespace Gallatin.Core.Tests.Web
             parser.AdditionalDataRequested += ( s, a ) =>
                                               {
                                                   i++;
-                                                    parser.AppendData(msg.Skip(i * 5).Take(5).ToArray());
+                                                  if (i < 12)
+                                                  {
+                                                      parser.AppendData(msg.Skip(i * 5).Take(5).ToArray());
+                                                  }
                                               };
 
             parser.MessageReadComplete += (s, a) => bodyReadCompleteCalled++;
@@ -50,7 +53,7 @@ namespace Gallatin.Core.Tests.Web
             Assert.That(partialReceiveBuffer, Is.EqualTo(Encoding.UTF8.GetBytes("123456789012345678901")));
             Assert.That(bodyAvailableCalled, Is.EqualTo(1));
             Assert.That(bodyReadCompleteCalled, Is.EqualTo(1));
-            Assert.That(i, Is.EqualTo(11));
+            Assert.That(i, Is.EqualTo(12));
         }
 
         [Test]
@@ -101,7 +104,7 @@ namespace Gallatin.Core.Tests.Web
             Assert.That(bodyReadCompleteCalled, Is.EqualTo(1));
             Assert.That(partialDataAvailableCalled, Is.EqualTo(10));
             Assert.That(readResponseCompleteCalled, Is.EqualTo(1));
-            Assert.That(additionalDataRequestedCalled, Is.EqualTo(1));
+            Assert.That(additionalDataRequestedCalled, Is.EqualTo(2));
             
         }
 
@@ -149,7 +152,7 @@ namespace Gallatin.Core.Tests.Web
             Assert.That(bodyReadCompleteCalled, Is.EqualTo(1));
             Assert.That(partialDataAvailableCalled, Is.EqualTo(1));
             Assert.That(readResponseCompleteCalled, Is.EqualTo(1));
-            Assert.That(additionalDataRequestedCalled, Is.EqualTo(1));
+            Assert.That(additionalDataRequestedCalled, Is.EqualTo(2));
         }
 
         [Test]
@@ -186,7 +189,7 @@ namespace Gallatin.Core.Tests.Web
 
             Assert.IsTrue( bodyReadCompleteCalled );
             Assert.IsTrue( readCompleteCalled );
-            Assert.That(additionalDataRequestedCount, Is.EqualTo(0));
+            Assert.That(additionalDataRequestedCount, Is.EqualTo(1));
         }
     }
 }
