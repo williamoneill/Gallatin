@@ -13,10 +13,10 @@ namespace Gallatin.Core.Util
 
         static CoreFactory()
         {
-            Register<IProxyService, ProxyService>();
-            Register( SettingsMapper.Load );
-            Register<INetworkFacadeFactory, NetworkFacadeFactory>();
-            Register<IProxySession,ProxySession>();
+            //Register<IProxyService, ProxyService>();
+            //Register( SettingsMapper.Load );
+            //Register<INetworkFacadeFactory, NetworkFacadeFactory>();
+            //Register<IProxySession,ProxySession>();
         }
 
         /// <summary>

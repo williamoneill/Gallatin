@@ -1,4 +1,5 @@
 ﻿using System;
+using System.ComponentModel.Composition;
 using System.Diagnostics.Contracts;
 using System.Threading;
 using Gallatin.Core.Util;
@@ -6,6 +7,8 @@ using Gallatin.Core.Web;
 
 namespace Gallatin.Core.Service
 {
+    [PartCreationPolicy(CreationPolicy.NonShared)]
+    [Export(typeof(IProxySession))]
     internal class ProxySession : IProxySession
     {
         private INetworkFacade _clientConnection;
@@ -19,11 +22,7 @@ namespace Gallatin.Core.Service
         private INetworkFacade _serverConnection;
         private IHttpStreamParser _serverParser;
 
-        public ProxySession() : this(CoreFactory.Create<INetworkFacadeFactory>())
-        {
-            
-        }
-
+        [ImportingConstructor]
         public ProxySession(  INetworkFacadeFactory factory )
         {
             Contract.Requires( factory != null );
@@ -459,7 +458,7 @@ namespace Gallatin.Core.Service
             }
             else
             {
-                ServiceLog.Logger.Error( "{0} Failed to receive data from client", Id );
+                ServiceLog.Logger.Info( "{0} Client closed connection.", Id );
                 EndSession();
             }
         }

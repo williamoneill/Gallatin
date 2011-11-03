@@ -100,6 +100,7 @@
     <Compile Include="Service\ProxyService.cs" />
     <Compile Include="Service\ProxySession.cs" />
     <Compile Include="Util\CoreFactory.cs" />
+    <Compile Include="Util\CoreFactory2.cs" />
     <Compile Include="Util\IPooledObject.cs">
       <SubType>Code</SubType>
     </Compile>

@@ -1,8 +1,10 @@
+using System.ComponentModel.Composition;
 using System.IO;
 using System.Xml.Serialization;
 
 namespace Gallatin.Core
 {
+    [PartCreationPolicy(CreationPolicy.Shared)]
     internal class SettingsMapper
     {
         public const string SettingsFileName = "settings.xml";
@@ -15,6 +17,15 @@ namespace Gallatin.Core
             }
 
             return originalValue;
+        }
+
+        [Export]
+        public ICoreSettings Settings
+        {
+            get
+            {
+                return Load();
+            }
         }
 
         public static void Save( ICoreSettings settings )

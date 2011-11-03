@@ -1,20 +1,19 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.Composition;
 using System.Diagnostics.Contracts;
 using Gallatin.Core.Util;
 
 namespace Gallatin.Core.Service
 {
+    [Export(typeof(IProxyService))]
     internal class ProxyService : IProxyService
     {
         private INetworkFacadeFactory _factory;
         private readonly List<IProxySession> _sessions = new List<IProxySession>();
         private readonly ICoreSettings _settings;
 
-        public ProxyService() : this( CoreFactory.Create<ICoreSettings>(), CoreFactory.Create<INetworkFacadeFactory>() )
-        {
-        }
-
+        [ImportingConstructor]
         internal ProxyService( ICoreSettings settings, INetworkFacadeFactory factory )
         {
             Contract.Requires(settings!=null);
@@ -70,7 +69,7 @@ namespace Gallatin.Core.Service
 
         private void HandleClientConnected( INetworkFacade clientConnection )
         {
-            IProxySession session = CoreFactory.Create<IProxySession>();
+            IProxySession session = CoreFactory2.Compose<IProxySession>();
 
             session.SessionEnded += HandleSessionEnded;
 

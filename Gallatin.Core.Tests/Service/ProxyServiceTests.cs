@@ -23,7 +23,7 @@ namespace Gallatin.Core.Tests.Service
 
             Mock<IProxySession> session = new Mock<IProxySession>();
 
-            CoreFactory.Register( () => session.Object );
+            //TODO: CoreFactory.Register( () => session.Object );
 
             Mock<INetworkFacade> server = new Mock<INetworkFacade>();
 

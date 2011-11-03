@@ -1,4 +1,5 @@
 using System;
+using System.ComponentModel.Composition;
 using System.Diagnostics.Contracts;
 using System.Net;
 using System.Net.Sockets;
@@ -6,6 +7,7 @@ using Gallatin.Core.Util;
 
 namespace Gallatin.Core.Service
 {
+    [Export(typeof(INetworkFacadeFactory))]
     internal class NetworkFacadeFactory : INetworkFacadeFactory
     {
         public const int DefaultBufferSize = 8192;
