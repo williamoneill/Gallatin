@@ -69,7 +69,8 @@ namespace Gallatin.Core.Service
 
         private void HandleClientConnected( INetworkFacade clientConnection )
         {
-            IProxySession session = CoreFactory2.Compose<IProxySession>();
+            // TODO: this is confirmed to be a performance issue. We should look at pooling again.
+            IProxySession session = CoreFactory.Compose<IProxySession>();
 
             session.SessionEnded += HandleSessionEnded;
 

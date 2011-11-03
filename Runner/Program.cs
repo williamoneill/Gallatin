@@ -13,7 +13,7 @@ namespace Runner
         {
             try
             {
-                IProxyService server = CoreFactory2.Compose<IProxyService>();
+                IProxyService server = CoreFactory.Compose<IProxyService>();
                 server.Start();
 
                 Console.WriteLine("Gallatin Proxy (www.gallatinproxy.com) v.{0}", Assembly.GetExecutingAssembly().GetName().Version);
