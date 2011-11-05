@@ -68,6 +68,14 @@ namespace Gallatin.Core.Service
             }
         }
 
+        public string ConnectionId
+        {
+            get
+            {
+                return Socket.RemoteEndPoint.ToString();
+            }
+        }
+
         public void BeginSend( byte[] buffer, Action<bool,INetworkFacade> callback )
         {
             ServiceLog.Logger.Info("{0} Sending data {1}", Id, buffer.Length);

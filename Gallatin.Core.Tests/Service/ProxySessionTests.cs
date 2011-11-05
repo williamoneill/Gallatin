@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Gallatin.Core.Service;
+using Gallatin.Core.Web;
 using Moq;
 using NUnit.Framework;
 
@@ -11,6 +12,8 @@ namespace Gallatin.Core.Tests.Service
     [TestFixture]
     public class ProxySessionTests
     {
+        // TODO: create test to verify filter is used
+
         [Test]
         public void SimpleSendReceiveTest()
         {
@@ -29,11 +32,16 @@ namespace Gallatin.Core.Tests.Service
             mockFactory.Setup( m => m.BeginConnect( "www.yahoo.com", 80, It.IsAny<Action<bool, INetworkFacade>>() ) )
                 .Callback<string, int, Action<bool, INetworkFacade>>( ( h, p, c ) => c( true, server.Object ) );
 
-            ProxySession session = new ProxySession( mockFactory.Object );
+            Mock<IProxyFilter> outboundFilter = new Mock<IProxyFilter>();
+            outboundFilter.Setup(m => m.EvaluateConnectionFilters(It.IsAny<HttpRequest>(), It.IsAny<string>())).Returns(null as string);
+
+            ProxySession session = new ProxySession( mockFactory.Object, outboundFilter.Object );
             session.Start(client.Object);
 
             client.Verify(m => m.BeginClose(It.IsAny<Action<bool, INetworkFacade>>()), Times.Once());
             server.Verify(m => m.BeginClose(It.IsAny<Action<bool, INetworkFacade>>()), Times.Once());
+
+            outboundFilter.Verify(m => m.EvaluateConnectionFilters(It.IsAny<HttpRequest>(), It.IsAny<string>()), Times.Once());
         }
 
         [Test]
@@ -59,13 +67,17 @@ namespace Gallatin.Core.Tests.Service
             mockFactory.Setup(m => m.BeginConnect("www.yahoo.com", 80, It.IsAny<Action<bool, INetworkFacade>>()))
                 .Callback<string, int, Action<bool, INetworkFacade>>((h, p, c) => c(true, server.Object));
 
-            ProxySession session = new ProxySession( mockFactory.Object);
+            Mock<IProxyFilter> outboundFilter = new Mock<IProxyFilter>();
+            outboundFilter.Setup(m => m.EvaluateConnectionFilters(It.IsAny<HttpRequest>(), It.IsAny<string>())).Returns(null as string);
+
+            ProxySession session = new ProxySession( mockFactory.Object, outboundFilter.Object);
             session.Start(client.Object);
 
             client.Verify(m => m.BeginClose(It.IsAny<Action<bool, INetworkFacade>>()), Times.Once());
             server.Verify(m => m.BeginClose(It.IsAny<Action<bool, INetworkFacade>>()), Times.Once());
             mockFactory.Verify(m=>m.BeginConnect(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<Action<bool,INetworkFacade>>()), Times.Once());
-            
+
+            outboundFilter.Verify(m => m.EvaluateConnectionFilters(It.IsAny<HttpRequest>(), It.IsAny<string>()), Times.Exactly(1));
         }
     }
 }

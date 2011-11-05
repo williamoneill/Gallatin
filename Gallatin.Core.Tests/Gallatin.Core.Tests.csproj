@@ -84,6 +84,10 @@
     </None>
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\Gallatin.Contracts\Gallatin.Contracts.csproj">
+      <Project>{03BA4FC5-AF79-46EB-92C0-F0ED50AD0744}</Project>
+      <Name>Gallatin.Contracts</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Gallatin.Core\Gallatin.Core.csproj">
       <Project>{FFDB4E9F-EB29-42E5-AC61-2017FC358D86}</Project>
       <Name>Gallatin.Core</Name>

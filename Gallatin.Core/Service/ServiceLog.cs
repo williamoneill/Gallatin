@@ -1,4 +1,6 @@
-﻿namespace Gallatin.Core.Util
+﻿using Gallatin.Core.Util;
+
+namespace Gallatin.Core.Service
 {
     internal static class ServiceLog 
     {

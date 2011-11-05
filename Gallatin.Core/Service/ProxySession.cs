@@ -1,8 +1,8 @@
 ﻿using System;
 using System.ComponentModel.Composition;
 using System.Diagnostics.Contracts;
+using System.Text;
 using System.Threading;
-using Gallatin.Core.Util;
 using Gallatin.Core.Web;
 
 namespace Gallatin.Core.Service
@@ -21,11 +21,15 @@ namespace Gallatin.Core.Service
         private HttpResponseHeaderEventArgs _responseHeader;
         private INetworkFacade _serverConnection;
         private IHttpStreamParser _serverParser;
+        private IProxyFilter _filters;
 
         [ImportingConstructor]
-        public ProxySession(  INetworkFacadeFactory factory )
+        public ProxySession(  INetworkFacadeFactory factory, IProxyFilter filters )
         {
             Contract.Requires( factory != null );
+            Contract.Requires(filters != null);
+
+            _filters = filters;
 
             _networkFacadeFactory = factory;
 
@@ -199,6 +203,8 @@ namespace Gallatin.Core.Service
             }
         }
 
+        private bool _isFiltered;
+
         private void HandleClientParserReadRequestHeaderComplete( object sender, HttpRequestHeaderEventArgs e )
         {
             const int HttpPort = 80;
@@ -212,62 +218,73 @@ namespace Gallatin.Core.Service
 
                 _requestHeader = e;
 
-                string host = e.Headers["Host"];
-                int port = HttpPort;
-
-                if ( _requestHeader.IsSsl )
+                var filter = _filters.EvaluateConnectionFilters( HttpRequest.CreateRequest(e), _clientConnection.ConnectionId );
+                if (filter != null)
                 {
-                    string[] tokens = _requestHeader.Path.Split( ':' );
-
-                    if ( tokens.Length == 2 )
-                    {
-                        port = int.Parse( tokens[1] );
-                        host = tokens[0];
-                    }
-                }
-
-                // Connect/reconnect to server?
-                if ( _serverConnection == null || _host != host
-                     || _port != port )
-                {
-                    // At times, the client may change host/port using the same client
-                    // connection. Account for that here by disconnecting existing sessions
-                    // if host/port changes
-                    if ( _serverConnection != null )
-                    {
-                        ServiceLog.Logger.Verbose( "{0} Closing existing server connection", Id );
-
-                        ManualResetEvent waitForServerDisconnectEvent = new ManualResetEvent( true );
-
-                        waitForServerDisconnectEvent.Reset();
-
-                        _serverConnection.BeginClose(
-                            ( s, f ) =>
-                            {
-                                if ( s )
-                                {
-                                    waitForServerDisconnectEvent.Set();
-                                }
-                            } );
-
-
-                        if ( !waitForServerDisconnectEvent.WaitOne( 10000 ) )
-                        {
-                            ServiceLog.Logger.Error( "Unable to disconnect new server connection." );
-                            EndSession();
-                        }
-                    }
-
-                    _host = host;
-                    _port = port;
-                    ServiceLog.Logger.Info("{0} Connecting to remote host {1}:{2}", Id, _host, _port);
-                    _networkFacadeFactory.BeginConnect( _host, _port, HandleServerConnect );
+                    _isFiltered = true;
+                    _clientConnection.BeginSend( Encoding.UTF8.GetBytes( filter ), HandleDataSentToClient );
                 }
                 else
                 {
-                    // Already connected. Send request.
-                    SendRequestHeaderToServer();
+                    string host = e.Headers["Host"];
+                    int port = HttpPort;
+
+                    if (_requestHeader.IsSsl)
+                    {
+                        string[] tokens = _requestHeader.Path.Split(':');
+
+                        if (tokens.Length == 2)
+                        {
+                            port = int.Parse(tokens[1]);
+                            host = tokens[0];
+                        }
+                    }
+
+                    // Connect/reconnect to server?
+                    if (_serverConnection == null || _host != host
+                         || _port != port)
+                    {
+                        // At times, the client may change host/port using the same client
+                        // connection. Account for that here by disconnecting existing sessions
+                        // if host/port changes
+                        if (_serverConnection != null)
+                        {
+                            ServiceLog.Logger.Verbose("{0} Closing existing server connection", Id);
+
+                            ManualResetEvent waitForServerDisconnectEvent = new ManualResetEvent(true);
+
+                            waitForServerDisconnectEvent.Reset();
+
+                            _serverConnection.BeginClose(
+                                (s, f) =>
+                                {
+                                    if (s)
+                                    {
+                                        waitForServerDisconnectEvent.Set();
+                                    }
+                                });
+
+
+                            if (!waitForServerDisconnectEvent.WaitOne(10000))
+                            {
+                                ServiceLog.Logger.Error("Unable to disconnect new server connection.");
+                                EndSession();
+                            }
+                        }
+
+                        _host = host;
+                        _port = port;
+                        ServiceLog.Logger.Info("{0} Connecting to remote host {1}:{2}", Id, _host, _port);
+                        _networkFacadeFactory.BeginConnect(_host, _port, HandleServerConnect);
+                    }
+                    else
+                    {
+                        // Already connected. Send request.
+                        SendRequestHeaderToServer();
+                    }
+                    
                 }
+
             }
             catch ( Exception ex )
             {
@@ -389,7 +406,15 @@ namespace Gallatin.Core.Service
             {
                 ServiceLog.Logger.Verbose( "{0} Data sent to client", Id );
 
-                if ( !success )
+                if (success )
+                {
+                    if (_isFiltered)
+                    {
+                        ServiceLog.Logger.Info("{0} Proxy returned filtered data. Ending connection.", Id);
+                        EndSession();
+                    }
+                }
+                else
                 {
                     ServiceLog.Logger.Error( "Unable to send data to client" );
                     EndSession();

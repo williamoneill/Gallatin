@@ -5,24 +5,23 @@
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <ProductVersion>8.0.30703</ProductVersion>
     <SchemaVersion>2.0</SchemaVersion>
-    <ProjectGuid>{FFDB4E9F-EB29-42E5-AC61-2017FC358D86}</ProjectGuid>
+    <ProjectGuid>{03BA4FC5-AF79-46EB-92C0-F0ED50AD0744}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>Gallatin.Core</RootNamespace>
-    <AssemblyName>Gallatin.Core</AssemblyName>
+    <RootNamespace>Gallatin.Contracts</RootNamespace>
+    <AssemblyName>Gallatin.Contracts</AssemblyName>
     <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
-    <CodeContractsAssemblyMode>1</CodeContractsAssemblyMode>
+    <CodeContractsAssemblyMode>0</CodeContractsAssemblyMode>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
-    <OutputPath>..\bin\debug\</OutputPath>
+    <OutputPath>..\bin\Debug\</OutputPath>
     <DefineConstants>TRACE;DEBUG;CONTRACTS_FULL</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
-    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <CodeContractsEnableRuntimeChecking>True</CodeContractsEnableRuntimeChecking>
     <CodeContractsRuntimeOnlyPublicSurface>False</CodeContractsRuntimeOnlyPublicSurface>
     <CodeContractsRuntimeThrowOnFailure>True</CodeContractsRuntimeThrowOnFailure>
@@ -46,9 +45,8 @@
     <CodeContractsBaseLineFile />
     <CodeContractsCacheAnalysisResults>False</CodeContractsCacheAnalysisResults>
     <CodeContractsRuntimeCheckingLevel>Full</CodeContractsRuntimeCheckingLevel>
-    <CodeContractsReferenceAssembly>DoNotBuild</CodeContractsReferenceAssembly>
+    <CodeContractsReferenceAssembly>Build</CodeContractsReferenceAssembly>
     <CodeContractsAnalysisWarningLevel>0</CodeContractsAnalysisWarningLevel>
-    <DocumentationFile>..\bin\debug\Gallatin.Core.XML</DocumentationFile>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -82,12 +80,9 @@
     <CodeContractsRuntimeCheckingLevel>ReleaseRequires</CodeContractsRuntimeCheckingLevel>
     <CodeContractsReferenceAssembly>Build</CodeContractsReferenceAssembly>
     <CodeContractsAnalysisWarningLevel>0</CodeContractsAnalysisWarningLevel>
-    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
-    <DocumentationFile>..\bin\Release\Gallatin.Core.XML</DocumentationFile>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
-    <Reference Include="System.ComponentModel.Composition" />
     <Reference Include="System.Core" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
@@ -96,56 +91,10 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Service\ProxyFilter.cs" />
-    <Compile Include="Service\IProxyFilter.cs" />
-    <Compile Include="CoreSettings.cs" />
-    <Compile Include="ICoreSettings.cs" />
-    <Compile Include="Service\IProxySession.cs" />
-    <Compile Include="Service\ProxyService.cs" />
-    <Compile Include="Service\ProxySession.cs" />
-    <Compile Include="Util\CoreFactory.cs" />
-    <Compile Include="Util\IPooledObject.cs">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="Util\Logger.cs" />
-    <Compile Include="Util\Pool.cs">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="Web\HttpDataEventArgs.cs" />
-    <Compile Include="Web\HttpHeaderEventArgs.cs" />
-    <Compile Include="Web\HttpHeaders.cs" />
-    <Compile Include="Web\HttpRequest.cs" />
-    <Compile Include="Web\HttpRequestHeaderEventArgs.cs" />
-    <Compile Include="Web\HttpResponseHeaderEventArgs.cs" />
-    <Compile Include="Web\HttpStreamParser.cs" />
-    <Compile Include="Web\IHttpStreamParser.cs" />
-    <Compile Include="Service\INetworkFacade.cs" />
-    <Compile Include="Service\INetworkFacadeFactory.cs" />
-    <Compile Include="Service\NetworkFacade.cs" />
-    <Compile Include="Service\NetworkFacadeFactory.cs" />
-    <Compile Include="Service\SslTunnel.cs" />
-    <Compile Include="SettingsMapper.cs" />
-    <Compile Include="SharedAssemblyInfo.cs" />
-    <Compile Include="Service\IProxyService.cs" />
-    <Compile Include="Service\ServiceLog.cs" />
+    <Compile Include="IConnectionFilter.cs" />
+    <Compile Include="IHttpHeaders.cs" />
+    <Compile Include="IHttpRequest.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Web\IHttpStreamParserContext.cs" />
-    <Compile Include="Web\IHttpStreamParserState.cs" />
-    <Compile Include="Web\ReadChunkedBodyState.cs" />
-    <Compile Include="Web\ReadChunkedHeaderState.cs" />
-    <Compile Include="Web\ReadChunkedTrailerState.cs" />
-    <Compile Include="Web\ReadHeaderState.cs" />
-    <Compile Include="Web\ReadNormalBodyState.cs" />
-    <Compile Include="Web\WebLog.cs" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="packages.config" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\Gallatin.Contracts\Gallatin.Contracts.csproj">
-      <Project>{03BA4FC5-AF79-46EB-92C0-F0ED50AD0744}</Project>
-      <Name>Gallatin.Contracts</Name>
-    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

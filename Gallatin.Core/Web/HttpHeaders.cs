@@ -2,13 +2,14 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics.Contracts;
 using System.Linq;
+using Gallatin.Contracts;
 
 namespace Gallatin.Core.Web
 {
     /// <summary>
     /// This class contains the HTTP header values extracted from the raw network data
     /// </summary>
-    public class HttpHeaders
+    public class HttpHeaders : IHttpHeaders
     {
         private readonly List<KeyValuePair<string, string>> _headers;
 

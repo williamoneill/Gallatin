@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics.Contracts;
+using System.Net;
 
 namespace Gallatin.Core.Service
 {
@@ -13,7 +14,12 @@ namespace Gallatin.Core.Service
         /// Gets the reference identity
         /// </summary>
         int Id { get; }
-        
+
+        /// <summary>
+        /// Gets a unique identifier for the connection
+        /// </summary>
+        string ConnectionId { get; }
+
         /// <summary>
         /// Begins a send operation using the underlying network
         /// </summary>
@@ -46,6 +52,8 @@ namespace Gallatin.Core.Service
         public abstract DateTime LastActivityTime { get; }
 
         #region INetworkFacade Members
+
+        public abstract string ConnectionId { get;  }
 
         public void BeginSend( byte[] buffer, Action<bool, INetworkFacade> callback )
         {
