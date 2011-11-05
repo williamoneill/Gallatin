@@ -99,5 +99,22 @@ namespace Gallatin.Core.Web
             }
         }
 
+        /// <summary>
+        /// Renames a key in the HTTP header collection
+        /// </summary>
+        /// <param name="oldKeyName">Old key name</param>
+        /// <param name="newKeyName">New key name</param>
+        public void RenameKey( string oldKeyName, string newKeyName )
+        {
+            KeyValuePair<string, string> header;
+            if (TryFindByKey(oldKeyName, out header))
+            {
+                // HTTP spec: do not change header order in proxy
+                var index = _headers.IndexOf( header );
+                _headers.Remove( header );
+                _headers.Insert( index, new KeyValuePair<string, string>(newKeyName, header.Value) );
+            }
+            
+        }
     }
 }

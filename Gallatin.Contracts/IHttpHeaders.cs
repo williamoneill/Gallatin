@@ -31,5 +31,12 @@ namespace Gallatin.Contracts
         /// <param name="key">Search key</param>
         /// <returns>The matching key/value pair or <c>null</c> if the key did not exist in the collection</returns>
         string this[ string key ] { get; }
+
+        /// <summary>
+        /// Renames a key in the HTTP header collection
+        /// </summary>
+        /// <param name="oldKeyName">Old key name</param>
+        /// <param name="newKeyName">New key name</param>
+        void RenameKey( string oldKeyName, string newKeyName );
     }
 }

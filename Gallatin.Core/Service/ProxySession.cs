@@ -218,11 +218,11 @@ namespace Gallatin.Core.Service
 
                 _requestHeader = e;
 
-                var filter = _filters.EvaluateConnectionFilters( HttpRequest.CreateRequest(e), _clientConnection.ConnectionId );
+                var filter = _filters.EvaluateConnectionFilters(HttpRequest.CreateRequest(e), _clientConnection.ConnectionId);
                 if (filter != null)
                 {
                     _isFiltered = true;
-                    _clientConnection.BeginSend( Encoding.UTF8.GetBytes( filter ), HandleDataSentToClient );
+                    _clientConnection.BeginSend(Encoding.UTF8.GetBytes(filter), HandleDataSentToClient);
                 }
                 else
                 {
@@ -298,14 +298,14 @@ namespace Gallatin.Core.Service
         {
             ServiceLog.Logger.Info( "{0} Sending header to server", Id );
 
+            ServiceLog.Logger.Verbose(() => string.Format("=======Actual request=======\r\n{0}", Encoding.UTF8.GetString(_requestHeader.GetBuffer())));
+
             _serverConnection.BeginSend( _requestHeader.GetBuffer(), HandleServerSendComplete );
             _connectingToServer.Set();
         }
 
         private void HandleServerConnect( bool success, INetworkFacade serverConnection )
         {
-            Contract.Requires( serverConnection != null );
-
             try
             {
                 ServiceLog.Logger.Verbose( "{0} Connected to server", Id );

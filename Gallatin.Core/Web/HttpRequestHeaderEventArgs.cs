@@ -13,6 +13,17 @@ namespace Gallatin.Core.Web
 
             Path = path;
             Method = method;
+
+            // Convert Proxy-Connection to Connection. This header causes some problems with certain sites.
+            // See http://homepage.ntlworld.com./jonathan.deboynepollard/FGA/web-proxy-connection-header.html
+            if (version == "1.0")
+            {
+                Headers.Remove("Proxy-Connection");
+            }
+            else
+            {
+                Headers.RenameKey("Proxy-Connection", "Connection");
+            }
         }
 
         public bool IsSsl
@@ -28,7 +39,11 @@ namespace Gallatin.Core.Web
 
         protected override string CreateFirstLine()
         {
-            return string.Format( "{0} {1} HTTP/{2}", Method, Path, Version );
+            Uri hostUri = new Uri( Path );
+
+            // Sites like YouTube get cranky if we send the complete path in the first line.
+            // Only send the relative path and query.
+            return string.Format( "{0} {1} HTTP/{2}", Method, hostUri.PathAndQuery, Version );
         }
     }
 }

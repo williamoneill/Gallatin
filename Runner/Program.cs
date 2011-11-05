@@ -11,6 +11,9 @@ namespace Runner
     {
         private static void Main(  )
         {
+            if(File.Exists("proxy.log.txt"))
+                File.Delete("proxy.log.txt");
+
             try
             {
                 IProxyService server = CoreFactory.Compose<IProxyService>();
