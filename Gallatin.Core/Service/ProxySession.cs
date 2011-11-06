@@ -298,8 +298,6 @@ namespace Gallatin.Core.Service
         {
             ServiceLog.Logger.Info( "{0} Sending header to server", Id );
 
-            ServiceLog.Logger.Verbose(() => string.Format("=======Actual request=======\r\n{0}", Encoding.UTF8.GetString(_requestHeader.GetBuffer())));
-
             _serverConnection.BeginSend( _requestHeader.GetBuffer(), HandleServerSendComplete );
             _connectingToServer.Set();
         }

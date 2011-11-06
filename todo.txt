@@ -1,2 +1,10 @@
-1. Nuget package does not update MOQ if you delete all files in bin\debug
-2. Consider moving MEF interfaces to Contract assembly
+-- need unit tests for connection filter
+-- need pooling again
+
+-- need white list concept
+-- research database
+
+-- Nuget package does not update MOQ if you delete all files in bin\debug
+-- Consider moving MEF interfaces to Contract assembly
+-- Check contracts for all interfaces
+-- double check project consistency

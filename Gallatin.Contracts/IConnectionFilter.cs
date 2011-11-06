@@ -12,5 +12,10 @@ namespace Gallatin.Contracts
         /// <param name="connectionId">Proxy client connection ID</param>
         /// <returns><c>null</c> if no filter is applicable or HTML code describing the error</returns>
         string EvaluateFilter( IHttpRequest request, string connectionId );
+
+        /// <summary>
+        /// Gets the filter speed type. 
+        /// </summary>
+        FilterSpeedType FilterSpeedType { get; }
     }
 }

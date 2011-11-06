@@ -91,6 +91,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="FilterSpeedType.cs" />
     <Compile Include="IConnectionFilter.cs" />
     <Compile Include="IHttpHeaders.cs" />
     <Compile Include="IHttpRequest.cs" />

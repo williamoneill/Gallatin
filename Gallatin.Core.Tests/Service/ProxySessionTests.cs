@@ -79,5 +79,38 @@ namespace Gallatin.Core.Tests.Service
 
             outboundFilter.Verify(m => m.EvaluateConnectionFilters(It.IsAny<HttpRequest>(), It.IsAny<string>()), Times.Exactly(1));
         }
+
+        [Test]
+        public void ConnectionFilterTest()
+        {
+            byte[] request = Encoding.UTF8.GetBytes("GET / HTTP/1.1\r\nHost: www.yahoo.com\r\n\r\n");
+
+            Mock<INetworkFacade> client = new Mock<INetworkFacade>();
+            client.Setup(m => m.BeginReceive(It.IsAny<Action<bool, byte[], INetworkFacade>>()))
+                .Callback((Action<bool, byte[], INetworkFacade> callback) => callback(true, request, client.Object));
+
+            // If I place Encoding.UTF8.GetBytes("Bad request") in the Setup method, this never gets called, yet
+            // the Assert verfies that is the value. Not sure what I'm doing wrong with MOQ.
+            client.Setup( m => m.BeginSend( It.IsAny<byte[]>(), It.IsAny<Action<bool, INetworkFacade>>() ) )
+                .Callback<byte[], Action<bool, INetworkFacade>>( ( b, d ) =>
+                                                                 {
+                                                                     Assert.That(b, Is.EqualTo(Encoding.UTF8.GetBytes("Bad request")));
+                                                                     d( true, client.Object );
+                                                                 } );
+
+            Mock<INetworkFacadeFactory> mockFactory = new Mock<INetworkFacadeFactory>();
+
+            Mock<IProxyFilter> outboundFilter = new Mock<IProxyFilter>();
+            outboundFilter.Setup(m => m.EvaluateConnectionFilters(It.IsAny<HttpRequest>(), It.IsAny<string>())).Returns("Bad request");
+
+            ProxySession session = new ProxySession(mockFactory.Object, outboundFilter.Object);
+            session.Start(client.Object);
+
+            // I can't get this to work in MOQ. Asserting in the callback above. 
+            //client.Verify(m => m.BeginSend(Encoding.UTF8.GetBytes("Bad request"), It.IsAny<Action<bool, INetworkFacade>>()), Times.Once());
+            client.Verify(m => m.BeginClose(It.IsAny<Action<bool, INetworkFacade>>()), Times.Once());
+            mockFactory.Verify( m => m.BeginConnect(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<Action<bool,INetworkFacade>>()), Times.Never() );
+            outboundFilter.Verify(m => m.EvaluateConnectionFilters(It.IsAny<HttpRequest>(), It.IsAny<string>()), Times.Once());
+        }
     }
 }
