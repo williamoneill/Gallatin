@@ -28,11 +28,18 @@ namespace Gallatin.Filter
 
             if (!string.IsNullOrEmpty(host))
             {
-                if (_ads.Match(host).Success)
+                // Always turn on safe search for Google queries
+                if (host == "www.google.com" && request.Path.Contains("&"))
+                {
+                   request.Path += "&safe=strict";
+                }
+
+                else if (_ads.Match(host).Success)
                 {
                     return string.Format("<div style='background:lightgreen'>Gallatin Proxy - Advertisement blocked to host: {0}</div>", host);
                 }
             }
+
 
             return null;
         }

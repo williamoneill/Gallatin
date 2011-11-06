@@ -8,7 +8,7 @@ namespace Gallatin.Contracts
         /// <summary>
         /// Relative path of the remote resource
         /// </summary>
-        string Path { get; }
+        string Path { get; set; }
 
         /// <summary>
         /// HTTP version

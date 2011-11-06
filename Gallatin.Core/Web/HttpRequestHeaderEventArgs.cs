@@ -35,7 +35,7 @@ namespace Gallatin.Core.Web
         }
 
         public string Method { get; private set; }
-        public string Path { get; private set; }
+        public string Path { get; set; }
 
         protected override string CreateFirstLine()
         {
