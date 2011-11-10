@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics.Contracts;
+using Gallatin.Core.Util;
 
 namespace Gallatin.Core.Web
 {
@@ -7,7 +8,7 @@ namespace Gallatin.Core.Web
     /// Interface for classes that parse raw HTTP streams
     /// </summary>
     [ContractClass( typeof (IHttpStreamParserContract) )]
-    internal interface IHttpStreamParser
+    internal interface IHttpStreamParser : IPooledObject
     {
         /// <summary>
         /// Raised when the HTTP request header is read.
@@ -64,5 +65,7 @@ namespace Gallatin.Core.Web
         }
 
         #endregion
+
+        public abstract void Reset();
     }
 }

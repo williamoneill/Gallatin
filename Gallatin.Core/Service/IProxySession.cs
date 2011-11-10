@@ -1,11 +1,12 @@
 using System;
+using Gallatin.Core.Util;
 
 namespace Gallatin.Core.Service
 {
     /// <summary>
     /// Interface for proxy client sessions
     /// </summary>
-    public interface IProxySession
+    public interface IProxySession : IPooledObject
     {
         /// <summary>
         /// Gets the session ID

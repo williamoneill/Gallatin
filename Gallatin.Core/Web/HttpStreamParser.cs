@@ -37,6 +37,12 @@ namespace Gallatin.Core.Web
             }
         }
 
+        public void Reset()
+        {
+            _bodyData = new MemoryStream();
+            State = new ReadHeaderState( this );
+        }
+
         #endregion
 
         #region IHttpStreamParserContext Members
@@ -162,11 +168,5 @@ namespace Gallatin.Core.Web
         }
 
         #endregion
-
-        public void Reset()
-        {
-            _bodyData = new MemoryStream();
-            State = new ReadHeaderState( this );
-        }
     }
 }

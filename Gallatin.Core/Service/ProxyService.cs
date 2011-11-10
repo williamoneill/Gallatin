@@ -27,7 +27,7 @@ namespace Gallatin.Core.Service
 
         private bool _isRunning;
         private object _mutex = new object();
-        //private Pool<IProxySession> _sessionPool = new Pool<IProxySession>(); 
+        private IPool<IProxySession> _sessionPool;
 
         public void Start()
         {
@@ -39,6 +39,9 @@ namespace Gallatin.Core.Service
                 }
 
                 _factory.Listen(_settings.NetworkAddressBindingOrdinal, _settings.ServerPort, HandleClientConnected);
+                //_sessionPool = CoreFactory.Compose<IPool<IProxySession>>();
+                _sessionPool = new Pool<IProxySession>();
+                _sessionPool.Init(_settings.MaxNumberClients, CoreFactory.Compose<IProxySession>);
                 _isRunning = true;
             }
         }
@@ -53,6 +56,7 @@ namespace Gallatin.Core.Service
                 }
 
                 _factory.EndListen();
+                _sessionPool = null;
                 _isRunning = false;
             }
         }
@@ -69,24 +73,30 @@ namespace Gallatin.Core.Service
 
         private void HandleClientConnected( INetworkFacade clientConnection )
         {
-            // TODO: this is confirmed to be a performance issue. We should look at pooling again.
-            IProxySession session = CoreFactory.Compose<IProxySession>();
+            try
+            {
+                IProxySession session = _sessionPool.Get();
 
-            session.SessionEnded += HandleSessionEnded;
+                session.SessionEnded += HandleSessionEnded;
 
-            session.Start(clientConnection);
+                session.Start(clientConnection);
 
-            _sessions.Add( session );
+                _sessions.Add(session);
+            }
+            catch ( InvalidOperationException ex )
+            {
+                ServiceLog.Logger.Exception("No more clients can be accepted; the pool of available sessions was exhausted. Increase the pool maximum number of clients in the proxy server settings.", ex);
+            }
         }
 
         private void HandleSessionEnded( object sender, EventArgs e )
         {
-            IProxySession proxySession = sender as IProxySession;
+            Contract.Requires(sender is IProxySession);
 
-            if ( proxySession != null )
-            {
-                _sessions.Remove( proxySession );
-            }
+            IProxySession proxySession = sender as IProxySession;
+            proxySession.SessionEnded -= HandleSessionEnded;
+
+            _sessionPool.Put(proxySession);
         }
     }
 }

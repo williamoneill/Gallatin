@@ -7,27 +7,28 @@ using Gallatin.Core.Web;
 
 namespace Gallatin.Core.Service
 {
-    [PartCreationPolicy(CreationPolicy.NonShared)]
-    [Export(typeof(IProxySession))]
+    [PartCreationPolicy( CreationPolicy.NonShared )]
+    [Export( typeof (IProxySession) )]
     internal class ProxySession : IProxySession
     {
-        private INetworkFacade _clientConnection;
         private readonly IHttpStreamParser _clientParser;
         private readonly ManualResetEvent _connectingToServerEvent;
+        private readonly IProxyFilter _filters;
         private readonly INetworkFacadeFactory _networkFacadeFactory;
+        private INetworkFacade _clientConnection;
         private string _host;
+        private bool _isFiltered;
         private int _port;
         private HttpRequestHeaderEventArgs _requestHeader;
         private HttpResponseHeaderEventArgs _responseHeader;
         private INetworkFacade _serverConnection;
         private IHttpStreamParser _serverParser;
-        private IProxyFilter _filters;
 
         [ImportingConstructor]
-        public ProxySession(  INetworkFacadeFactory factory, IProxyFilter filters )
+        public ProxySession( INetworkFacadeFactory factory, IProxyFilter filters )
         {
             Contract.Requires( factory != null );
-            Contract.Requires(filters != null);
+            Contract.Requires( filters != null );
 
             _filters = filters;
 
@@ -40,47 +41,68 @@ namespace Gallatin.Core.Service
             WireClientEvents();
         }
 
+        #region IProxySession Members
+
         public string Id
         {
             get
             {
-                return string.Format("C {0} S {1} ",
+                return string.Format( "C {0} S {1} ",
                                       _clientConnection == null ? 0 : _clientConnection.Id,
-                                      _serverConnection == null ? 0 : _serverConnection.Id);
+                                      _serverConnection == null ? 0 : _serverConnection.Id );
             }
         }
 
         public event EventHandler SessionEnded;
 
-        public void Start(INetworkFacade clientConnection)
+        public void Start( INetworkFacade clientConnection )
         {
-            Contract.Requires(clientConnection!=null);
+            Contract.Requires( clientConnection != null );
 
             _clientConnection = clientConnection;
 
-            ServiceLog.Logger.Verbose("{0} Starting proxy session", Id);
+            ServiceLog.Logger.Verbose( "{0} Starting proxy session", Id );
 
             _clientConnection.BeginReceive( HandleClientReceive );
         }
+
+        public void Reset()
+        {
+            UnwireClientEvents();
+            UnwireServerEvents();
+            _clientConnection = null;
+            _serverConnection = null;
+            _clientParser.Reset();
+            _host = null;
+            _isFiltered = false;
+            _port = 0;
+            _requestHeader = null;
+            _responseHeader = null;
+
+            if (_serverParser != null)
+            {
+                _serverParser.Reset();
+            }
+
+        }
+
+        #endregion
 
         private void WireClientEvents()
         {
             _clientParser.AdditionalDataRequested += HandleClientParserAdditionalDataRequested;
             _clientParser.ReadRequestHeaderComplete += HandleClientParserReadRequestHeaderComplete;
             _clientParser.PartialDataAvailable += HandleClientParserPartialDataAvailable;
-            
         }
 
         private void UnwireClientEvents()
         {
-            if (_clientParser != null)
+            if ( _clientParser != null )
             {
                 _clientParser.AdditionalDataRequested -= HandleClientParserAdditionalDataRequested;
                 _clientParser.ReadRequestHeaderComplete -= HandleClientParserReadRequestHeaderComplete;
                 _clientParser.PartialDataAvailable -= HandleClientParserPartialDataAvailable;
-                
             }
-            
         }
 
         private void WireServerEvents()
@@ -93,7 +115,7 @@ namespace Gallatin.Core.Service
 
         private void UnwireServerEvents()
         {
-            if (_serverParser != null)
+            if ( _serverParser != null )
             {
                 _serverParser.AdditionalDataRequested -= HandleServerParserAdditionalDataRequested;
                 _serverParser.ReadResponseHeaderComplete -= HandleServerParserReadResponseHeaderComplete;
@@ -161,9 +183,9 @@ namespace Gallatin.Core.Service
                     {
                         // Do not forward the header to the server when SSL. The SSL stream class will
                         // send the appropriate headers for a proxy server.
-                        if (!_requestHeader.IsSsl)
+                        if ( !_requestHeader.IsSsl )
                         {
-                            _serverConnection.BeginSend(e.Data, HandleServerSendComplete);
+                            _serverConnection.BeginSend( e.Data, HandleServerSendComplete );
                         }
                     }
                     else
@@ -203,8 +225,6 @@ namespace Gallatin.Core.Service
             }
         }
 
-        private bool _isFiltered;
-
         private void HandleClientParserReadRequestHeaderComplete( object sender, HttpRequestHeaderEventArgs e )
         {
             const int HttpPort = 80;
@@ -218,73 +238,71 @@ namespace Gallatin.Core.Service
 
                 _requestHeader = e;
 
-                var filter = _filters.EvaluateConnectionFilters(HttpRequest.CreateRequest(e), _clientConnection.ConnectionId);
-                if (filter != null)
+                string filter = _filters.EvaluateConnectionFilters( HttpRequest.CreateRequest( e ), _clientConnection.ConnectionId );
+                if ( filter != null )
                 {
                     _isFiltered = true;
-                    _clientConnection.BeginSend(Encoding.UTF8.GetBytes(filter), HandleDataSentToClient);
+                    _clientConnection.BeginSend( Encoding.UTF8.GetBytes( filter ), HandleDataSentToClient );
                 }
                 else
                 {
                     string host = e.Headers["Host"];
                     int port = HttpPort;
 
-                    if (_requestHeader.IsSsl)
+                    if ( _requestHeader.IsSsl )
                     {
-                        string[] tokens = _requestHeader.Path.Split(':');
+                        string[] tokens = _requestHeader.Path.Split( ':' );
 
-                        if (tokens.Length == 2)
+                        if ( tokens.Length == 2 )
                         {
-                            port = int.Parse(tokens[1]);
+                            port = int.Parse( tokens[1] );
                             host = tokens[0];
                         }
                     }
 
                     // Connect/reconnect to server?
-                    if (_serverConnection == null || _host != host
-                         || _port != port)
+                    if ( _serverConnection == null || _host != host
+                         || _port != port )
                     {
                         // At times, the client may change host/port using the same client
                         // connection. Account for that here by disconnecting existing sessions
                         // if host/port changes
-                        if (_serverConnection != null)
+                        if ( _serverConnection != null )
                         {
-                            ServiceLog.Logger.Verbose("{0} Closing existing server connection", Id);
+                            ServiceLog.Logger.Verbose( "{0} Closing existing server connection", Id );
 
-                            ManualResetEvent waitForServerDisconnectEvent = new ManualResetEvent(true);
+                            ManualResetEvent waitForServerDisconnectEvent = new ManualResetEvent( true );
 
                             waitForServerDisconnectEvent.Reset();
 
                             _serverConnection.BeginClose(
-                                (s, f) =>
+                                ( s, f ) =>
                                 {
-                                    if (s)
+                                    if ( s )
                                     {
                                         waitForServerDisconnectEvent.Set();
                                     }
-                                });
+                                } );
 
 
-                            if (!waitForServerDisconnectEvent.WaitOne(10000))
+                            if ( !waitForServerDisconnectEvent.WaitOne( 10000 ) )
                             {
-                                ServiceLog.Logger.Error("Unable to disconnect new server connection.");
+                                ServiceLog.Logger.Error( "Unable to disconnect new server connection." );
                                 EndSession();
                             }
                         }
 
                         _host = host;
                         _port = port;
-                        ServiceLog.Logger.Info("{0} Connecting to remote host {1}:{2}", Id, _host, _port);
-                        _networkFacadeFactory.BeginConnect(_host, _port, HandleServerConnect);
+                        ServiceLog.Logger.Info( "{0} Connecting to remote host {1}:{2}", Id, _host, _port );
+                        _networkFacadeFactory.BeginConnect( _host, _port, HandleServerConnect );
                     }
                     else
                     {
                         // Already connected. Send request.
                         SendRequestHeaderToServer();
                     }
-                    
                 }
-
             }
             catch ( Exception ex )
             {
@@ -318,7 +336,7 @@ namespace Gallatin.Core.Service
 
                         _connectingToServerEvent.Set();
 
-                        ServiceLog.Logger.Info("{0} Chaning to SSL tunnel", Id);
+                        ServiceLog.Logger.Info( "{0} Chaning to SSL tunnel", Id );
 
                         SslTunnel tunnel = new SslTunnel( _clientConnection, _serverConnection, _requestHeader.Version );
                         tunnel.TunnelClosed += HandleSslTunnelClosed;
@@ -404,11 +422,11 @@ namespace Gallatin.Core.Service
             {
                 ServiceLog.Logger.Verbose( "{0} Data sent to client", Id );
 
-                if (success )
+                if ( success )
                 {
-                    if (_isFiltered)
+                    if ( _isFiltered )
                     {
-                        ServiceLog.Logger.Info("{0} Proxy returned filtered data. Ending connection.", Id);
+                        ServiceLog.Logger.Info( "{0} Proxy returned filtered data. Ending connection.", Id );
                         EndSession();
                     }
                 }
@@ -443,7 +461,7 @@ namespace Gallatin.Core.Service
         {
             try
             {
-                ServiceLog.Logger.Info("{0} Read response header from server", Id);
+                ServiceLog.Logger.Info( "{0} Read response header from server", Id );
                 _responseHeader = e;
 
                 // Consult the response filters to see if any are interested in the entire body.
@@ -451,28 +469,29 @@ namespace Gallatin.Core.Service
                 // If any filters can make the judgement now, before we read the body, then use their response to
                 // short-circuit the body evaluation.
                 string filterResponse;
-                if (_filters.TryEvaluateResponseFilters(HttpResponse.CreateResponse(_responseHeader), _clientConnection.ConnectionId, out filterResponse))
+                if ( _filters.TryEvaluateResponseFilters( HttpResponse.CreateResponse( _responseHeader ),
+                                                          _clientConnection.ConnectionId,
+                                                          out filterResponse ) )
                 {
                     // Filter active and does not need HTTP body
-                    if (filterResponse != null)
+                    if ( filterResponse != null )
                     {
-                        ServiceLog.Logger.Info("{0} Response filter blocking content", Id);
+                        ServiceLog.Logger.Info( "{0} Response filter blocking content", Id );
 
                         _serverParser.PartialDataAvailable -= HandleServerParserPartialDataAvailable;
                         _isFiltered = true;
-                        _clientConnection.BeginSend(Encoding.UTF8.GetBytes(filterResponse), HandleDataSentToClient);
+                        _clientConnection.BeginSend( Encoding.UTF8.GetBytes( filterResponse ), HandleDataSentToClient );
                     }
                     else
                     {
                         // Normal behavior. No filter activated.
-                        _clientConnection.BeginSend(e.GetBuffer(), HandleDataSentToClient);
+                        _clientConnection.BeginSend( e.GetBuffer(), HandleDataSentToClient );
                     }
-
                 }
                 else
                 {
                     // Prepare to receive the entire HTTP body
-                    ServiceLog.Logger.Info("{0} Response filter requires entire body. Building HTTP body.", Id);
+                    ServiceLog.Logger.Info( "{0} Response filter requires entire body. Building HTTP body.", Id );
 
                     _serverParser.PartialDataAvailable -= HandleServerParserPartialDataAvailable;
                     _serverParser.BodyAvailable += HandleServerParserBodyAvailable;
@@ -480,68 +499,71 @@ namespace Gallatin.Core.Service
             }
             catch ( Exception ex )
             {
-                ServiceLog.Logger.Exception(string.Format("{0} Error evaluating response filter", Id), ex);
+                ServiceLog.Logger.Exception( string.Format( "{0} Error evaluating response filter", Id ), ex );
                 EndSession();
             }
         }
 
-        void HandleServerParserBodyAvailable(object sender, HttpDataEventArgs e)
+        private void HandleServerParserBodyAvailable( object sender, HttpDataEventArgs e )
         {
             try
             {
-                ServiceLog.Logger.Info("{0} Sending filtered body to client", Id);
+                ServiceLog.Logger.Info( "{0} Sending filtered body to client", Id );
 
                 // Unsubscribe to the body available event because it is expensive. Resume
                 // partial read for the next message, if any, in a persistent connection
                 _serverParser.BodyAvailable -= HandleServerParserBodyAvailable;
                 _serverParser.PartialDataAvailable += HandleServerParserPartialDataAvailable;
 
-                var filter = _filters.EvaluateResponseFiltersWithBody(HttpResponse.CreateResponse(_responseHeader), _clientConnection.ConnectionId, e.Data);
+                byte[] filter = _filters.EvaluateResponseFiltersWithBody( HttpResponse.CreateResponse( _responseHeader ),
+                                                                          _clientConnection.ConnectionId,
+                                                                          e.Data );
 
-                ServiceLog.Logger.Verbose(() => string.Format("{0} Filtered response header: {1}", Id, Encoding.UTF8.GetString(_responseHeader.GetBuffer())));
-                _clientConnection.BeginSend(_responseHeader.GetBuffer(), HandleDataSentToClient);
+                ServiceLog.Logger.Verbose(
+                    () => string.Format( "{0} Filtered response header: {1}", Id, Encoding.UTF8.GetString( _responseHeader.GetBuffer() ) ) );
+                _clientConnection.BeginSend( _responseHeader.GetBuffer(), HandleDataSentToClient );
 
-                if (filter != null)
+                if ( filter != null )
                 {
-                    ServiceLog.Logger.Verbose(() => string.Format("{0} Filtered response: {1}", Id, Encoding.UTF8.GetString(filter)));
+                    ServiceLog.Logger.Verbose( () => string.Format( "{0} Filtered response: {1}", Id, Encoding.UTF8.GetString( filter ) ) );
 
                     _isFiltered = true;
-                    _clientConnection.BeginSend(filter, HandleDataSentToClient);
+                    _clientConnection.BeginSend( filter, HandleDataSentToClient );
                 }
                 else
                 {
-                    ServiceLog.Logger.Verbose(() => string.Format("{0} Filtered response body: {1}", Id, Encoding.UTF8.GetString(e.Data)));
-                    _clientConnection.BeginSend(e.Data, HandleDataSentToClient);
+                    ServiceLog.Logger.Verbose(
+                        () => string.Format( "{0} Filtered response body: {1}", Id, Encoding.UTF8.GetString( e.Data ) ) );
+                    _clientConnection.BeginSend( e.Data, HandleDataSentToClient );
                 }
             }
             catch ( Exception ex )
             {
-                ServiceLog.Logger.Exception(string.Format("{0} Error sending filtered body to client", Id), ex);
+                ServiceLog.Logger.Exception( string.Format( "{0} Error sending filtered body to client", Id ), ex );
                 EndSession();
             }
-
         }
 
         private void HandleServerParserAdditionalDataRequested( object sender, EventArgs e )
         {
             ServiceLog.Logger.Verbose( "{0} Additional data needed from server to complete request", Id );
-            _serverConnection.BeginReceive(HandleDataFromServer);
+            _serverConnection.BeginReceive( HandleDataFromServer );
         }
 
         private void HandleClientParserAdditionalDataRequested( object sender, EventArgs e )
         {
             ServiceLog.Logger.Verbose( "{0} Additional data needed from client to complete request", Id );
-            if (_connectingToServerEvent.WaitOne(30000))
+            if ( _connectingToServerEvent.WaitOne( 30000 ) )
             {
                 // Ignore the event the parser requires requesting more data if we are changing over to an SSL tunnel
-                if (!_requestHeader.IsSsl)
+                if ( !_requestHeader.IsSsl )
                 {
-                    _clientConnection.BeginReceive(HandleClientReceive);
+                    _clientConnection.BeginReceive( HandleClientReceive );
                 }
             }
             else
             {
-                ServiceLog.Logger.Verbose("{0} Timed out waiting for server connection", Id);
+                ServiceLog.Logger.Verbose( "{0} Timed out waiting for server connection", Id );
                 EndSession();
             }
         }
@@ -560,7 +582,5 @@ namespace Gallatin.Core.Service
                 EndSession();
             }
         }
-
-
     }
 }
