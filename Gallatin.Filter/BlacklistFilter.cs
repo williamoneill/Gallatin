@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -16,6 +17,8 @@ namespace Gallatin.Filter
     {
         static Regex _ads = new Regex(@"^ad(\S*)\..*$");
 
+
+
         /// <summary>
         /// Evaluates the HTTP request to determine if the host or path is in a blacklist
         /// </summary>
@@ -28,7 +31,7 @@ namespace Gallatin.Filter
 
             if (!string.IsNullOrEmpty(host))
             {
-                // Always turn on safe search for Google queries
+                // Always turn on safe search for Google queries.
                 if (host == "www.google.com" && request.Path.Contains("&"))
                 {
                    request.Path += "&safe=strict";
@@ -38,11 +41,29 @@ namespace Gallatin.Filter
                 {
                     return string.Format("<div style='background:lightgreen'>Gallatin Proxy - Advertisement blocked to host: {0}</div>", host);
                 }
-            }
 
+                //else
+                //{
+
+                //    string googlAdvisory =
+                //        "<p>Advisory provided by Google http://code.google.com/apis/safebrowsing/safebrowsing_faq.html#whyAdvisory. Google works to provide the most accurate and up-to-date phishing and malware information. However, it cannot guarantee that its information is comprehensive and error-free: some risky sites may not be identified, and some safe sites may be identified in error.";
+
+                //    if (rep == Reputation.MalwareBlackList)
+                //    {
+                //        return
+                //            "Warning- Suspected phishing page. This page may be a forgery or imitation of another website, designed to trick users into sharing personal or financial information. Entering any personal information on this page may result in identity theft or other abuse. You can find out more about phishing from www.antiphishing.org." + googlAdvisory;
+                //    }
+                //    if (rep == Reputation.PhishBlackList)
+                //    {
+                //        return
+                //            "Warning- Visiting this web site may harm your computer. This page appears to contain malicious code that could be downloaded to your computer without your consent. You can learn more about harmful web content including viruses and other malicious code and how to protect your computer at StopBadware.org." + googlAdvisory;
+                //    }
+                //}
+            }
 
             return null;
         }
+
 
         /// <summary>
         /// Gets the filter speed type which is local and slow

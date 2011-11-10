@@ -179,8 +179,6 @@ namespace Gallatin.Core.Web
             
         }
 
-
-
         private IHttpStreamParserContext _context;
 
         public ReadHeaderState(IHttpStreamParserContext context)

@@ -48,6 +48,7 @@
     <Compile Include="..\Gallatin.Core\SharedAssemblyInfo.cs">
       <Link>SharedAssemblyInfo.cs</Link>
     </Compile>
+    <Compile Include="BadWordsResponseFilter.cs" />
     <Compile Include="BlacklistFilter.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
@@ -56,6 +57,15 @@
       <Project>{03BA4FC5-AF79-46EB-92C0-F0ED50AD0744}</Project>
       <Name>Gallatin.Contracts</Name>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup />
+  <ItemGroup>
+    <Content Include="GoogleSafeBrowsing\googleBlack.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="GoogleSafeBrowsing\googleMalware.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

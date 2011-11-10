@@ -95,6 +95,7 @@
     <Compile Include="IConnectionFilter.cs" />
     <Compile Include="IHttpHeaders.cs" />
     <Compile Include="IHttpRequest.cs" />
+    <Compile Include="IResponseFilter.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

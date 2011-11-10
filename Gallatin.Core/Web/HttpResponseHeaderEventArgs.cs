@@ -1,11 +1,12 @@
 using System;
 using System.Diagnostics.Contracts;
+using Gallatin.Contracts;
 
 namespace Gallatin.Core.Web
 {
     internal class HttpResponseHeaderEventArgs : HttpHeaderEventArgs
     {
-        public HttpResponseHeaderEventArgs( string version, HttpHeaders headers, int statusCode, string statusText )
+        public HttpResponseHeaderEventArgs( string version, IHttpHeaders headers, int statusCode, string statusText )
             : base(version, headers)
         {
             Contract.Requires(!string.IsNullOrEmpty(statusText));

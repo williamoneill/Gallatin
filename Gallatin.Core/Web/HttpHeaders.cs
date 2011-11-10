@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics.Contracts;
 using System.Linq;
+using System.Text.RegularExpressions;
 using Gallatin.Contracts;
 
 namespace Gallatin.Core.Web
@@ -9,7 +10,7 @@ namespace Gallatin.Core.Web
     /// <summary>
     /// This class contains the HTTP header values extracted from the raw network data
     /// </summary>
-    public class HttpHeaders : IHttpHeaders
+    internal class HttpHeaders : IHttpHeaders
     {
         private readonly List<KeyValuePair<string, string>> _headers;
 
@@ -116,5 +117,62 @@ namespace Gallatin.Core.Web
             }
             
         }
+
+
+        public void RemoveKeyValue(string key, string value)
+        {
+            KeyValuePair<string, string> header;
+            if (TryFindByKey(key, out header))
+            {
+                // HTTP spec: do not change header order in proxy
+                var index = _headers.IndexOf(header);
+
+                // Check for the trailing ";" if there are multiple values for the key. E.g. "text/html;charset=utf-8"
+                Regex regex = new Regex(string.Format(@"\s*{0}\s*(;?)", value), RegexOptions.IgnoreCase);
+
+                var newValue = regex.Replace( header.Value, "" );
+
+                // Remove the header. We will re-write it below. If the value ends up being empty then remove the 
+                // header from the collection.
+                _headers.Remove(header);
+
+                // Still something left in the value? Add the key/value pair back, less the value we are removing.
+                if (!string.IsNullOrEmpty(newValue))
+                {
+                    _headers.Insert(index, new KeyValuePair<string, string>(key, newValue));
+                }
+            }
+        }
+
+        public void UpsertKeyValue(string key, string value)
+        {
+            KeyValuePair<string, string> header;
+            if (TryFindByKey(key, out header))
+            {
+                // HTTP spec: do not change header order in proxy
+                var index = _headers.IndexOf(header);
+
+                // Find dups and delete them all, including the one we found above.
+                bool wasFound;
+                do
+                {
+                    KeyValuePair<string, string> searchHeader;
+                    wasFound = TryFindByKey( key, out searchHeader );
+                    if(wasFound)
+                    {
+                        _headers.Remove( searchHeader );
+                    }
+                }
+                while ( wasFound );
+
+                _headers.Insert(index, new KeyValuePair<string, string>(key, value));
+            }
+            else
+            {
+                _headers.Add( new KeyValuePair<string, string>(key, value));
+            }
+            
+        }
+
     }
 }

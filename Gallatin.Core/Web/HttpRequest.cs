@@ -3,23 +3,18 @@ using Gallatin.Contracts;
 
 namespace Gallatin.Core.Web
 {
-    /// <summary>
-    /// Represents the HTTP request
-    /// </summary>
-    public class HttpRequest : IHttpRequest
+    internal class HttpRequest : IHttpRequest
     {
         private readonly HttpRequestHeaderEventArgs _args;
 
         private HttpRequest( HttpRequestHeaderEventArgs args )
         {
+            Contract.Requires(args!=null);
             _args = args;
         }
 
         #region IHttpRequest Members
 
-        /// <summary>
-        /// Relative path of the remote resource
-        /// </summary>
         public string Path
         {
             get
@@ -32,9 +27,6 @@ namespace Gallatin.Core.Web
             }
         }
 
-        /// <summary>
-        /// HTTP version
-        /// </summary>
         public string Version
         {
             get
@@ -43,9 +35,6 @@ namespace Gallatin.Core.Web
             }
         }
 
-        /// <summary>
-        /// HTTP method
-        /// </summary>
         public string Method
         {
             get
@@ -54,9 +43,6 @@ namespace Gallatin.Core.Web
             }
         }
 
-        /// <summary>
-        /// HTTP headers
-        /// </summary>
         public IHttpHeaders Headers
         {
             get
@@ -65,9 +51,14 @@ namespace Gallatin.Core.Web
             }
         }
 
-        /// <summary>
-        /// Gets the flag indicating if the request uses SSL (HTTPS)
-        /// </summary>
+        public bool HasBody
+        {
+            get
+            {
+                return _args.HasBody;
+            }
+        }
+
         public bool IsSsl
         {
             get
@@ -76,20 +67,12 @@ namespace Gallatin.Core.Web
             }
         }
 
-        /// <summary>
-        /// Gets the HTTP body
-        /// </summary>
-        public byte[] Body { get; private set; }
-
         #endregion
 
         internal static HttpRequest CreateRequest( HttpRequestHeaderEventArgs args )
         {
             Contract.Requires( args != null );
-
-            HttpRequest request = new HttpRequest( args );
-
-            return request;
+            return new HttpRequest( args );
         }
     }
 }

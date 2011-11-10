@@ -116,6 +116,7 @@
     <Compile Include="Web\HttpHeaders.cs" />
     <Compile Include="Web\HttpRequest.cs" />
     <Compile Include="Web\HttpRequestHeaderEventArgs.cs" />
+    <Compile Include="Web\HttpResponse.cs" />
     <Compile Include="Web\HttpResponseHeaderEventArgs.cs" />
     <Compile Include="Web\HttpStreamParser.cs" />
     <Compile Include="Web\IHttpStreamParser.cs" />

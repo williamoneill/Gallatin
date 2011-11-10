@@ -2,6 +2,7 @@ using System;
 using System.Diagnostics.Contracts;
 using System.IO;
 using System.Text;
+using Gallatin.Contracts;
 
 namespace Gallatin.Core.Web
 {
@@ -34,15 +35,13 @@ namespace Gallatin.Core.Web
             {
                 State.AcceptData( data );
             }
-
-            WebLog.Logger.Verbose( () => string.Format( "Appending data to body: {0}", Encoding.UTF8.GetString( data ) ) );
         }
 
         #endregion
 
         #region IHttpStreamParserContext Members
 
-        public void OnReadRequestHeaderComplete( string version, HttpHeaders headers, string method, string path )
+        public void OnReadRequestHeaderComplete( string version, IHttpHeaders headers, string method, string path )
         {
             WebLog.Logger.Verbose( "ReadRequestHeaderComplete event raised" );
 
@@ -56,7 +55,7 @@ namespace Gallatin.Core.Web
             }
         }
 
-        public void OnReadResponseHeaderComplete( string version, HttpHeaders headers, int statusCode, string statusMessage )
+        public void OnReadResponseHeaderComplete( string version, IHttpHeaders headers, int statusCode, string statusMessage )
         {
             WebLog.Logger.Verbose( "ReadResponseHeaderComplete event raised" );
 

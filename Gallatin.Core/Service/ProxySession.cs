@@ -13,7 +13,7 @@ namespace Gallatin.Core.Service
     {
         private INetworkFacade _clientConnection;
         private readonly IHttpStreamParser _clientParser;
-        private readonly ManualResetEvent _connectingToServer;
+        private readonly ManualResetEvent _connectingToServerEvent;
         private readonly INetworkFacadeFactory _networkFacadeFactory;
         private string _host;
         private int _port;
@@ -35,7 +35,7 @@ namespace Gallatin.Core.Service
 
             _clientParser = new HttpStreamParser();
 
-            _connectingToServer = new ManualResetEvent( true );
+            _connectingToServerEvent = new ManualResetEvent( true );
 
             WireClientEvents();
         }
@@ -154,10 +154,10 @@ namespace Gallatin.Core.Service
             {
                 ServiceLog.Logger.Info( "{0} Receiving partial data from client", Id );
 
-                if ( _connectingToServer.WaitOne( 30000 ) )
+                if ( _connectingToServerEvent.WaitOne( 30000 ) )
                 {
                     // Wait for pending server connection
-                    if ( _connectingToServer.WaitOne( 30000 ) )
+                    if ( _connectingToServerEvent.WaitOne( 30000 ) )
                     {
                         // Do not forward the header to the server when SSL. The SSL stream class will
                         // send the appropriate headers for a proxy server.
@@ -214,7 +214,7 @@ namespace Gallatin.Core.Service
                 ServiceLog.Logger.Verbose( "{0} Read request header from client.", Id );
 
                 // Block all threads until we connect
-                _connectingToServer.Reset();
+                _connectingToServerEvent.Reset();
 
                 _requestHeader = e;
 
@@ -288,7 +288,7 @@ namespace Gallatin.Core.Service
             }
             catch ( Exception ex )
             {
-                _connectingToServer.Set();
+                _connectingToServerEvent.Set();
                 ServiceLog.Logger.Exception( string.Format( "{0} Unhandled exception evaluating server connection", Id ), ex );
                 EndSession();
             }
@@ -299,7 +299,7 @@ namespace Gallatin.Core.Service
             ServiceLog.Logger.Info( "{0} Sending header to server", Id );
 
             _serverConnection.BeginSend( _requestHeader.GetBuffer(), HandleServerSendComplete );
-            _connectingToServer.Set();
+            _connectingToServerEvent.Set();
         }
 
         private void HandleServerConnect( bool success, INetworkFacade serverConnection )
@@ -316,7 +316,7 @@ namespace Gallatin.Core.Service
                     {
                         UnwireClientEvents();
 
-                        _connectingToServer.Set();
+                        _connectingToServerEvent.Set();
 
                         ServiceLog.Logger.Info("{0} Chaning to SSL tunnel", Id);
 
@@ -441,22 +441,97 @@ namespace Gallatin.Core.Service
 
         private void HandleServerParserReadResponseHeaderComplete( object sender, HttpResponseHeaderEventArgs e )
         {
-            ServiceLog.Logger.Info( "{0} Read response header from server", Id );
-            _responseHeader = e;
+            try
+            {
+                ServiceLog.Logger.Info("{0} Read response header from server", Id);
+                _responseHeader = e;
 
-            _clientConnection.BeginSend( e.GetBuffer(), HandleDataSentToClient );
+                // Consult the response filters to see if any are interested in the entire body.
+                // Don't build the response body unless we have to; it's expensive.
+                // If any filters can make the judgement now, before we read the body, then use their response to
+                // short-circuit the body evaluation.
+                string filterResponse;
+                if (_filters.TryEvaluateResponseFilters(HttpResponse.CreateResponse(_responseHeader), _clientConnection.ConnectionId, out filterResponse))
+                {
+                    // Filter active and does not need HTTP body
+                    if (filterResponse != null)
+                    {
+                        ServiceLog.Logger.Info("{0} Response filter blocking content", Id);
+
+                        _serverParser.PartialDataAvailable -= HandleServerParserPartialDataAvailable;
+                        _isFiltered = true;
+                        _clientConnection.BeginSend(Encoding.UTF8.GetBytes(filterResponse), HandleDataSentToClient);
+                    }
+                    else
+                    {
+                        // Normal behavior. No filter activated.
+                        _clientConnection.BeginSend(e.GetBuffer(), HandleDataSentToClient);
+                    }
+
+                }
+                else
+                {
+                    // Prepare to receive the entire HTTP body
+                    ServiceLog.Logger.Info("{0} Response filter requires entire body. Building HTTP body.", Id);
+
+                    _serverParser.PartialDataAvailable -= HandleServerParserPartialDataAvailable;
+                    _serverParser.BodyAvailable += HandleServerParserBodyAvailable;
+                }
+            }
+            catch ( Exception ex )
+            {
+                ServiceLog.Logger.Exception(string.Format("{0} Error evaluating response filter", Id), ex);
+                EndSession();
+            }
+        }
+
+        void HandleServerParserBodyAvailable(object sender, HttpDataEventArgs e)
+        {
+            try
+            {
+                ServiceLog.Logger.Info("{0} Sending filtered body to client", Id);
+
+                // Unsubscribe to the body available event because it is expensive. Resume
+                // partial read for the next message, if any, in a persistent connection
+                _serverParser.BodyAvailable -= HandleServerParserBodyAvailable;
+                _serverParser.PartialDataAvailable += HandleServerParserPartialDataAvailable;
+
+                var filter = _filters.EvaluateResponseFiltersWithBody(HttpResponse.CreateResponse(_responseHeader), _clientConnection.ConnectionId, e.Data);
+
+                ServiceLog.Logger.Verbose(() => string.Format("{0} Filtered response header: {1}", Id, Encoding.UTF8.GetString(_responseHeader.GetBuffer())));
+                _clientConnection.BeginSend(_responseHeader.GetBuffer(), HandleDataSentToClient);
+
+                if (filter != null)
+                {
+                    ServiceLog.Logger.Verbose(() => string.Format("{0} Filtered response: {1}", Id, Encoding.UTF8.GetString(filter)));
+
+                    _isFiltered = true;
+                    _clientConnection.BeginSend(filter, HandleDataSentToClient);
+                }
+                else
+                {
+                    ServiceLog.Logger.Verbose(() => string.Format("{0} Filtered response body: {1}", Id, Encoding.UTF8.GetString(e.Data)));
+                    _clientConnection.BeginSend(e.Data, HandleDataSentToClient);
+                }
+            }
+            catch ( Exception ex )
+            {
+                ServiceLog.Logger.Exception(string.Format("{0} Error sending filtered body to client", Id), ex);
+                EndSession();
+            }
+
         }
 
         private void HandleServerParserAdditionalDataRequested( object sender, EventArgs e )
         {
             ServiceLog.Logger.Verbose( "{0} Additional data needed from server to complete request", Id );
-            _serverConnection.BeginReceive( HandleServerReceive );
+            _serverConnection.BeginReceive(HandleDataFromServer);
         }
 
         private void HandleClientParserAdditionalDataRequested( object sender, EventArgs e )
         {
             ServiceLog.Logger.Verbose( "{0} Additional data needed from client to complete request", Id );
-            if (_connectingToServer.WaitOne(30000))
+            if (_connectingToServerEvent.WaitOne(30000))
             {
                 // Ignore the event the parser requires requesting more data if we are changing over to an SSL tunnel
                 if (!_requestHeader.IsSsl)
@@ -486,19 +561,6 @@ namespace Gallatin.Core.Service
             }
         }
 
-        private void HandleServerReceive( bool success, byte[] data, INetworkFacade server )
-        {
-            ServiceLog.Logger.Verbose( "{0} Receiving server data", Id );
 
-            if ( success )
-            {
-                _serverParser.AppendData( data );
-            }
-            else
-            {
-                ServiceLog.Logger.Info( "{0} Server closed connection", Id );
-                EndSession();
-            }
-        }
     }
 }

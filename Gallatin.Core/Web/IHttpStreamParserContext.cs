@@ -1,3 +1,5 @@
+using Gallatin.Contracts;
+
 namespace Gallatin.Core.Web
 {
     /// <summary>
@@ -38,7 +40,7 @@ namespace Gallatin.Core.Web
         /// <param name="headers">HTTP headers</param>
         /// <param name="method">HTTP method</param>
         /// <param name="path">HTTP path</param>
-        void OnReadRequestHeaderComplete( string version, HttpHeaders headers, string method, string path );
+        void OnReadRequestHeaderComplete( string version, IHttpHeaders headers, string method, string path );
         
         /// <summary>
         /// Raises the HTTP response header complete event
@@ -47,7 +49,7 @@ namespace Gallatin.Core.Web
         /// <param name="headers">HTTP headers</param>
         /// <param name="statusCode">HTTP status code</param>
         /// <param name="statusMessage">HTTP status message</param>
-        void OnReadResponseHeaderComplete( string version, HttpHeaders headers, int statusCode, string statusMessage );
+        void OnReadResponseHeaderComplete( string version, IHttpHeaders headers, int statusCode, string statusMessage );
         
         /// <summary>
         /// Appends data to the internal HTTP body buffer

@@ -38,5 +38,20 @@ namespace Gallatin.Contracts
         /// <param name="oldKeyName">Old key name</param>
         /// <param name="newKeyName">New key name</param>
         void RenameKey( string oldKeyName, string newKeyName );
+
+        /// <summary>
+        /// Removes the value from the key/value header pair specified by the key
+        /// </summary>
+        /// <param name="key">Header key</param>
+        /// <param name="value">Value to remove from the value</param>
+        void RemoveKeyValue( string key, string value );
+
+        /// <summary>
+        /// Updates or inserts the HTTP header for the key with the specified value. Duplicate key/value pairs 
+        /// matching the key will be removed.
+        /// </summary>
+        /// <param name="key">Search key</param>
+        /// <param name="value">New value</param>
+        void UpsertKeyValue( string key, string value );
     }
 }

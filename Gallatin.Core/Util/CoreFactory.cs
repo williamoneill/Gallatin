@@ -19,7 +19,7 @@ namespace Gallatin.Core.Util
 
             if (Directory.Exists(AddinDirectory))
             {
-                var filterCatalog = new DirectoryCatalog(".\\addins");
+                var filterCatalog = new DirectoryCatalog(AddinDirectory, "*filter.dll");
                 aggregateCatalog.Catalogs.Add(filterCatalog);
             }
 
