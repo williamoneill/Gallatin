@@ -6,7 +6,7 @@ namespace Gallatin.Core.Service
     /// <summary>
     /// Interface for factories that generate network facades
     /// </summary>
-    [ContractClass( typeof (INetworkFacadeFactoryContract) )]
+    [ContractClass( typeof (NetworkFacadeFactoryContract) )]
     public interface INetworkFacadeFactory
     {
         /// <summary>
@@ -32,7 +32,7 @@ namespace Gallatin.Core.Service
     }
 
     [ContractClassFor( typeof (INetworkFacadeFactory) )]
-    internal abstract class INetworkFacadeFactoryContract : INetworkFacadeFactory
+    internal abstract class NetworkFacadeFactoryContract : INetworkFacadeFactory
     {
         #region INetworkFacadeFactory Members
 

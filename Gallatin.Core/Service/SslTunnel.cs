@@ -1,110 +1,135 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
+using System.ComponentModel.Composition;
 using System.Diagnostics.Contracts;
-using System.Linq;
-using System.Net.Sockets;
 using System.Text;
-using Gallatin.Core.Util;
 
 namespace Gallatin.Core.Service
 {
-    internal class SslTunnel
+    [PartCreationPolicy(CreationPolicy.NonShared)]
+    [Export( typeof (ISslTunnel) )]
+    internal class SslTunnel : ISslTunnel
     {
         private INetworkFacade _client;
-        private INetworkFacade _server;
         private string _httpVersion;
+        private INetworkFacade _server;
 
-        public SslTunnel( INetworkFacade client, INetworkFacade server, string httpVersion )
+        #region ISslTunnel Members
+
+        public event EventHandler TunnelClosed;
+
+        public void EstablishTunnel(INetworkFacade client, INetworkFacade server, string httpVersion)
         {
-            Contract.Requires(client != null);
-            Contract.Requires(server != null);
-            Contract.Requires(!string.IsNullOrEmpty(httpVersion));
+            if (_client != null)
+            {
+                throw new InvalidOperationException( "Tunnel already established" );
+            }
+
+            ServiceLog.Logger.Info( "Starting SSL connection" );
 
             _client = client;
             _server = server;
             _httpVersion = httpVersion;
+
+            _client.BeginSend(
+                Encoding.UTF8.GetBytes( string.Format(
+                    "HTTP/{0} 200 Connection established\r\n" +
+                    "Proxy-agent: Gallatin-Proxy/1.1\r\n\r\n",
+                    _httpVersion ) ),
+                HandleClientSend );
+
+            _client.BeginReceive( HandleClientReceive );
         }
 
-        public event EventHandler TunnelClosed;
+        #endregion
 
         private void OnTunnelClosed()
         {
             EventHandler tunnelClosed = TunnelClosed;
-            if (tunnelClosed != null)
+            if ( tunnelClosed != null )
             {
-                tunnelClosed(this, new EventArgs());
+                tunnelClosed( this, new EventArgs() );
             }
         }
 
-        private void HandleServerReceive(bool success, byte[] data, INetworkFacade server)
+        private void HandleServerReceive( bool success, byte[] data, INetworkFacade server )
         {
-            if(success)
+            try
             {
-                _client.BeginSend(data, HandleClientSend);
+                if (success)
+                {
+                    _client.BeginSend(data, HandleClientSend);
+                }
+                else
+                {
+                    OnTunnelClosed();
+                    ServiceLog.Logger.Verbose("SSL: unable to receive data from server");
+                }
             }
-            else
+            catch
             {
                 OnTunnelClosed();
-                ServiceLog.Logger.Verbose("SSL: unable to receive data from server");
             }
         }
 
-        private void HandleClientReceive(bool success, byte[] data, INetworkFacade client)
+        private void HandleClientReceive( bool success, byte[] data, INetworkFacade client )
         {
-            if(success)
+            try
             {
-                _server.BeginSend( data, HandleServerSend );
+                if (success)
+                {
+                    _server.BeginSend(data, HandleServerSend);
+                }
+                else
+                {
+                    OnTunnelClosed();
+                    ServiceLog.Logger.Verbose("SSL: unable to receive data from client");
+                }
             }
-            else
+            catch
             {
                 OnTunnelClosed();
-                ServiceLog.Logger.Verbose("SSL: unable to receive data from client");
             }
         }
 
-        private void HandleClientSend(bool succes, INetworkFacade client)
+        private void HandleClientSend( bool succes, INetworkFacade client )
         {
-            if(succes)
+            try
             {
-                _server.BeginReceive(HandleServerReceive);   
+                if (succes)
+                {
+                    _server.BeginReceive(HandleServerReceive);
+                }
+                else
+                {
+                    OnTunnelClosed();
+                    ServiceLog.Logger.Verbose("SSL: unable to send data to client");
+                }
             }
-            else
+            catch
             {
                 OnTunnelClosed();
-                ServiceLog.Logger.Verbose("SSL: unable to send data to client");
             }
+
         }
 
-        private void HandleServerSend(bool succes, INetworkFacade server)
+        private void HandleServerSend( bool succes, INetworkFacade server )
         {
-            if(succes)
+            try
             {
-                _client.BeginReceive(HandleClientReceive);
+                if (succes)
+                {
+                    _client.BeginReceive(HandleClientReceive);
+                }
+                else
+                {
+                    OnTunnelClosed();
+                    ServiceLog.Logger.Verbose("SSL: unable to send data to server");
+                }
             }
-            else
+            catch
             {
                 OnTunnelClosed();
-                ServiceLog.Logger.Verbose("SSL: unable to send data to server");
             }
         }
-
-        public void EstablishTunnel()
-        {
-            ServiceLog.Logger.Info( "Starting SSL connection" );
-
-            _client.BeginSend(
-                Encoding.UTF8.GetBytes(string.Format(
-                "HTTP/{0} 200 Connection established\r\n" +
-                "Proxy-agent: Gallatin-Proxy/1.1\r\n\r\n",
-                _httpVersion)), HandleClientSend);
-
-            _client.BeginReceive(HandleClientReceive);
-
-        }
-
-
-
-
     }
 }

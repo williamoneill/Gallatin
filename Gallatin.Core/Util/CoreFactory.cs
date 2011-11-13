@@ -1,4 +1,7 @@
+using System;
 using System.ComponentModel.Composition.Hosting;
+using System.ComponentModel.Composition.Primitives;
+using System.Diagnostics.Contracts;
 using System.IO;
 using System.Reflection;
 
@@ -9,7 +12,7 @@ namespace Gallatin.Core.Util
     /// </summary>
     public static class CoreFactory
     {
-        private static CompositionContainer _container;
+        private static readonly CompositionContainer _container;
 
         static CoreFactory()
         {
@@ -29,6 +32,18 @@ namespace Gallatin.Core.Util
             _container = new CompositionContainer(aggregateCatalog);
         }
 
+        /// <summary>
+        /// When asking to compose type, use the delegate to create the instance
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        internal static void Register<T>( Func<T> creationDelegate )
+        {
+            Contract.Requires(creationDelegate!=null);
+
+            var batch = new CompositionBatch();
+            batch.AddExport( new Export( typeof (T).ToString(), creationDelegate as Func<object> ) );
+            _container.Compose( batch );
+        }
 
         /// <summary>
         /// Creates an instance of the specified type or interface

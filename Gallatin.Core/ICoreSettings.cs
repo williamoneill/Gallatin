@@ -1,6 +1,5 @@
 ﻿namespace Gallatin.Core
 {
-
     /// <summary>
     /// Interface for proxy service settings
     /// </summary>
@@ -40,5 +39,15 @@
         /// Gets and sets the timeout in seconds to wait for a server connection
         /// </summary>
         int ConnectTimeout { get; set; }
+
+        /// <summary>
+        /// Gets and sets the name of the localhost
+        /// </summary>
+        string LocalHostDnsEntry { get; set; }
+
+        /// <summary>
+        /// Gets and set the maximum length of the pending connections queue 
+        /// </summary>
+        int ProxyClientListenerBacklog { get; set; }
     }
 }

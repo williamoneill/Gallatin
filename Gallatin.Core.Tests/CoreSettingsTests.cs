@@ -26,7 +26,7 @@ namespace Gallatin.Core.Tests
 
             ICoreSettings settings = SettingsMapper.Load();
 
-            Assert.That(settings.MaxNumberClients, Is.EqualTo(500));
+            Assert.That(settings.MaxNumberClients, Is.EqualTo(100));
             Assert.That(settings.NetworkAddressBindingOrdinal, Is.EqualTo(0));
             Assert.That(settings.ReceiveBufferSize, Is.EqualTo(8192));
 

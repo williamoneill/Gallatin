@@ -63,6 +63,7 @@
     <Compile Include="Web\HttpRequestHeaderEventArgsTests.cs" />
     <Compile Include="Web\HttpStreamParserTests.cs" />
     <Compile Include="Web\ReadChunkedBodyStateTests.cs" />
+    <Compile Include="Web\ReadHeaderStateTests.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
@@ -94,6 +95,9 @@
       <Project>{FFDB4E9F-EB29-42E5-AC61-2017FC358D86}</Project>
       <Name>Gallatin.Core</Name>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Util\" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

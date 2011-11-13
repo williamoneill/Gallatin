@@ -7,18 +7,8 @@ using Gallatin.Core.Service;
 
 namespace Gallatin.Core.Util
 {
-    internal interface IPool<T>
-        where T : class, IPooledObject
-    {
-        IEnumerable<T> ReleasedObjectList { get; }
-        void Init( int size, Func<T> creationDelegate );
-        T Get();
-        void Put( T item );
-    }
 
-    [PartCreationPolicy(CreationPolicy.NonShared)]
-    [Export(typeof(IPool<>))]
-    internal class Pool<T> : IPool<T>
+    internal class Pool<T>
         where T : class, IPooledObject
     {
         private readonly object _mutex = new object();

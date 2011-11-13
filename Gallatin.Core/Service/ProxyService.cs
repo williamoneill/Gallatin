@@ -6,57 +6,54 @@ using Gallatin.Core.Util;
 
 namespace Gallatin.Core.Service
 {
-    [Export(typeof(IProxyService))]
+    [Export( typeof (IProxyService) )]
     internal class ProxyService : IProxyService
     {
-        private INetworkFacadeFactory _factory;
+        private readonly INetworkFacadeFactory _factory;
+        private readonly object _mutex = new object();
         private readonly List<IProxySession> _sessions = new List<IProxySession>();
-        private readonly ICoreSettings _settings;
+
+        private bool _isRunning;
+        //private Pool<IProxySession> _sessionPool;
 
         [ImportingConstructor]
-        internal ProxyService( ICoreSettings settings, INetworkFacadeFactory factory )
+        internal ProxyService( INetworkFacadeFactory factory )
         {
-            Contract.Requires(settings!=null);
-            Contract.Requires(factory!=null);
+            Contract.Requires( factory != null );
 
-            _settings = settings;
             _factory = factory;
         }
 
         #region IProxyService Members
 
-        private bool _isRunning;
-        private object _mutex = new object();
-        private IPool<IProxySession> _sessionPool;
-
         public void Start()
         {
-            lock (_mutex)
+            lock ( _mutex )
             {
-                if (_isRunning)
+                if ( _isRunning )
                 {
                     throw new InvalidOperationException( "Service has already been started" );
                 }
 
-                _factory.Listen(_settings.NetworkAddressBindingOrdinal, _settings.ServerPort, HandleClientConnected);
-                //_sessionPool = CoreFactory.Compose<IPool<IProxySession>>();
-                _sessionPool = new Pool<IProxySession>();
-                _sessionPool.Init(_settings.MaxNumberClients, CoreFactory.Compose<IProxySession>);
+                //_sessionPool = new Pool<IProxySession>();
+                //_sessionPool.Init( CoreSettings.Instance.MaxNumberClients, CoreFactory.Compose<IProxySession> );
+
+                _factory.Listen( CoreSettings.Instance.NetworkAddressBindingOrdinal, CoreSettings.Instance.ServerPort, HandleClientConnected );
                 _isRunning = true;
             }
         }
 
         public void Stop()
         {
-            lock (_mutex)
+            lock ( _mutex )
             {
-                if (!_isRunning)
+                if ( !_isRunning )
                 {
-                    throw new InvalidOperationException("Service has not been started");
+                    throw new InvalidOperationException( "Service has not been started" );
                 }
 
                 _factory.EndListen();
-                _sessionPool = null;
+                //_sessionPool = null;
                 _isRunning = false;
             }
         }
@@ -75,28 +72,32 @@ namespace Gallatin.Core.Service
         {
             try
             {
-                IProxySession session = _sessionPool.Get();
+                //IProxySession session = _sessionPool.Get();
+
+                IProxySession session = CoreFactory.Compose<IProxySession>();
 
                 session.SessionEnded += HandleSessionEnded;
 
-                session.Start(clientConnection);
+                session.Start( clientConnection );
 
-                _sessions.Add(session);
+                _sessions.Add( session );
             }
             catch ( InvalidOperationException ex )
             {
-                ServiceLog.Logger.Exception("No more clients can be accepted; the pool of available sessions was exhausted. Increase the pool maximum number of clients in the proxy server settings.", ex);
+                ServiceLog.Logger.Exception(
+                    "No more clients can be accepted; the pool of available sessions was exhausted. Increase the pool maximum number of clients in the proxy server settings.",
+                    ex );
             }
         }
 
         private void HandleSessionEnded( object sender, EventArgs e )
         {
-            Contract.Requires(sender is IProxySession);
+            Contract.Requires( sender is IProxySession );
 
             IProxySession proxySession = sender as IProxySession;
             proxySession.SessionEnded -= HandleSessionEnded;
 
-            _sessionPool.Put(proxySession);
+           // _sessionPool.Put( proxySession );
         }
     }
 }

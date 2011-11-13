@@ -1,17 +1,18 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.Contracts;
 using Gallatin.Contracts;
-
 
 namespace Gallatin.Core.Service
 {
     /// <summary>
     /// Interface for proxy filter classes that contain all filter collections
     /// </summary>
+    [ContractClass( typeof (ProxyFilterContract) )]
     public interface IProxyFilter
     {
         /// <summary>
-        /// Gets and sets the outbound filters
+        /// Gets and sets the outbound connection filters
         /// </summary>
         IEnumerable<IConnectionFilter> ConnectionFilters { get; set; }
 
@@ -21,12 +22,13 @@ namespace Gallatin.Core.Service
         IEnumerable<IResponseFilter> ResponseFilters { get; set; }
 
         /// <summary>
-        /// Evaluates the connection filters before a connection is established
+        /// Evaluates the connection filters before a connection is established. This is not checked again
+        /// for persistent connections.
         /// </summary>
         /// <param name="args">HTTP request</param>
         /// <param name="connectionId">Clinet connection ID</param>
         /// <returns><c>null</c> if no filter was applied</returns>
-        string EvaluateConnectionFilters(IHttpRequest args, string connectionId);
+        string EvaluateConnectionFilters( IHttpRequest args, string connectionId );
 
         /// <summary>
         /// Evaluates the response filters as a response is returned from the server
@@ -35,7 +37,7 @@ namespace Gallatin.Core.Service
         /// <param name="connectionId">Clinet connection ID</param>
         /// <param name="filterResponse"><c>null</c> if no filter was applied</param>
         /// <returns><c>True</c> if the filters were able to function without the HTTP body</returns>
-        bool TryEvaluateResponseFilters(IHttpResponse args, string connectionId, out string filterResponse);
+        bool TryEvaluateResponseFilters( IHttpResponse args, string connectionId, out string filterResponse );
 
         /// <summary>
         /// Evaluates the response once the HTTP body is available
@@ -48,5 +50,65 @@ namespace Gallatin.Core.Service
         /// <param name="body">HTTP body</param>
         /// <returns><c>null</c> if no filter was applied; otherwise, the filtered response</returns>
         byte[] EvaluateResponseFiltersWithBody( IHttpResponse args, string connectionId, byte[] body );
+    }
+
+    [ContractClassFor( typeof (IProxyFilter) )]
+    internal abstract class ProxyFilterContract : IProxyFilter
+    {
+        #region IProxyFilter Members
+
+        public IEnumerable<IConnectionFilter> ConnectionFilters
+        {
+            get
+            {
+                throw new NotImplementedException();
+            }
+            set
+            {
+                Contract.Requires( value != null );
+            }
+        }
+
+        public IEnumerable<IResponseFilter> ResponseFilters
+        {
+            get
+            {
+                throw new NotImplementedException();
+            }
+            set
+            {
+                Contract.Requires( value != null );
+            }
+        }
+
+        public string EvaluateConnectionFilters( IHttpRequest args, string connectionId )
+        {
+            Contract.Requires( args != null );
+            Contract.Requires( !string.IsNullOrEmpty( connectionId ) );
+            Contract.Requires( ConnectionFilters != null );
+
+            throw new NotImplementedException();
+        }
+
+        public bool TryEvaluateResponseFilters( IHttpResponse args, string connectionId, out string filterResponse )
+        {
+            Contract.Requires( args != null );
+            Contract.Requires( !string.IsNullOrEmpty( connectionId ) );
+            Contract.Requires( ResponseFilters != null );
+
+            throw new NotImplementedException();
+        }
+
+        public byte[] EvaluateResponseFiltersWithBody( IHttpResponse args, string connectionId, byte[] body )
+        {
+            Contract.Requires( args != null );
+            Contract.Requires( !string.IsNullOrEmpty( connectionId ) );
+            Contract.Requires( ResponseFilters != null );
+            Contract.Ensures( Contract.Result<byte[]>() != null );
+
+            throw new NotImplementedException();
+        }
+
+        #endregion
     }
 }

@@ -14,7 +14,8 @@ namespace Gallatin.Core.Web
 
         public HttpStreamParser()
         {
-            Reset();
+            _bodyData = new MemoryStream();
+            State = new ReadHeaderState(this);
         }
 
         #region IHttpStreamParser Members
@@ -28,9 +29,6 @@ namespace Gallatin.Core.Web
 
         public void AppendData( byte[] data )
         {
-            Contract.Requires( data != null );
-            Contract.Requires( data.Length > 0 );
-
             lock ( _mutex )
             {
                 State.AcceptData( data );
@@ -39,8 +37,6 @@ namespace Gallatin.Core.Web
 
         public void Reset()
         {
-            _bodyData = new MemoryStream();
-            State = new ReadHeaderState( this );
         }
 
         #endregion

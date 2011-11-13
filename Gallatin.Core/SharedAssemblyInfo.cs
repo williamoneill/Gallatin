@@ -8,13 +8,6 @@
 [assembly: AssemblyProduct("Gallatin Proxy Server")]
 [assembly: AssemblyCopyright("Copyright © Bill O'Neill 2011")]
 
-
-// Version information for an assembly consists of the following four values:
-//
-//      Major Version
-//      Minor Version 
-//      Build Number
-//      Revision
-//
-
 [assembly: AssemblyVersion("0.1.0.0")]
+[assembly: AssemblyFileVersion("0.1.0.1")]
+

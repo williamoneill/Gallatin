@@ -3,15 +3,12 @@ using System.ComponentModel.Composition;
 using System.Diagnostics.Contracts;
 using System.Net;
 using System.Net.Sockets;
-using Gallatin.Core.Util;
 
 namespace Gallatin.Core.Service
 {
-    [Export(typeof(INetworkFacadeFactory))]
+    [Export( typeof (INetworkFacadeFactory) )]
     internal class NetworkFacadeFactory : INetworkFacadeFactory
     {
-        public const int DefaultBufferSize = 8192;
-
         private Action<INetworkFacade> _clientConnectCallback;
         private Socket _socket;
 
@@ -29,8 +26,8 @@ namespace Gallatin.Core.Service
 
             state.Socket.SetSocketOption( SocketOptionLevel.Socket, SocketOptionName.Linger, false );
             state.Socket.SetSocketOption( SocketOptionLevel.Socket, SocketOptionName.KeepAlive, false );
-            state.Socket.SetSocketOption( SocketOptionLevel.Socket, SocketOptionName.ReceiveBuffer, DefaultBufferSize );
-            state.Socket.SetSocketOption( SocketOptionLevel.Socket, SocketOptionName.SendBuffer, DefaultBufferSize );
+            state.Socket.SetSocketOption( SocketOptionLevel.Socket, SocketOptionName.ReceiveBuffer, CoreSettings.Instance.ReceiveBufferSize );
+            state.Socket.SetSocketOption( SocketOptionLevel.Socket, SocketOptionName.SendBuffer, CoreSettings.Instance.ReceiveBufferSize );
 
             state.Socket.BeginConnect( host, port, HandleConnect, state );
         }
@@ -48,14 +45,14 @@ namespace Gallatin.Core.Service
                                   SocketType.Stream,
                                   ProtocolType.Tcp );
 
-            IPHostEntry dnsEntry = Dns.GetHostEntry( "localhost" );
+            IPHostEntry dnsEntry = Dns.GetHostEntry( CoreSettings.Instance.LocalHostDnsEntry );
 
             IPEndPoint endPoint =
                 new IPEndPoint( dnsEntry.AddressList[hostInterfaceIndex], port );
 
             _socket.Bind( endPoint );
 
-            _socket.Listen( 30 );
+            _socket.Listen( CoreSettings.Instance.ProxyClientListenerBacklog );
 
             _socket.BeginAccept( HandleNewClientConnect, null );
         }
@@ -102,14 +99,14 @@ namespace Gallatin.Core.Service
                 // Server may be in the process of shutting down. Ignore pending connect notifications.
                 if ( _socket != null )
                 {
-                    Socket _clientSocket = _socket.EndAccept( ar );
+                    Socket clientSocket = _socket.EndAccept( ar );
 
                     // Immediately listen for the next clientSession
                     _socket.BeginAccept( HandleNewClientConnect, null );
 
-                    ServiceLog.Logger.Info( "{0} New client connect", _clientSocket.GetHashCode() );
+                    ServiceLog.Logger.Info( "{0} New client connect", clientSocket.GetHashCode() );
 
-                    _clientConnectCallback( new NetworkFacade( _clientSocket ) );
+                    _clientConnectCallback( new NetworkFacade( clientSocket ) );
                 }
             }
             catch ( Exception ex )

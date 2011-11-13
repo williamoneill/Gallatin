@@ -23,8 +23,8 @@ namespace Gallatin.Core.Tests.Service
             client.Setup(m => m.BeginReceive(It.IsAny<Action<bool, byte[], INetworkFacade>>()))
                 .Callback( (Action<bool, byte[], INetworkFacade> callback) => callback(true, firstDataFromClient, client.Object));
 
-            SslTunnel tunnel = new SslTunnel(client.Object, server.Object, "1.1");
-            tunnel.EstablishTunnel();
+            SslTunnel tunnel = new SslTunnel();
+            tunnel.EstablishTunnel(client.Object, server.Object, "1.1");
 
             var data = Encoding.UTF8.GetBytes(
                 "HTTP/1.1 200 Connection established\r\n" +
@@ -61,8 +61,8 @@ namespace Gallatin.Core.Tests.Service
             server.Setup(m => m.BeginSend(clientMessages[2], It.IsAny<Action<bool, INetworkFacade>>()))
                 .Callback((byte[] d1, Action<bool, INetworkFacade> callback) => callback(false, server.Object));
 
-            SslTunnel tunnel = new SslTunnel(client.Object, server.Object, "1.1");
-            tunnel.EstablishTunnel();
+            SslTunnel tunnel = new SslTunnel();
+            tunnel.EstablishTunnel(client.Object, server.Object, "1.1");
 
             var data = Encoding.UTF8.GetBytes(
                 "HTTP/1.1 200 Connection established\r\n" +
@@ -131,8 +131,8 @@ namespace Gallatin.Core.Tests.Service
                 .Callback((byte[] d1, Action<bool, INetworkFacade> callback) => callback(true, server.Object));
 
             // Run the class under test
-            SslTunnel tunnel = new SslTunnel(client.Object, server.Object, "1.1");
-            tunnel.EstablishTunnel();
+            SslTunnel tunnel = new SslTunnel();
+            tunnel.EstablishTunnel(client.Object, server.Object, "1.1");
 
             server.Verify(m => m.BeginSend(clientMessages[0], It.IsAny<Action<bool, INetworkFacade>>()));
             server.Verify(m => m.BeginSend(clientMessages[1], It.IsAny<Action<bool, INetworkFacade>>()));

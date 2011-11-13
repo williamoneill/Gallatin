@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics.Contracts;
 using Gallatin.Core.Util;
 
 namespace Gallatin.Core.Service
@@ -6,6 +7,7 @@ namespace Gallatin.Core.Service
     /// <summary>
     /// Interface for proxy client sessions
     /// </summary>
+    [ContractClass(typeof(ProxySessionContract))]
     public interface IProxySession : IPooledObject
     {
         /// <summary>
@@ -25,5 +27,23 @@ namespace Gallatin.Core.Service
         void Start( INetworkFacade connection );
     }
 
-    // TODO: place contracts here
+    [ContractClassFor(typeof(IProxySession))]
+    internal abstract class ProxySessionContract : IProxySession
+    {
+        public void Reset()
+        {
+        }
+
+        public abstract string Id
+        {
+            get;
+        }
+
+        public abstract event EventHandler SessionEnded;
+
+        public void Start( INetworkFacade connection )
+        {
+            Contract.Requires(connection != null);
+        }
+    }
 }

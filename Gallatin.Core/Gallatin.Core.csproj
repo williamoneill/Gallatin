@@ -96,6 +96,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Service\ISslTunnel.cs" />
     <Compile Include="Service\ProxyFilter.cs" />
     <Compile Include="Service\IProxyFilter.cs" />
     <Compile Include="CoreSettings.cs" />

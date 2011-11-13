@@ -15,7 +15,7 @@ namespace Gallatin.Filter
     [Export(typeof(IConnectionFilter))]
     public class BlacklistFilter : IConnectionFilter
     {
-        static Regex _ads = new Regex(@"^\S*ad(\S*)\..*$");
+        static Regex _ads = new Regex(@"\.?ad(\S{0,2})\.");
 
 
 
@@ -37,10 +37,9 @@ namespace Gallatin.Filter
                    request.Path += "&safe=strict";
                 }
 
-                // this really screws with a lot of sites. the commercial videos do not show on sites like youtube and the whole video does not load.
                 //else if (_ads.Match(host).Success)
                 //{
-                //    return string.Format("<div style='background:lightgreen'>Gallatin Proxy - Advertisement blocked to host: {0}</div>", host);
+                //    return string.Format("<div style='background:white; font-size: 8pt; font-weight: bold; color: #000;'>Gallatin Proxy - Advertisement blocked to host: {0}</div>", host);
                 //}
 
                 //else

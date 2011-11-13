@@ -1,5 +1,4 @@
-﻿using System;
-using System.ComponentModel.Composition;
+﻿using Gallatin.Core.Util;
 
 namespace Gallatin.Core
 {
@@ -8,6 +7,18 @@ namespace Gallatin.Core
     /// </summary>
     public class CoreSettings : ICoreSettings
     {
+        /// <summary>
+        /// Gets the default settings instance. This instance should not
+        /// be cached so it can be refreshed without restarting the proxy.
+        /// </summary>
+        public static ICoreSettings Instance
+        {
+            get
+            {
+                return CoreFactory.Compose<ICoreSettings>();
+            }
+        }
+
         #region ICoreSettings Members
 
         /// <summary>
@@ -44,6 +55,16 @@ namespace Gallatin.Core
         /// Gets and sets the timeout in seconds to wait for a server connection
         /// </summary>
         public int ConnectTimeout { get; set; }
+
+        /// <summary>
+        /// Gets and sets the name of the localhost
+        /// </summary>
+        public string LocalHostDnsEntry { get; set; }
+
+        /// <summary>
+        /// Gets and set the maximum length of the pending connections queue 
+        /// </summary>
+        public int ProxyClientListenerBacklog { get; set; }
 
         #endregion
     }

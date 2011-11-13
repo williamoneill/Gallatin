@@ -61,7 +61,8 @@ namespace Gallatin.Core.Web
 
         public void AppendData( byte[] data )
         {
-            Contract.Requires( data != null );
+            Contract.Requires(data != null);
+            Contract.Requires(data.Length > 0);
         }
 
         #endregion
