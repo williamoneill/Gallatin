@@ -106,6 +106,8 @@ namespace Gallatin.Filter
 
         static BadWordsResponseFilter()
         {
+            _wordList.Add("proxy", 34);
+
             _wordList.Add( "cunt", 100 );
             _wordList.Add("fuck", 100);
             _wordList.Add("fucker", 100);

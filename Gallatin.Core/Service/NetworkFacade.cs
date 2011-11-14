@@ -42,7 +42,7 @@ namespace Gallatin.Core.Service
 
         public void BeginSend( byte[] buffer, Action<bool, INetworkFacade> callback )
         {
-            ServiceLog.Logger.Info( "{0} Sending data {1}", Id, buffer.Length );
+            ServiceLog.Logger.Verbose( "{0} Sending data, len: {1}", Id, buffer.Length );
 
             _sendBuffer = buffer;
             Socket.BeginSend(
@@ -56,7 +56,7 @@ namespace Gallatin.Core.Service
 
         public void BeginReceive( Action<bool, byte[], INetworkFacade> callback )
         {
-            ServiceLog.Logger.Info( "{0} Receiving data", Id );
+            ServiceLog.Logger.Verbose( "{0} Receiving data", Id );
 
             _receiveBuffer = new byte[CoreSettings.Instance.ReceiveBufferSize];
 

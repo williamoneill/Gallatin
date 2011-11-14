@@ -347,7 +347,7 @@ namespace Gallatin.Core.Service
 
                         _connectingToServerEvent.Set();
 
-                        ServiceLog.Logger.Info( "{0} Chaning to SSL tunnel", Id );
+                        ServiceLog.Logger.Info( "{0} Changing to SSL tunnel", Id );
 
                         ISslTunnel tunnel = CoreFactory.Compose<ISslTunnel>();
                         tunnel.TunnelClosed += HandleSslTunnelClosed;

@@ -16,6 +16,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Gallatin.Filter", "Gallatin
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Gallatin.Contracts", "Gallatin.Contracts\Gallatin.Contracts.csproj", "{03BA4FC5-AF79-46EB-92C0-F0ED50AD0744}"
 EndProject
+Project("{54435603-DBB4-11D2-8724-00A0C9A8B90C}") = "Setup", "Setup\Setup.vdproj", "{2717DD06-2329-408A-9AA8-FACA32E56DA2}"
+EndProject
 Global
 	GlobalSection(TestCaseManagementSettings) = postSolution
 		CategoryFile = Gallatin.vsmdi
@@ -78,6 +80,12 @@ Global
 		{03BA4FC5-AF79-46EB-92C0-F0ED50AD0744}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
 		{03BA4FC5-AF79-46EB-92C0-F0ED50AD0744}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 		{03BA4FC5-AF79-46EB-92C0-F0ED50AD0744}.Release|x86.ActiveCfg = Release|Any CPU
+		{2717DD06-2329-408A-9AA8-FACA32E56DA2}.Debug|Any CPU.ActiveCfg = Debug
+		{2717DD06-2329-408A-9AA8-FACA32E56DA2}.Debug|Mixed Platforms.ActiveCfg = Debug
+		{2717DD06-2329-408A-9AA8-FACA32E56DA2}.Debug|x86.ActiveCfg = Debug
+		{2717DD06-2329-408A-9AA8-FACA32E56DA2}.Release|Any CPU.ActiveCfg = Release
+		{2717DD06-2329-408A-9AA8-FACA32E56DA2}.Release|Mixed Platforms.ActiveCfg = Release
+		{2717DD06-2329-408A-9AA8-FACA32E56DA2}.Release|x86.ActiveCfg = Release
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

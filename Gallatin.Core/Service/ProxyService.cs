@@ -14,7 +14,7 @@ namespace Gallatin.Core.Service
         private readonly List<IProxySession> _sessions = new List<IProxySession>();
 
         private bool _isRunning;
-        //private Pool<IProxySession> _sessionPool;
+        private Pool<IProxySession> _sessionPool;
 
         [ImportingConstructor]
         internal ProxyService( INetworkFacadeFactory factory )
@@ -35,8 +35,8 @@ namespace Gallatin.Core.Service
                     throw new InvalidOperationException( "Service has already been started" );
                 }
 
-                //_sessionPool = new Pool<IProxySession>();
-                //_sessionPool.Init( CoreSettings.Instance.MaxNumberClients, CoreFactory.Compose<IProxySession> );
+                _sessionPool = new Pool<IProxySession>();
+                _sessionPool.Init(CoreSettings.Instance.MaxNumberClients, CoreFactory.Compose<IProxySession>);
 
                 _factory.Listen( CoreSettings.Instance.NetworkAddressBindingOrdinal, CoreSettings.Instance.ServerPort, HandleClientConnected );
                 _isRunning = true;
@@ -53,7 +53,7 @@ namespace Gallatin.Core.Service
                 }
 
                 _factory.EndListen();
-                //_sessionPool = null;
+                _sessionPool = null;
                 _isRunning = false;
             }
         }
@@ -72,9 +72,7 @@ namespace Gallatin.Core.Service
         {
             try
             {
-                //IProxySession session = _sessionPool.Get();
-
-                IProxySession session = CoreFactory.Compose<IProxySession>();
+                IProxySession session = _sessionPool.Get();
 
                 session.SessionEnded += HandleSessionEnded;
 
@@ -97,7 +95,7 @@ namespace Gallatin.Core.Service
             IProxySession proxySession = sender as IProxySession;
             proxySession.SessionEnded -= HandleSessionEnded;
 
-           // _sessionPool.Put( proxySession );
+           _sessionPool.Put( proxySession );
         }
     }
 }

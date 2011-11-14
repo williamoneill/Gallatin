@@ -10,7 +10,7 @@ namespace Gallatin.Core.Web
             : base( version, headers )
         {
             Contract.Requires( !string.IsNullOrEmpty( method ) );
-            Contract.Requires( !string.IsNullOrEmpty( path ) );
+            Contract.Requires( path != null );
 
             Path = path;
             Method = method;

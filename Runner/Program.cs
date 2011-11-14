@@ -20,10 +20,12 @@ namespace Runner
                 server.Start();
 
                 Console.WriteLine("Gallatin Proxy (www.gallatinproxy.com) v.{0}", Assembly.GetExecutingAssembly().GetName().Version);
+                Console.WriteLine("Copyright (C) 2011, Bill O'Neill");
                 Console.WriteLine();
+                Console.WriteLine("This is the command line interface for Gallatin Proxy Service");
                 Console.WriteLine("Listening for client connections...");
                 Console.WriteLine();
-                Console.WriteLine("Press any key to terminate");
+                Console.WriteLine("Press any key to terminate the proxy");
                 Console.ReadKey();
 
                 server.Stop();
