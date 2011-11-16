@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel.Composition;
-using System.IO;
-using System.Linq;
-using System.Text;
-using System.Text.RegularExpressions;
+﻿using System.ComponentModel.Composition;
 using Gallatin.Contracts;
 
 namespace Gallatin.Filter
@@ -12,12 +6,10 @@ namespace Gallatin.Filter
     /// <summary>
     /// Implements the default blacklist filter
     /// </summary>
-    [Export(typeof(IConnectionFilter))]
+    [Export( typeof (IConnectionFilter) )]
     public class BlacklistFilter : IConnectionFilter
     {
-        static Regex _ads = new Regex(@"\.?ad(\S{0,2})\.");
-
-
+        #region IConnectionFilter Members
 
         /// <summary>
         /// Evaluates the HTTP request to determine if the host or path is in a blacklist
@@ -28,19 +20,25 @@ namespace Gallatin.Filter
         public string EvaluateFilter( IHttpRequest request, string connectionId )
         {
             string host = request.Headers["host"].ToLower();
+            string contentType = request.Headers["content-type"];
 
-            if (!string.IsNullOrEmpty(host))
+            if ( !string.IsNullOrEmpty( host ) )
             {
                 // Always turn on safe search for Google queries.
-                if (host == "www.google.com" && request.Path.Contains("&"))
+                if ( host == "www.google.com"
+                     && request.Path.Contains( "&" ) )
                 {
-                   request.Path += "&safe=strict";
+                    request.Path += "&safe=strict";
                 }
 
-                //else if (_ads.Match(host).Success)
-                //{
-                //    return string.Format("<div style='background:white; font-size: 8pt; font-weight: bold; color: #000;'>Gallatin Proxy - Advertisement blocked to host: {0}</div>", host);
-                //}
+                else if ( contentType != null && contentType.Equals( "text/html" )
+                          && ( host.StartsWith( "ad." ) || host.StartsWith( "ads." ) ) )
+                {
+                    return
+                        string.Format(
+                            "<div style='background:white; padding:5; margin:5; font-size: 10pt; font-weight: bold; color: #000;'>Gallatin Proxy - Advertisement blocked to host: {0}</div>",
+                            host );
+                }
 
                 //else
                 //{
@@ -75,5 +73,7 @@ namespace Gallatin.Filter
                 return FilterSpeedType.LocalAndSlow;
             }
         }
+
+        #endregion
     }
 }

@@ -47,5 +47,54 @@ namespace Gallatin.Core.Tests.Web
             // the header order according to HTTP spec.
             Assert.That(Encoding.UTF8.GetString(buffer), Is.EqualTo("GET /foo.html HTTP/1.1\r\nHost: www.yahoo.com\r\nConnection: keep-alive\r\nFoo: bar\r\n\r\n"));
         }
+
+        [Test]
+        public void IsSslTest()
+        {
+            List<KeyValuePair<string, string>> headerList = new List<KeyValuePair<string, string>>();
+            headerList.Add(new KeyValuePair<string, string>("Host", "www.yahoo.com"));
+            headerList.Add(new KeyValuePair<string, string>("Proxy-Connection", "keep-alive"));
+            HttpHeaders headers = new HttpHeaders(headerList);
+
+            var objectUnderTest = new HttpRequestHeaderEventArgs("1.1", headers, "cOnNeCt", "http://www.yahoo.com:443");
+            
+            Assert.That(objectUnderTest.IsSsl, Is.True);
+        }
+
+        [Test]
+        public void CreateBufferForCompleteUrlInPathTest()
+        {
+            List<KeyValuePair<string, string>> headerList = new List<KeyValuePair<string, string>>();
+            headerList.Add(new KeyValuePair<string, string>("Host", "www.yahoo.com"));
+            headerList.Add(new KeyValuePair<string, string>("Proxy-Connection", "keep-alive"));
+            HttpHeaders headers = new HttpHeaders(headerList);
+
+            var objectUnderTest = new HttpRequestHeaderEventArgs("1.1", headers, "GET", "http://www.yahoo.com/foo.html");
+
+            byte[] headerBytes = objectUnderTest.GetBuffer();
+
+            string expectedHeader = "GET /foo.html HTTP/1.1\r\nHost: www.yahoo.com\r\nConnection: keep-alive\r\n\r\n";
+            var expectedBytes = Encoding.UTF8.GetBytes( expectedHeader );
+
+            Assert.That(headerBytes, Is.EqualTo(expectedBytes));
+        }
+
+        [Test]
+        public void CreateBufferTest()
+        {
+            List<KeyValuePair<string, string>> headerList = new List<KeyValuePair<string, string>>();
+            headerList.Add(new KeyValuePair<string, string>("Host", "www.yahoo.com"));
+            headerList.Add(new KeyValuePair<string, string>("Proxy-Connection", "keep-alive"));
+            HttpHeaders headers = new HttpHeaders(headerList);
+
+            var objectUnderTest = new HttpRequestHeaderEventArgs("1.1", headers, "PUT", "/");
+
+            byte[] headerBytes = objectUnderTest.GetBuffer();
+
+            string expectedHeader = "PUT / HTTP/1.1\r\nHost: www.yahoo.com\r\nConnection: keep-alive\r\n\r\n";
+            var expectedBytes = Encoding.UTF8.GetBytes(expectedHeader);
+
+            Assert.That(headerBytes, Is.EqualTo(expectedBytes));
+        }
     }
 }

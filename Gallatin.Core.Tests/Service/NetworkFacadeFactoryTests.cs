@@ -56,21 +56,21 @@ namespace Gallatin.Core.Tests.Service
         public void DuplicateListenFails()
         {
             NetworkFacadeFactory factory = new NetworkFacadeFactory();
-            factory.Listen( 1, 20201, s => s.ToString() );
-            Assert.Throws<InvalidOperationException>( () => factory.Listen( 1, 20202, s => s.ToString() ) );
+            factory.Listen( "127.0.0.1", 20201, s => s.ToString() );
+            Assert.Throws<InvalidOperationException>( () => factory.Listen( "127.0.0.1", 20202, s => s.ToString() ) );
         }
 
         [Test]
         public void EndListenTest()
         {
             NetworkFacadeFactory factory = new NetworkFacadeFactory();
-            factory.Listen( 1, 4587, s => Assert.Pass() );
+            factory.Listen("127.0.0.1", 4587, s => Assert.Pass());
 
-            Assert.Throws<InvalidOperationException>( () => factory.Listen( 1, 4588, s => Assert.Fail() ) );
+            Assert.Throws<InvalidOperationException>(() => factory.Listen("127.0.0.1", 4588, s => Assert.Fail()));
 
             factory.EndListen();
 
-            factory.Listen( 1, 4588, s => Assert.Pass() );
+            factory.Listen("127.0.0.1", 4588, s => Assert.Pass());
             factory.EndListen();
         }
 
@@ -94,13 +94,13 @@ namespace Gallatin.Core.Tests.Service
             bool isConnected = false;
 
             NetworkFacadeFactory factory = new NetworkFacadeFactory();
-            factory.Listen( 1,
+            factory.Listen("127.0.0.1",
                             8081,
                             s =>
                             {
                                 Assert.That( s, Is.Not.Null );
-                                trigger.Set();
                                 isConnected = true;
+                                trigger.Set();
                             } );
 
             TcpClient client = new TcpClient( "localhost", 8081 );
@@ -114,7 +114,15 @@ namespace Gallatin.Core.Tests.Service
         public void SanityVerifyInterFaceContract()
         {
             NetworkFacadeFactory factory = new NetworkFacadeFactory();
-            factory.Listen( -1, -1, null );
+            factory.Listen(null, -1, null);
+        }
+
+        [Test]
+        public void InvalidAddressTest()
+        {
+            NetworkFacadeFactory factory = new NetworkFacadeFactory();
+
+            Assert.Throws<ArgumentException>(() => factory.Listen("localhost", 45983, s => Assert.Fail()));
         }
     }
 }

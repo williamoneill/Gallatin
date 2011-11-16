@@ -20,10 +20,10 @@ namespace Gallatin.Core.Service
         /// <summary>
         /// Listens for new connections on the specified port
         /// </summary>
-        /// <param name="hostInterfaceIndex">Host machine network interface ID</param>
+        /// <param name="address">IP address to bind to. Useful in a multi-homed environment</param>
         /// <param name="port">Port to listen for client connections</param>
         /// <param name="callback">Delegate to invoke when a client connects</param>
-        void Listen( int hostInterfaceIndex, int port, Action<INetworkFacade> callback );
+        void Listen( string address, int port, Action<INetworkFacade> callback );
 
         /// <summary>
         /// Stops listening for new client connections
@@ -43,9 +43,9 @@ namespace Gallatin.Core.Service
             Contract.Requires( callback != null );
         }
 
-        public void Listen( int hostInterfaceIndex, int port, Action<INetworkFacade> callback )
+        public void Listen( string address, int port, Action<INetworkFacade> callback )
         {
-            Contract.Requires( hostInterfaceIndex >= 0 );
+            Contract.Requires( !string.IsNullOrEmpty(address) );
             Contract.Requires( port > 0 );
             Contract.Requires( callback != null );
         }

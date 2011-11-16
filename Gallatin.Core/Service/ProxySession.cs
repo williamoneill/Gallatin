@@ -24,6 +24,7 @@ namespace Gallatin.Core.Service
         private HttpResponseHeaderEventArgs _responseHeader;
         private INetworkFacade _serverConnection;
         private IHttpStreamParser _serverParser;
+        private Guid _guid = Guid.NewGuid();
 
         [ImportingConstructor]
         public ProxySession( INetworkFacadeFactory factory, IProxyFilter filters )
@@ -48,7 +49,8 @@ namespace Gallatin.Core.Service
         {
             get
             {
-                return string.Format( "C {0} S {1} ",
+                return string.Format( "{0} [{1}-{2}] ",
+                                      _guid,
                                       _clientConnection == null ? 0 : _clientConnection.Id,
                                       _serverConnection == null ? 0 : _serverConnection.Id );
             }
@@ -60,30 +62,9 @@ namespace Gallatin.Core.Service
         {
             _clientConnection = clientConnection;
 
-            ServiceLog.Logger.Verbose( "{0} Starting proxy session", Id );
+            ServiceLog.Logger.Info( "{0} Starting proxy session", Id );
 
             _clientConnection.BeginReceive( HandleClientReceive );
-        }
-
-        public void Reset()
-        {
-            ServiceLog.Logger.Info("{0} Resetting client connection", Id);
-
-            UnwireClientEvents();
-            UnwireServerEvents();
-            _clientConnection = null;
-            _serverConnection = null;
-            _clientParser.Reset();
-            _host = null;
-            _isFiltered = false;
-            _port = 0;
-            _requestHeader = null;
-            _responseHeader = null;
-
-            if ( _serverParser != null )
-            {
-                _serverParser.Reset();
-            }
         }
 
         #endregion
@@ -133,33 +114,37 @@ namespace Gallatin.Core.Service
                 UnwireClientEvents();
                 UnwireServerEvents();
 
-                if ( _clientConnection != null )
+                if (_clientConnection != null)
                 {
                     _clientConnection.BeginClose(
-                        ( s, f ) =>
+                        (s, f) =>
                         {
-                            if ( !s )
+                            if (!s)
                             {
-                                ServiceLog.Logger.Error( "Error closing client connection" );
+                                ServiceLog.Logger.Error("Error closing client connection");
                             }
-                        } );
+                        });
                 }
 
-                if ( _serverConnection != null )
+                if (_serverConnection != null)
                 {
                     _serverConnection.BeginClose(
-                        ( s, f ) =>
+                        (s, f) =>
                         {
-                            if ( !s )
+                            if (!s)
                             {
-                                ServiceLog.Logger.Error( "Error closing server connection" );
+                                ServiceLog.Logger.Error("Error closing server connection");
                             }
-                        } );
+                        });
                 }
             }
-            catch
+            catch (ObjectDisposedException)
             {
-                ServiceLog.Logger.Info("{0} Exception while ending session", Id);
+                ServiceLog.Logger.Warning("{0} Encountered object disposed exception while ending client session", Id);
+            }
+            catch (Exception ex)
+            {
+                ServiceLog.Logger.Exception(string.Format("{0} Exception while ending session", Id), ex);
             }
 
             EventHandler sessionEnded = SessionEnded;
@@ -173,7 +158,7 @@ namespace Gallatin.Core.Service
         {
             try
             {
-                ServiceLog.Logger.Info( "{0} Receiving partial data from client", Id );
+                ServiceLog.Logger.Info( "{0} Receiving partial data from client. Waiting for mutex.", Id );
 
                 if (_connectingToServerEvent.WaitOne(CoreSettings.Instance.ConnectTimeout))
                 {
@@ -244,6 +229,7 @@ namespace Gallatin.Core.Service
                     string host = e.Headers["Host"];
                     int port = HttpPort;
 
+                    // Get the port from the host address if it set
                     string[] tokens = host.Split(':');
                     if (tokens.Length == 2)
                     {
@@ -256,7 +242,7 @@ namespace Gallatin.Core.Service
                     {
                         string[] pathTokens = _requestHeader.Path.Split( ':' );
 
-                        if ( tokens.Length == 2 )
+                        if (pathTokens.Length == 2)
                         {
                             port = int.Parse(pathTokens[1]);
                             host = pathTokens[0];
@@ -319,7 +305,7 @@ namespace Gallatin.Core.Service
         {
             try
             {
-                ServiceLog.Logger.Info("{0} Sending header to server", Id);
+                ServiceLog.Logger.Verbose("{0} Sending header to server", Id);
 
                 _serverConnection.BeginSend(_requestHeader.GetBuffer(), HandleServerSendComplete);
                 _connectingToServerEvent.Set();
@@ -458,7 +444,7 @@ namespace Gallatin.Core.Service
         {
             try
             {
-                ServiceLog.Logger.Info( "{0} Partial data available from server {1}", Id, e.Data.Length );
+                ServiceLog.Logger.Verbose( "{0} Partial data available from server {1}", Id, e.Data.Length );
                 _clientConnection.BeginSend( e.Data, HandleDataSentToClient );
             }
             catch ( Exception ex )
@@ -472,7 +458,7 @@ namespace Gallatin.Core.Service
         {
             try
             {
-                ServiceLog.Logger.Info( "{0} Read response header from server", Id );
+                ServiceLog.Logger.Verbose( "{0} Read response header from server", Id );
                 _responseHeader = e;
 
                 // Consult the response filters to see if any are interested in the entire body.
@@ -564,7 +550,7 @@ namespace Gallatin.Core.Service
         {
             try
             {
-                ServiceLog.Logger.Verbose("{0} Additional data needed from client to complete request", Id);
+                ServiceLog.Logger.Verbose("{0} Additional data needed from client to complete request. Waiting for mutex.", Id);
                 if (_connectingToServerEvent.WaitOne(CoreSettings.Instance.ConnectTimeout))
                 {
                     // Ignore the event the parser requires requesting more data if we are changing over to an SSL tunnel

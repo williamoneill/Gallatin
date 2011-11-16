@@ -1,16 +1,17 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics.Contracts;
 using System.Text;
 using Gallatin.Contracts;
 
 namespace Gallatin.Core.Web
 {
-    internal abstract class HttpHeaderEventArgs :EventArgs
+    internal abstract class HttpHeaderEventArgs : EventArgs
     {
-        protected HttpHeaderEventArgs( string version, IHttpHeaders headers)
+        protected HttpHeaderEventArgs( string version, IHttpHeaders headers )
         {
-            Contract.Requires(!string.IsNullOrEmpty(version));
-            Contract.Requires(headers!=null);
+            Contract.Requires( !string.IsNullOrEmpty( version ) );
+            Contract.Requires( headers != null );
 
             Version = version;
             Headers = headers;
@@ -23,8 +24,8 @@ namespace Gallatin.Core.Web
                 string contentLength = Headers["content-length"];
                 string chunkedData = Headers["transfer-encoding"];
 
-                return ( (contentLength != null && int.Parse(contentLength) > 0)
-                    || (chunkedData != null && chunkedData.ToLower().Contains("chunked")));
+                return ( ( contentLength != null && int.Parse( contentLength ) > 0 )
+                         || ( chunkedData != null && chunkedData.ToLower().Contains( "chunked" ) ) );
             }
         }
 
@@ -37,18 +38,16 @@ namespace Gallatin.Core.Web
         {
             StringBuilder builder = new StringBuilder();
 
-            builder.AppendFormat("{0}\r\n", CreateFirstLine());
+            builder.AppendFormat( "{0}\r\n", CreateFirstLine() );
 
-            foreach ( var header in Headers.AsEnumerable() )
+            foreach ( KeyValuePair<string, string> header in Headers.AsEnumerable() )
             {
-                builder.AppendFormat("{0}: {1}\r\n", header.Key, header.Value);
+                builder.AppendFormat( "{0}: {1}\r\n", header.Key, header.Value );
             }
 
-            builder.AppendFormat("\r\n");
+            builder.AppendFormat( "\r\n" );
 
             return Encoding.UTF8.GetBytes( builder.ToString() );
         }
-
-
     }
 }

@@ -1,8 +1,10 @@
 using System;
+using System.ComponentModel.Composition;
 using System.ComponentModel.Composition.Hosting;
 using System.ComponentModel.Composition.Primitives;
 using System.Diagnostics.Contracts;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 
 namespace Gallatin.Core.Util
@@ -13,9 +15,11 @@ namespace Gallatin.Core.Util
     public static class CoreFactory
     {
         private static readonly CompositionContainer _container;
+        private static readonly CompositionContainer _mockContainer;
 
         static CoreFactory()
         {
+            // TODO: document this behavior and naming convention...
             const string AddinDirectory = ".\\addins";
 
             var aggregateCatalog = new AggregateCatalog();
@@ -26,10 +30,15 @@ namespace Gallatin.Core.Util
                 aggregateCatalog.Catalogs.Add(filterCatalog);
             }
 
-            var catalog = new AssemblyCatalog(Assembly.GetExecutingAssembly());
-            aggregateCatalog.Catalogs.Add( catalog );
+            aggregateCatalog.Catalogs.Add( new AssemblyCatalog(Assembly.GetExecutingAssembly()) );
+            var mainExportProvider = new CatalogExportProvider( aggregateCatalog );
 
-            _container = new CompositionContainer(aggregateCatalog);
+            _mockContainer = new CompositionContainer();
+
+            // See http://stackoverflow.com/questions/3828290/how-to-replace-an-exported-part-object-in-a-mef-container
+            // See http://codebetter.com/glennblock/2009/05/14/customizing-container-behavior-part-2-of-n-defaults/
+            _container = new CompositionContainer(_mockContainer, mainExportProvider);
+            mainExportProvider.SourceProvider = _container;
         }
 
         /// <summary>
@@ -40,9 +49,7 @@ namespace Gallatin.Core.Util
         {
             Contract.Requires(creationDelegate!=null);
 
-            var batch = new CompositionBatch();
-            batch.AddExport( new Export( typeof (T).ToString(), creationDelegate as Func<object> ) );
-            _container.Compose( batch );
+            _mockContainer.ComposeExportedValue( creationDelegate() );
         }
 
         /// <summary>

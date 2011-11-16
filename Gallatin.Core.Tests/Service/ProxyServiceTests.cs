@@ -9,8 +9,7 @@ namespace Gallatin.Core.Tests.Service
     [TestFixture]
     public class ProxyServiceTests
     {
-        // TODO: need to verify that reset is called on client session
-
+ 
         [Test]
         public void BasicSendTest()
         {
@@ -21,15 +20,17 @@ namespace Gallatin.Core.Tests.Service
 
             Mock<INetworkFacade> server = new Mock<INetworkFacade>();
 
+            CoreSettings.Instance.LocalHostDnsEntry = "127.0.0.1";
+
             Mock<INetworkFacadeFactory> factory = new Mock<INetworkFacadeFactory>();
-            factory.Setup( m => m.Listen( 0, 8080, It.IsAny<Action<INetworkFacade>>() ) )
-                .Callback<int, int, Action<INetworkFacade>>( ( i, j, k ) => k( server.Object ) );
+            factory.Setup( m => m.Listen( "127.0.0.1", 8080, It.IsAny<Action<INetworkFacade>>() ) )
+                .Callback<string, int, Action<INetworkFacade>>( ( i, j, k ) => k( server.Object ) );
 
             ProxyService service = new ProxyService( factory.Object );
             service.Start();
             service.Stop();
 
-            factory.Verify( m => m.Listen( 0, 8080, It.IsAny<Action<INetworkFacade>>() ), Times.Once() );
+            factory.Verify( m => m.Listen( "127.0.0.1", 8080, It.IsAny<Action<INetworkFacade>>() ), Times.Once() );
             factory.Verify( m => m.EndListen(), Times.Once() );
         }
 

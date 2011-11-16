@@ -25,6 +25,22 @@ namespace Gallatin.Core.Util
             }
         }
 
+        public int AvailablePoolSize
+        {
+            get
+            {
+                return _pool.Count;
+            }
+        }
+
+        public int AllocatedPoolSize
+        {
+            get
+            {
+                return _outOfPoolList.Count;
+            }
+        }
+
         public void Init( int size, Func<T> creationDelegate )
         {
             Contract.Requires( size > 0 );

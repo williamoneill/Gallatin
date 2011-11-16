@@ -32,7 +32,7 @@ namespace Gallatin.Core.Service
             state.Socket.BeginConnect( host, port, HandleConnect, state );
         }
 
-        public void Listen( int hostInterfaceIndex, int port, Action<INetworkFacade> callback )
+        public void Listen( string address, int port, Action<INetworkFacade> callback )
         {
             if ( _socket != null )
             {
@@ -45,10 +45,47 @@ namespace Gallatin.Core.Service
                                   SocketType.Stream,
                                   ProtocolType.Tcp );
 
-            IPHostEntry dnsEntry = Dns.GetHostEntry( CoreSettings.Instance.LocalHostDnsEntry );
+            IPHostEntry dnsEntry = Dns.GetHostEntry( address );
+
+            // For now, we only accept addresses in dotted quad notation that reside on the host.
+            // This is desireable for multi-homed systems.
+            const int NoValue = -1;
+            int index = NoValue;
+            bool foundMatch = false;
+            for ( int i = 0; i < dnsEntry.AddressList.Length && !foundMatch; i++ )
+            {
+                byte[] addressBytes = dnsEntry.AddressList[i].GetAddressBytes();
+
+                string[] parts = address.Split( '.' );
+
+                if ( addressBytes.Length == parts.Length )
+                {
+                    foundMatch = true;
+
+                    for ( int j = 0; j < addressBytes.Length; j++ )
+                    {
+                        if ( addressBytes[j]
+                             != byte.Parse( parts[j] ) )
+                        {
+                            foundMatch = false;
+                        }
+                    }
+                }
+
+                if ( foundMatch )
+                {
+                    index = i;
+                }
+            }
+
+            if ( index == NoValue )
+            {
+                throw new ArgumentException( string.Format(
+                    "The server address {0} was invalid or does not exist on the host. It must be a dotted quad IP address.", address ) );
+            }
 
             IPEndPoint endPoint =
-                new IPEndPoint( dnsEntry.AddressList[hostInterfaceIndex], port );
+                new IPEndPoint( dnsEntry.AddressList[index], port );
 
             _socket.Bind( endPoint );
 

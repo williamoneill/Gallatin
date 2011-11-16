@@ -9,7 +9,7 @@ namespace Gallatin.Core.Web
         public HttpResponseHeaderEventArgs( string version, IHttpHeaders headers, int statusCode, string statusText )
             : base(version, headers)
         {
-            Contract.Requires(!string.IsNullOrEmpty(statusText));
+            Contract.Requires(statusText != null);
             Contract.Requires(statusCode > 99);
             Contract.Requires(statusCode<1000);
 

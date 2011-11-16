@@ -142,15 +142,15 @@ namespace Gallatin.Filter
             _wordList.Add("breast", 20);
             _wordList.Add("cancer", -20);
 
-            _wordList.Add("nude", 15);
+            _wordList.Add("nude", 30);
+            _wordList.Add("art", -10);
             _wordList.Add("naked", 15);
-            _wordList.Add("sex", 30);
+            _wordList.Add("sex", 15);
             _wordList.Add("sensual", 30);
             _wordList.Add("sexy", 30);
 
             _wordList.Add("adult", 15);
             _wordList.Add("explict", 15);
-            _wordList.Add("sexually-explicit", 45);
             _wordList.Add("sexually", 30);
 
             _wordList.Add("skin", 5);
@@ -164,16 +164,10 @@ namespace Gallatin.Filter
 
         private static string MakeWordLessOffensive( string word )
         {
-
-            if (word.Length < 4)
-            {
-                return "***";
-            }
-
             char[] array = word.ToCharArray();
-            for (int i = 2; i < array.Length; i += 3)
+            for (int i = 1; i < array.Length; i += 2)
             {
-                array[i] = '*';
+                array[i] = '#';
             }
 
             return new string(array);
@@ -194,7 +188,7 @@ namespace Gallatin.Filter
                 int val;
                 if (_wordList.TryGetValue(word, out val))
                 {
-                    bannedWords.AppendFormat( "[{0}] ", MakeWordLessOffensive( word ) );
+                    bannedWords.AppendFormat( "<br/>{0} --- weight {1} ", val > 0 ? MakeWordLessOffensive( word ) : word, val );
 
                     rating += val;
                 }
@@ -204,7 +198,7 @@ namespace Gallatin.Filter
             {
                 return Encoding.UTF8.GetBytes( 
                     string.Format(
-                     "<h3>Gallatin Proxy</h3>This page has been banned because it contained inappropriate content. Page rating of {1} exceeds limit of {2}.<p>Language: {0}",
+                     "<div style='background:white; padding:5; margin:5; font-size: 10pt; font-weight: bold; color: #000;'>Gallatin Proxy - This page has been blocked because it contained inappropriate content. Page rating of {1} exceeds limit of {2}.<p>Blocked words: {0}</div>",
                      bannedWords, rating, MaxWeight) );
             }
 

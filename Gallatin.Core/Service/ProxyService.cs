@@ -11,10 +11,9 @@ namespace Gallatin.Core.Service
     {
         private readonly INetworkFacadeFactory _factory;
         private readonly object _mutex = new object();
-        private readonly List<IProxySession> _sessions = new List<IProxySession>();
 
         private bool _isRunning;
-        private Pool<IProxySession> _sessionPool;
+        //private Pool<IProxySession> _sessionPool;
 
         [ImportingConstructor]
         internal ProxyService( INetworkFacadeFactory factory )
@@ -35,10 +34,10 @@ namespace Gallatin.Core.Service
                     throw new InvalidOperationException( "Service has already been started" );
                 }
 
-                _sessionPool = new Pool<IProxySession>();
-                _sessionPool.Init(CoreSettings.Instance.MaxNumberClients, CoreFactory.Compose<IProxySession>);
-
-                _factory.Listen( CoreSettings.Instance.NetworkAddressBindingOrdinal, CoreSettings.Instance.ServerPort, HandleClientConnected );
+                //_sessionPool = new Pool<IProxySession>();
+                //_sessionPool.Init(CoreSettings.Instance.MaxNumberClients, CoreFactory.Compose<IProxySession>);
+                
+                _factory.Listen( CoreSettings.Instance.LocalHostDnsEntry, CoreSettings.Instance.ServerPort, HandleClientConnected );
                 _isRunning = true;
             }
         }
@@ -53,7 +52,7 @@ namespace Gallatin.Core.Service
                 }
 
                 _factory.EndListen();
-                _sessionPool = null;
+                //_sessionPool = null;
                 _isRunning = false;
             }
         }
@@ -62,7 +61,8 @@ namespace Gallatin.Core.Service
         {
             get
             {
-                return _sessions.Count;
+                return 0;
+                //return _sessionPool.AllocatedPoolSize;
             }
         }
 
@@ -72,13 +72,15 @@ namespace Gallatin.Core.Service
         {
             try
             {
-                IProxySession session = _sessionPool.Get();
+                //ServiceLog.Logger.Info("ProxyService notified of new client connect. Pool size: {0}", _sessionPool.AvailablePoolSize);
+
+                //IProxySession session = _sessionPool.Get();
+
+                IProxySession session = CoreFactory.Compose<IProxySession>();
 
                 session.SessionEnded += HandleSessionEnded;
 
-                session.Start( clientConnection );
-
-                _sessions.Add( session );
+                session.Start(clientConnection);
             }
             catch ( InvalidOperationException ex )
             {
@@ -95,7 +97,9 @@ namespace Gallatin.Core.Service
             IProxySession proxySession = sender as IProxySession;
             proxySession.SessionEnded -= HandleSessionEnded;
 
-           _sessionPool.Put( proxySession );
+           // _sessionPool.Put( proxySession );
+
+           //ServiceLog.Logger.Info("ProxyService notified that session ended. Pool size: {0}.", _sessionPool.AvailablePoolSize);
         }
     }
 }

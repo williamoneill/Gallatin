@@ -24,8 +24,10 @@ namespace Gallatin.Core.Tests.Service
             client.Setup(m => m.BeginReceive(It.IsAny<Action<bool, byte[], INetworkFacade>>()))
                 .Callback((Action<bool, byte[], INetworkFacade> callback) => callback(true, request, client.Object));
 
+            // The server should be contacted by the proxy server
             Mock<INetworkFacade> server = new Mock<INetworkFacade>();
 
+            // That the proxy server should attempt to connect on port 443
             Mock<INetworkFacadeFactory> mockFactory = new Mock<INetworkFacadeFactory>();
             mockFactory.Setup(m => m.BeginConnect("www.yahoo.com", 443, It.IsAny<Action<bool, INetworkFacade>>()))
                 .Callback<string, int, Action<bool, INetworkFacade>>((h, p, c) => c(true, server.Object));
@@ -33,6 +35,7 @@ namespace Gallatin.Core.Tests.Service
             Mock<IProxyFilter> outboundFilter = new Mock<IProxyFilter>();
             outboundFilter.Setup(m => m.EvaluateConnectionFilters(It.IsAny<HttpRequest>(), It.IsAny<string>())).Returns(null as string);
 
+            // Setup the mock SSL tunnel. Yes, this is an integration test and not a pure unit test.
             Mock<ISslTunnel> mockSslTunnel = new Mock<ISslTunnel>();
             mockSslTunnel.Setup( m => m.EstablishTunnel( client.Object, server.Object, "1.1" ) )
                 .Callback<INetworkFacade, INetworkFacade, string>(

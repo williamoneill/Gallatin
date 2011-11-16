@@ -1,5 +1,4 @@
 using System;
-using System.Diagnostics.Contracts;
 using System.IO;
 using System.Text;
 using Gallatin.Contracts;
@@ -15,7 +14,7 @@ namespace Gallatin.Core.Web
         public HttpStreamParser()
         {
             _bodyData = new MemoryStream();
-            State = new ReadHeaderState(this);
+            State = new ReadHeaderState( this );
         }
 
         #region IHttpStreamParser Members
@@ -33,10 +32,6 @@ namespace Gallatin.Core.Web
             {
                 State.AcceptData( data );
             }
-        }
-
-        public void Reset()
-        {
         }
 
         #endregion
