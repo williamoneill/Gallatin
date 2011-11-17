@@ -26,9 +26,12 @@ namespace Gallatin.Core.Tests.Service
         }
 
         [Test]
-        public void VerifyResponseFilterWithCallbackAndNoBody()
+        public void VerifyResponseFilterWithCallbackAndNoBody([Values(true, false)] bool filterEnabled)
         {
-            ProxyFilter filter = new ProxyFilter();
+            Mock<ICoreSettings> settings = new Mock<ICoreSettings>();
+            settings.SetupGet(m => m.FilteringEnabled).Returns(filterEnabled);
+
+            ProxyFilter filter = new ProxyFilter(settings.Object);
             List<IResponseFilter> filters = new List<IResponseFilter>();
 
             Mock<IHttpResponse> response = new Mock<IHttpResponse>();
@@ -58,7 +61,7 @@ namespace Gallatin.Core.Tests.Service
         }
 
         [Test]
-        public void VerifyResponseFilterWithCallbackWithBody()
+        public void VerifyResponseFilterWithCallbackWithBody([Values(true, false)] bool filterEnabled)
         {
             bool delegateHasBeenCalled = false;
 
@@ -70,7 +73,10 @@ namespace Gallatin.Core.Tests.Service
             mockHeaders.Setup( s => s["transfer-encoding"] ).Returns( "chunked" );
             mockHeaders.Setup( s => s["content-encoding"] ).Returns( "gzip" );
 
-            ProxyFilter filter = new ProxyFilter();
+            Mock<ICoreSettings> settings = new Mock<ICoreSettings>();
+            settings.SetupGet(m => m.FilteringEnabled).Returns(filterEnabled);
+
+            ProxyFilter filter = new ProxyFilter(settings.Object);
             List<IResponseFilter> filters = new List<IResponseFilter>();
 
             Mock<IHttpResponse> response = new Mock<IHttpResponse>();
@@ -97,27 +103,39 @@ namespace Gallatin.Core.Tests.Service
             string filterResponse;
             bool noBodyNeeded = filter.TryEvaluateResponseFilters( response.Object, "connectionid", out filterResponse );
 
-            Assert.That( noBodyNeeded, Is.False );
-            Assert.That( filterResponse, Is.Null );
+            if (filterEnabled)
+            {
+                Assert.That(noBodyNeeded, Is.False);
+                Assert.That(filterResponse, Is.Null);
 
-            byte[] responseMessage = filter.EvaluateResponseFiltersWithBody( response.Object, "connectionid", compressedBody );
+                byte[] responseMessage = filter.EvaluateResponseFiltersWithBody(response.Object, "connectionid", compressedBody);
 
-            Assert.That( responseMessage, Is.EqualTo( outBody ) );
+                Assert.That(responseMessage, Is.EqualTo(outBody));
 
-            mockHeaders.Verify( s => s.RemoveKeyValue( "transfer-encoding", "chunked" ), Times.Once() );
-            mockHeaders.Verify( s => s.UpsertKeyValue( "Content-Length", "25" ), Times.Once() );
-            mockHeaders.Verify( s => s.RemoveKeyValue( "content-encoding", "gzip" ), Times.Once() );
-            mockHeaders.Verify( s => s.UpsertKeyValue( "Content-Length", "16" ),
-                                Times.Once(),
-                                "The header should have been updated with the uncompressed body size" );
+                mockHeaders.Verify(s => s.RemoveKeyValue("transfer-encoding", "chunked"), Times.Once());
+                mockHeaders.Verify(s => s.UpsertKeyValue("Content-Length", "25"), Times.Once());
+                mockHeaders.Verify(s => s.RemoveKeyValue("content-encoding", "gzip"), Times.Once());
+                mockHeaders.Verify(s => s.UpsertKeyValue("Content-Length", "16"),
+                                    Times.Once(),
+                                    "The header should have been updated with the uncompressed body size");
 
-            Assert.That( delegateHasBeenCalled, Is.True );
+                Assert.That(delegateHasBeenCalled, Is.True);
+            }
+            else
+            {
+                Assert.That(noBodyNeeded, Is.True);
+                Assert.That(filterResponse, Is.Null);
+                
+            }
         }
 
         [Test]
-        public void VerifyResponseFiltersNoCallback()
+        public void VerifyResponseFiltersNoCallback( [Values(true,false)] bool filterEnabled )
         {
-            ProxyFilter filter = new ProxyFilter();
+            Mock<ICoreSettings> settings = new Mock<ICoreSettings>();
+            settings.SetupGet( m => m.FilteringEnabled ).Returns( filterEnabled );
+
+            ProxyFilter filter = new ProxyFilter(settings.Object);
             List<IResponseFilter> filters = new List<IResponseFilter>();
 
             Mock<IHttpResponse> response = new Mock<IHttpResponse>();
@@ -135,15 +153,26 @@ namespace Gallatin.Core.Tests.Service
             bool noBodyNeeded = filter.TryEvaluateResponseFilters( response.Object, "connectionid", out filterResponse );
 
             Assert.That( noBodyNeeded, Is.True );
-            Assert.That( filterResponse,
-                         Is.EqualTo(
-                             "HTTP/ 200 OK\r\nConnection: close\r\nContent length: 91\r\nContent-Type: text/html\r\n\r\n<html><head><title>Gallatin Proxy - Response Filtered</title></head><body>foo</body></html>" ) );
+
+            if (filterEnabled)
+            {
+                Assert.That(filterResponse,
+                             Is.EqualTo(
+                                 "HTTP/ 200 OK\r\nConnection: close\r\nContent length: 91\r\nContent-Type: text/html\r\n\r\n<html><head><title>Gallatin Proxy - Response Filtered</title></head><body>foo</body></html>"));
+            }
+            else
+            {
+                Assert.That(filterResponse, Is.Null);
+            }
         }
 
         [Test]
-        public void VerifyResponseSort()
+        public void VerifyResponseSort([Values(true, false)] bool filterEnabled)
         {
-            ProxyFilter filter = new ProxyFilter();
+            Mock<ICoreSettings> settings = new Mock<ICoreSettings>();
+            settings.SetupGet(m => m.FilteringEnabled).Returns(filterEnabled);
+
+            ProxyFilter filter = new ProxyFilter(settings.Object);
             List<IConnectionFilter> filters = new List<IConnectionFilter>();
 
             Mock<IHttpRequest> requestArgs = new Mock<IHttpRequest>();
@@ -162,9 +191,16 @@ namespace Gallatin.Core.Tests.Service
 
             string output = filter.EvaluateConnectionFilters( requestArgs.Object, "whatever" );
 
-            Assert.That( output,
-                         Is.EqualTo(
-                             "HTTP/ 200 OK\r\nConnection: close\r\nContent length: 93\r\nContent-Type: text/html\r\n\r\n<html><head><title>Gallatin Proxy - Connection Rejected</title></head><body>Foo</body></html>" ) );
+            if (filterEnabled)
+            {
+                Assert.That(output,
+                             Is.EqualTo(
+                                 "HTTP/ 200 OK\r\nConnection: close\r\nContent length: 93\r\nContent-Type: text/html\r\n\r\n<html><head><title>Gallatin Proxy - Connection Rejected</title></head><body>Foo</body></html>"));
+            }
+            else
+            {
+                Assert.That( output, Is.Null );
+            }
         }
     }
 }

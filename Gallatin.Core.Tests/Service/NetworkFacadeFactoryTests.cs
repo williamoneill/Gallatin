@@ -3,6 +3,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Threading;
 using Gallatin.Core.Service;
+using Moq;
 using NUnit.Framework;
 
 namespace Gallatin.Core.Tests.Service
@@ -39,7 +40,9 @@ namespace Gallatin.Core.Tests.Service
                                 },
                                 null );
 
-            NetworkFacadeFactory factory = new NetworkFacadeFactory();
+            Mock<ICoreSettings> settings = new Mock<ICoreSettings>();
+
+            NetworkFacadeFactory factory = new NetworkFacadeFactory(settings.Object);
             factory.BeginConnect( "localhost",
                                   8089,
                                   ( b, s ) =>
@@ -55,7 +58,9 @@ namespace Gallatin.Core.Tests.Service
         [Test]
         public void DuplicateListenFails()
         {
-            NetworkFacadeFactory factory = new NetworkFacadeFactory();
+            Mock<ICoreSettings> settings = new Mock<ICoreSettings>();
+
+            NetworkFacadeFactory factory = new NetworkFacadeFactory(settings.Object);
             factory.Listen( "127.0.0.1", 20201, s => s.ToString() );
             Assert.Throws<InvalidOperationException>( () => factory.Listen( "127.0.0.1", 20202, s => s.ToString() ) );
         }
@@ -63,7 +68,9 @@ namespace Gallatin.Core.Tests.Service
         [Test]
         public void EndListenTest()
         {
-            NetworkFacadeFactory factory = new NetworkFacadeFactory();
+            Mock<ICoreSettings> settings = new Mock<ICoreSettings>();
+
+            NetworkFacadeFactory factory = new NetworkFacadeFactory(settings.Object);
             factory.Listen("127.0.0.1", 4587, s => Assert.Pass());
 
             Assert.Throws<InvalidOperationException>(() => factory.Listen("127.0.0.1", 4588, s => Assert.Fail()));
@@ -77,8 +84,10 @@ namespace Gallatin.Core.Tests.Service
         [Test]
         public void FailedServerConnect()
         {
+            Mock<ICoreSettings> settings = new Mock<ICoreSettings>();
+
             // Connect to server that does not exist. Verify error.
-            NetworkFacadeFactory factory = new NetworkFacadeFactory();
+            NetworkFacadeFactory factory = new NetworkFacadeFactory(settings.Object);
             factory.BeginConnect( "localhost",
                                   5150,
                                   ( b, s ) =>
@@ -90,10 +99,12 @@ namespace Gallatin.Core.Tests.Service
         [Test]
         public void ListenTest()
         {
-            ManualResetEvent trigger = new ManualResetEvent( false );
+            Mock<ICoreSettings> settings = new Mock<ICoreSettings>();
+
+            ManualResetEvent trigger = new ManualResetEvent(false);
             bool isConnected = false;
 
-            NetworkFacadeFactory factory = new NetworkFacadeFactory();
+            NetworkFacadeFactory factory = new NetworkFacadeFactory(settings.Object);
             factory.Listen("127.0.0.1",
                             8081,
                             s =>
@@ -113,14 +124,18 @@ namespace Gallatin.Core.Tests.Service
         [ExpectedException]
         public void SanityVerifyInterFaceContract()
         {
-            NetworkFacadeFactory factory = new NetworkFacadeFactory();
+            Mock<ICoreSettings> settings = new Mock<ICoreSettings>();
+
+            NetworkFacadeFactory factory = new NetworkFacadeFactory(settings.Object);
             factory.Listen(null, -1, null);
         }
 
         [Test]
         public void InvalidAddressTest()
         {
-            NetworkFacadeFactory factory = new NetworkFacadeFactory();
+            Mock<ICoreSettings> settings = new Mock<ICoreSettings>();
+
+            NetworkFacadeFactory factory = new NetworkFacadeFactory(settings.Object);
 
             Assert.Throws<ArgumentException>(() => factory.Listen("localhost", 45983, s => Assert.Fail()));
         }

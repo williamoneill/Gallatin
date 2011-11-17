@@ -61,10 +61,8 @@ namespace Gallatin.Core
             settings.ServerPort = SetDefaultValue( settings.ServerPort, 0, 8080 );
             settings.MaxNumberClients = SetDefaultValue( settings.MaxNumberClients, 0, 100 );
             settings.ReceiveBufferSize = SetDefaultValue( settings.ReceiveBufferSize, 0, 8192 );
-            settings.MonitorThreadSleepInterval = SetDefaultValue(settings.MonitorThreadSleepInterval, 0, 10000);
-            settings.SessionInactivityTimeout = SetDefaultValue( settings.SessionInactivityTimeout, 0, 30000 );
             settings.ConnectTimeout = SetDefaultValue(settings.ConnectTimeout, 0, 30000);
-            settings.LocalHostDnsEntry = SetDefaultValue(settings.LocalHostDnsEntry, null, "localhost");
+            settings.ListenAddress = SetDefaultValue(settings.ListenAddress, null, "127.0.0.1");
             settings.ProxyClientListenerBacklog = SetDefaultValue(settings.ProxyClientListenerBacklog, 0, 30);
 
             // Extra save...just in case we created a new instance in the above else block

@@ -47,7 +47,9 @@ namespace Gallatin.Core.Tests.Service
 
             CoreFactory.Register( () => mockSslTunnel.Object );
 
-            ProxySession session = new ProxySession(mockFactory.Object, outboundFilter.Object);
+            Mock<ICoreSettings> settings = new Mock<ICoreSettings>();
+
+            ProxySession session = new ProxySession(mockFactory.Object, outboundFilter.Object, settings.Object);
             session.Start(client.Object);
 
             client.Verify(m => m.BeginClose(It.IsAny<Action<bool, INetworkFacade>>()), Times.Once());
@@ -66,6 +68,9 @@ namespace Gallatin.Core.Tests.Service
             client.Setup( m => m.BeginReceive( It.IsAny<Action<bool, byte[], INetworkFacade>>() ) )
                 .Callback( ( Action<bool, byte[], INetworkFacade> callback ) => callback( true, request, client.Object ) );
 
+            Mock<ICoreSettings> settings = new Mock<ICoreSettings>();
+            settings.SetupGet( m => m.FilteringEnabled ).Returns( true );
+
             // If I place Encoding.UTF8.GetBytes("Bad request") in the Setup method, this never gets called, yet
             // the Assert verfies that is the value. Not sure what I'm doing wrong with MOQ.
             client.Setup( m => m.BeginSend( It.IsAny<byte[]>(), It.IsAny<Action<bool, INetworkFacade>>() ) )
@@ -80,7 +85,7 @@ namespace Gallatin.Core.Tests.Service
             Mock<IProxyFilter> outboundFilter = new Mock<IProxyFilter>();
             outboundFilter.Setup( m => m.EvaluateConnectionFilters( It.IsAny<HttpRequest>(), It.IsAny<string>() ) ).Returns( "Bad request" );
 
-            ProxySession session = new ProxySession( mockFactory.Object, outboundFilter.Object );
+            ProxySession session = new ProxySession( mockFactory.Object, outboundFilter.Object, settings.Object );
             session.Start( client.Object );
 
             client.Verify( m => m.BeginSend( badRequest, It.IsAny<Action<bool, INetworkFacade>>() ), Times.Once() );
@@ -118,7 +123,9 @@ namespace Gallatin.Core.Tests.Service
             Mock<IProxyFilter> outboundFilter = new Mock<IProxyFilter>();
             outboundFilter.Setup( m => m.EvaluateConnectionFilters( It.IsAny<HttpRequest>(), It.IsAny<string>() ) ).Returns( null as string );
 
-            ProxySession session = new ProxySession( mockFactory.Object, outboundFilter.Object );
+            Mock<ICoreSettings> settings = new Mock<ICoreSettings>();
+
+            ProxySession session = new ProxySession( mockFactory.Object, outboundFilter.Object, settings.Object );
             session.Start( client.Object );
 
             client.Verify( m => m.BeginClose( It.IsAny<Action<bool, INetworkFacade>>() ), Times.Once() );
@@ -177,7 +184,9 @@ namespace Gallatin.Core.Tests.Service
             filter.Setup( m => m.EvaluateResponseFiltersWithBody( It.IsAny<IHttpResponse>(), It.IsAny<string>(), body ) )
                 .Returns( Encoding.UTF8.GetBytes( "by" ) );
 
-            ProxySession session = new ProxySession( mockFactory.Object, filter.Object );
+            Mock<ICoreSettings> settings = new Mock<ICoreSettings>();
+
+            ProxySession session = new ProxySession( mockFactory.Object, filter.Object, settings.Object );
             session.Start( client.Object );
 
             client.Verify( m => m.BeginClose( It.IsAny<Action<bool, INetworkFacade>>() ), Times.Once() );
@@ -220,7 +229,9 @@ namespace Gallatin.Core.Tests.Service
             filter.Setup( m => m.TryEvaluateResponseFilters( It.IsAny<IHttpResponse>(), It.IsAny<string>(), out filterResponse ) ).Returns(
                 true );
 
-            ProxySession session = new ProxySession( mockFactory.Object, filter.Object );
+            Mock<ICoreSettings> settings = new Mock<ICoreSettings>();
+
+            ProxySession session = new ProxySession( mockFactory.Object, filter.Object, settings.Object );
             session.Start( client.Object );
 
             client.Verify( m => m.BeginClose( It.IsAny<Action<bool, INetworkFacade>>() ), Times.Once() );
@@ -254,7 +265,9 @@ namespace Gallatin.Core.Tests.Service
             Mock<IProxyFilter> outboundFilter = new Mock<IProxyFilter>();
             outboundFilter.Setup( m => m.EvaluateConnectionFilters( It.IsAny<HttpRequest>(), It.IsAny<string>() ) ).Returns( null as string );
 
-            ProxySession session = new ProxySession( mockFactory.Object, outboundFilter.Object );
+            Mock<ICoreSettings> settings = new Mock<ICoreSettings>();
+
+            ProxySession session = new ProxySession(mockFactory.Object, outboundFilter.Object, settings.Object);
             session.Start( client.Object );
 
             client.Verify( m => m.BeginClose( It.IsAny<Action<bool, INetworkFacade>>() ), Times.Once() );

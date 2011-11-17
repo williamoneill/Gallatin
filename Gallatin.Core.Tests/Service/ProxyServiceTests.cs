@@ -14,19 +14,17 @@ namespace Gallatin.Core.Tests.Service
         public void BasicSendTest()
         {
             Mock<ICoreSettings> settings = new Mock<ICoreSettings>();
-            settings.SetupGet( m => m.ServerPort ).Returns( 5150 );
-            settings.SetupGet( m => m.NetworkAddressBindingOrdinal ).Returns( 1 );
             settings.SetupGet( m => m.MaxNumberClients ).Returns( 10 );
+            settings.SetupGet( m => m.ServerPort ).Returns( 8080 );
+            settings.SetupGet(m => m.ListenAddress).Returns("127.0.0.1");
 
             Mock<INetworkFacade> server = new Mock<INetworkFacade>();
-
-            CoreSettings.Instance.LocalHostDnsEntry = "127.0.0.1";
 
             Mock<INetworkFacadeFactory> factory = new Mock<INetworkFacadeFactory>();
             factory.Setup( m => m.Listen( "127.0.0.1", 8080, It.IsAny<Action<INetworkFacade>>() ) )
                 .Callback<string, int, Action<INetworkFacade>>( ( i, j, k ) => k( server.Object ) );
 
-            ProxyService service = new ProxyService( factory.Object );
+            ProxyService service = new ProxyService( factory.Object, settings.Object );
             service.Start();
             service.Stop();
 
@@ -37,9 +35,12 @@ namespace Gallatin.Core.Tests.Service
         [Test]
         public void DoubleStartTest()
         {
+            Mock<ICoreSettings> settings = new Mock<ICoreSettings>();
+            settings.SetupGet( m => m.MaxNumberClients ).Returns( 10 );
+
             Mock<INetworkFacadeFactory> factory = new Mock<INetworkFacadeFactory>();
 
-            ProxyService service = new ProxyService( factory.Object );
+            ProxyService service = new ProxyService( factory.Object, settings.Object );
             service.Start();
 
             Assert.Throws<InvalidOperationException>( service.Start );
@@ -48,9 +49,12 @@ namespace Gallatin.Core.Tests.Service
         [Test]
         public void StopBeforeStartTest()
         {
+            Mock<ICoreSettings> settings = new Mock<ICoreSettings>();
+            settings.SetupAllProperties();
+
             Mock<INetworkFacadeFactory> factory = new Mock<INetworkFacadeFactory>();
 
-            ProxyService service = new ProxyService( factory.Object );
+            ProxyService service = new ProxyService( factory.Object, settings.Object );
 
             Assert.Throws<InvalidOperationException>( service.Stop );
         }

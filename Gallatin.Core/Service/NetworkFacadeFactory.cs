@@ -11,8 +11,16 @@ namespace Gallatin.Core.Service
     {
         private Action<INetworkFacade> _clientConnectCallback;
         private Socket _socket;
+        private ICoreSettings _settings;
 
         #region INetworkFacadeFactory Members
+
+        [ImportingConstructor]
+        public NetworkFacadeFactory(ICoreSettings settings)
+        {
+            Contract.Requires(settings!=null);
+            _settings = settings;
+        }
 
         public void BeginConnect( string host, int port, Action<bool, INetworkFacade> callback )
         {
@@ -26,8 +34,8 @@ namespace Gallatin.Core.Service
 
             state.Socket.SetSocketOption( SocketOptionLevel.Socket, SocketOptionName.Linger, false );
             state.Socket.SetSocketOption( SocketOptionLevel.Socket, SocketOptionName.KeepAlive, false );
-            state.Socket.SetSocketOption( SocketOptionLevel.Socket, SocketOptionName.ReceiveBuffer, CoreSettings.Instance.ReceiveBufferSize );
-            state.Socket.SetSocketOption( SocketOptionLevel.Socket, SocketOptionName.SendBuffer, CoreSettings.Instance.ReceiveBufferSize );
+            state.Socket.SetSocketOption( SocketOptionLevel.Socket, SocketOptionName.ReceiveBuffer, _settings.ReceiveBufferSize );
+            state.Socket.SetSocketOption( SocketOptionLevel.Socket, SocketOptionName.SendBuffer, _settings.ReceiveBufferSize );
 
             state.Socket.BeginConnect( host, port, HandleConnect, state );
         }
@@ -89,7 +97,7 @@ namespace Gallatin.Core.Service
 
             _socket.Bind( endPoint );
 
-            _socket.Listen( CoreSettings.Instance.ProxyClientListenerBacklog );
+            _socket.Listen( _settings.ProxyClientListenerBacklog );
 
             _socket.BeginAccept( HandleNewClientConnect, null );
         }

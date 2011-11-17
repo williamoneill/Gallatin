@@ -13,14 +13,17 @@ namespace Gallatin.Core.Service
         private readonly object _mutex = new object();
 
         private bool _isRunning;
-        //private Pool<IProxySession> _sessionPool;
+        private Pool<IProxySession> _sessionPool;
+        private ICoreSettings _settings;
 
         [ImportingConstructor]
-        internal ProxyService( INetworkFacadeFactory factory )
+        internal ProxyService( INetworkFacadeFactory factory, ICoreSettings settings )
         {
             Contract.Requires( factory != null );
+            Contract.Requires(settings!=null);
 
             _factory = factory;
+            _settings = settings;
         }
 
         #region IProxyService Members
@@ -34,10 +37,10 @@ namespace Gallatin.Core.Service
                     throw new InvalidOperationException( "Service has already been started" );
                 }
 
-                //_sessionPool = new Pool<IProxySession>();
-                //_sessionPool.Init(CoreSettings.Instance.MaxNumberClients, CoreFactory.Compose<IProxySession>);
+                _sessionPool = new Pool<IProxySession>();
+                _sessionPool.Init(_settings.MaxNumberClients, CoreFactory.Compose<IProxySession>);
                 
-                _factory.Listen( CoreSettings.Instance.LocalHostDnsEntry, CoreSettings.Instance.ServerPort, HandleClientConnected );
+                _factory.Listen( _settings.ListenAddress, _settings.ServerPort, HandleClientConnected );
                 _isRunning = true;
             }
         }
@@ -52,7 +55,7 @@ namespace Gallatin.Core.Service
                 }
 
                 _factory.EndListen();
-                //_sessionPool = null;
+                _sessionPool = null;
                 _isRunning = false;
             }
         }
@@ -61,8 +64,7 @@ namespace Gallatin.Core.Service
         {
             get
             {
-                return 0;
-                //return _sessionPool.AllocatedPoolSize;
+                return _sessionPool.AllocatedPoolSize;
             }
         }
 
@@ -74,9 +76,7 @@ namespace Gallatin.Core.Service
             {
                 //ServiceLog.Logger.Info("ProxyService notified of new client connect. Pool size: {0}", _sessionPool.AvailablePoolSize);
 
-                //IProxySession session = _sessionPool.Get();
-
-                IProxySession session = CoreFactory.Compose<IProxySession>();
+                IProxySession session = _sessionPool.Get();
 
                 session.SessionEnded += HandleSessionEnded;
 
@@ -97,7 +97,7 @@ namespace Gallatin.Core.Service
             IProxySession proxySession = sender as IProxySession;
             proxySession.SessionEnded -= HandleSessionEnded;
 
-           // _sessionPool.Put( proxySession );
+           _sessionPool.Put( proxySession );
 
            //ServiceLog.Logger.Info("ProxyService notified that session ended. Pool size: {0}.", _sessionPool.AvailablePoolSize);
         }

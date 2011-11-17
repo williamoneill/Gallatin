@@ -9,12 +9,6 @@ namespace Gallatin.Core.Web
 {
     internal class ReadHeaderState : IHttpStreamParserState
     {
-        private static readonly Regex _splitReponseHeader =
-            new Regex( @"HTTP/(?<version>\d.\d)\s*(?<statuscode>\d*)\s(?<status>.*)$", RegexOptions.Compiled );
-
-        private static readonly Regex _splitRequestHeader =
-            new Regex( @"(?<method>\w*)\s*(?<destination>\S*)\sHTTP/(?<version>.*)$", RegexOptions.Compiled );
-
         private readonly IHttpStreamParserContext _context;
 
         private readonly MemoryStream _headerData = new MemoryStream();

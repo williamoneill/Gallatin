@@ -1,8 +1,11 @@
 ﻿using System;
 using System.ComponentModel.Composition;
 using System.Diagnostics.Contracts;
+using System.IO;
+using System.IO.Compression;
 using System.Text;
 using System.Threading;
+using Gallatin.Contracts;
 using Gallatin.Core.Util;
 using Gallatin.Core.Web;
 
@@ -12,8 +15,8 @@ namespace Gallatin.Core.Service
     [Export( typeof (IProxySession) )]
     internal class ProxySession : IProxySession
     {
-        private readonly IHttpStreamParser _clientParser;
-        private readonly ManualResetEvent _connectingToServerEvent;
+        private IHttpStreamParser _clientParser;
+        private ManualResetEvent _connectingToServerEvent;
         private readonly IProxyFilter _filters;
         private readonly INetworkFacadeFactory _networkFacadeFactory;
         private INetworkFacade _clientConnection;
@@ -24,23 +27,21 @@ namespace Gallatin.Core.Service
         private HttpResponseHeaderEventArgs _responseHeader;
         private INetworkFacade _serverConnection;
         private IHttpStreamParser _serverParser;
+        private readonly ICoreSettings _settings;
         private Guid _guid = Guid.NewGuid();
 
         [ImportingConstructor]
-        public ProxySession( INetworkFacadeFactory factory, IProxyFilter filters )
+        public ProxySession( INetworkFacadeFactory factory, IProxyFilter filters, ICoreSettings settings )
         {
             Contract.Requires( factory != null );
             Contract.Requires( filters != null );
+            Contract.Requires(settings!=null);
 
             _filters = filters;
-
+            _settings = settings;
             _networkFacadeFactory = factory;
 
-            _clientParser = new HttpStreamParser();
-
             _connectingToServerEvent = new ManualResetEvent( true );
-
-            WireClientEvents();
         }
 
         #region IProxySession Members
@@ -49,7 +50,7 @@ namespace Gallatin.Core.Service
         {
             get
             {
-                return string.Format( "{0} [{1}-{2}] ",
+                return String.Format( "{0} {1} {2} ",
                                       _guid,
                                       _clientConnection == null ? 0 : _clientConnection.Id,
                                       _serverConnection == null ? 0 : _serverConnection.Id );
@@ -60,11 +61,16 @@ namespace Gallatin.Core.Service
 
         public void Start( INetworkFacade clientConnection )
         {
-            _clientConnection = clientConnection;
+            ServiceLog.Logger.Info("{0} Starting proxy session", Id);
 
-            ServiceLog.Logger.Info( "{0} Starting proxy session", Id );
-
-            _clientConnection.BeginReceive( HandleClientReceive );
+            lock (_resettingObjectMutex)
+            {
+                _isSessionActive = true;
+                _clientParser = new HttpStreamParser();
+                WireClientEvents();
+                _clientConnection = clientConnection;
+                _clientConnection.BeginReceive(HandleClientReceive);
+            }
         }
 
         #endregion
@@ -105,53 +111,64 @@ namespace Gallatin.Core.Service
             }
         }
 
+        private bool _isSessionActive;
+
         private void EndSession()
         {
+            if (!_isSessionActive)
+                return;
+
             ServiceLog.Logger.Verbose( "{0} Ending session", Id );
 
-            try
+            lock (_resettingObjectMutex)
             {
-                UnwireClientEvents();
-                UnwireServerEvents();
-
-                if (_clientConnection != null)
+                try
                 {
-                    _clientConnection.BeginClose(
-                        (s, f) =>
-                        {
-                            if (!s)
+                    UnwireClientEvents();
+                    UnwireServerEvents();
+
+                    if (_clientConnection != null)
+                    {
+                        _clientConnection.BeginClose(
+                            (s, f) =>
                             {
-                                ServiceLog.Logger.Error("Error closing client connection");
-                            }
-                        });
+                                if (!s)
+                                {
+                                    ServiceLog.Logger.Error("Error closing client connection");
+                                }
+                            });
+                    }
+
+                    if (_serverConnection != null)
+                    {
+                        _serverConnection.BeginClose(
+                            (s, f) =>
+                            {
+                                if (!s)
+                                {
+                                    ServiceLog.Logger.Error("Error closing server connection");
+                                }
+                            });
+                    }
+                }
+                catch (ObjectDisposedException)
+                {
+                    ServiceLog.Logger.Warning("{0} Encountered object disposed exception while ending client session", Id);
+                }
+                catch (Exception ex)
+                {
+                    ServiceLog.Logger.Exception(String.Format("{0} Exception while ending session", Id), ex);
                 }
 
-                if (_serverConnection != null)
+                EventHandler sessionEnded = SessionEnded;
+                if (sessionEnded != null)
                 {
-                    _serverConnection.BeginClose(
-                        (s, f) =>
-                        {
-                            if (!s)
-                            {
-                                ServiceLog.Logger.Error("Error closing server connection");
-                            }
-                        });
+                    sessionEnded(this, new EventArgs());
                 }
-            }
-            catch (ObjectDisposedException)
-            {
-                ServiceLog.Logger.Warning("{0} Encountered object disposed exception while ending client session", Id);
-            }
-            catch (Exception ex)
-            {
-                ServiceLog.Logger.Exception(string.Format("{0} Exception while ending session", Id), ex);
+
+                _isSessionActive = false;
             }
 
-            EventHandler sessionEnded = SessionEnded;
-            if ( sessionEnded != null )
-            {
-                sessionEnded( this, new EventArgs() );
-            }
         }
 
         private void HandleClientParserPartialDataAvailable( object sender, HttpDataEventArgs e )
@@ -160,7 +177,7 @@ namespace Gallatin.Core.Service
             {
                 ServiceLog.Logger.Info( "{0} Receiving partial data from client. Waiting for mutex.", Id );
 
-                if (_connectingToServerEvent.WaitOne(CoreSettings.Instance.ConnectTimeout))
+                if (_connectingToServerEvent.WaitOne(_settings.ConnectTimeout))
                 {
                     // Do not forward the header to the server when SSL. The SSL stream class will
                     // send the appropriate headers for a proxy server.
@@ -181,7 +198,7 @@ namespace Gallatin.Core.Service
             }
             catch ( Exception ex )
             {
-                ServiceLog.Logger.Exception( string.Format( "{0} Unhandled exception receiving partial data from client", Id ), ex );
+                ServiceLog.Logger.Exception( String.Format( "{0} Unhandled exception receiving partial data from client", Id ), ex );
                 EndSession();
             }
         }
@@ -200,7 +217,7 @@ namespace Gallatin.Core.Service
             }
             catch ( Exception ex )
             {
-                ServiceLog.Logger.Exception( string.Format( "{0} Unhandled exception sending data to server", Id ), ex );
+                ServiceLog.Logger.Exception( String.Format( "{0} Unhandled exception sending data to server", Id ), ex );
                 EndSession();
             }
         }
@@ -221,6 +238,7 @@ namespace Gallatin.Core.Service
                 string filter = _filters.EvaluateConnectionFilters( HttpRequest.CreateRequest( e ), _clientConnection.ConnectionId );
                 if ( filter != null )
                 {
+                    ServiceLog.Logger.Info("{0} Connection filter activated. Connection aborted.", Id);
                     _isFiltered = true;
                     _clientConnection.BeginSend( Encoding.UTF8.GetBytes( filter ), HandleDataSentToClient );
                 }
@@ -233,7 +251,7 @@ namespace Gallatin.Core.Service
                     string[] tokens = host.Split(':');
                     if (tokens.Length == 2)
                     {
-                        port = int.Parse(tokens[1]);
+                        port = Int32.Parse(tokens[1]);
                         host = tokens[0];
                     }
 
@@ -244,7 +262,7 @@ namespace Gallatin.Core.Service
 
                         if (pathTokens.Length == 2)
                         {
-                            port = int.Parse(pathTokens[1]);
+                            port = Int32.Parse(pathTokens[1]);
                             host = pathTokens[0];
                         }
                     }
@@ -274,7 +292,7 @@ namespace Gallatin.Core.Service
                                 } );
 
 
-                            if ( !waitForServerDisconnectEvent.WaitOne( CoreSettings.Instance.ConnectTimeout ) )
+                            if ( !waitForServerDisconnectEvent.WaitOne( _settings.ConnectTimeout ) )
                             {
                                 ServiceLog.Logger.Error( "Unable to disconnect new server connection." );
                                 EndSession();
@@ -296,7 +314,7 @@ namespace Gallatin.Core.Service
             catch ( Exception ex )
             {
                 _connectingToServerEvent.Set();
-                ServiceLog.Logger.Exception( string.Format( "{0} Unhandled exception evaluating server connection", Id ), ex );
+                ServiceLog.Logger.Exception( String.Format( "{0} Unhandled exception evaluating server connection", Id ), ex );
                 EndSession();
             }
         }
@@ -312,7 +330,7 @@ namespace Gallatin.Core.Service
             }
             catch ( Exception ex )
             {
-                ServiceLog.Logger.Exception( string.Format("{0} Exception sending request header to server", Id), ex );
+                ServiceLog.Logger.Exception( String.Format("{0} Exception sending request header to server", Id), ex );
                 EndSession();
             }
         }
@@ -358,7 +376,7 @@ namespace Gallatin.Core.Service
             }
             catch ( Exception ex )
             {
-                ServiceLog.Logger.Exception( string.Format( "{0} Unhandled exception handling server connection", Id ), ex );
+                ServiceLog.Logger.Exception( String.Format( "{0} Unhandled exception handling server connection", Id ), ex );
                 EndSession();
             }
         }
@@ -385,7 +403,7 @@ namespace Gallatin.Core.Service
             }
             catch ( Exception ex )
             {
-                ServiceLog.Logger.Exception( string.Format( "{0} Unhandled exception handling data from server", Id ), ex );
+                ServiceLog.Logger.Exception( String.Format( "{0} Unhandled exception handling data from server", Id ), ex );
                 EndSession();
             }
         }
@@ -408,7 +426,7 @@ namespace Gallatin.Core.Service
             }
             catch ( Exception ex )
             {
-                ServiceLog.Logger.Exception( string.Format( "{0} Unhandled exception handling complete message from server", Id ), ex );
+                ServiceLog.Logger.Exception( String.Format( "{0} Unhandled exception handling complete message from server", Id ), ex );
                 EndSession();
             }
         }
@@ -435,7 +453,7 @@ namespace Gallatin.Core.Service
             }
             catch ( Exception ex )
             {
-                ServiceLog.Logger.Exception( string.Format( "{0} Unhandled exception sending data to client", Id ), ex );
+                ServiceLog.Logger.Exception( String.Format( "{0} Unhandled exception sending data to client", Id ), ex );
                 EndSession();
             }
         }
@@ -449,7 +467,7 @@ namespace Gallatin.Core.Service
             }
             catch ( Exception ex )
             {
-                ServiceLog.Logger.Exception( string.Format( "{0} Unhandled exception receiving partial data from server", Id ), ex );
+                ServiceLog.Logger.Exception( String.Format( "{0} Unhandled exception receiving partial data from server", Id ), ex );
                 EndSession();
             }
         }
@@ -466,43 +484,46 @@ namespace Gallatin.Core.Service
                 // If any filters can make the judgement now, before we read the body, then use their response to
                 // short-circuit the body evaluation.
                 string filterResponse;
-                if ( _filters.TryEvaluateResponseFilters( HttpResponse.CreateResponse( _responseHeader ),
-                                                          _clientConnection.ConnectionId,
-                                                          out filterResponse ) )
+                if (_filters.TryEvaluateResponseFilters(HttpResponse.CreateResponse(_responseHeader),
+                                                            _clientConnection.ConnectionId,
+                                                            out filterResponse))
                 {
                     // Filter active and does not need HTTP body
-                    if ( filterResponse != null )
+                    if (filterResponse != null)
                     {
-                        ServiceLog.Logger.Info( "{0} Response filter blocking content", Id );
+                        ServiceLog.Logger.Info("{0} *** PERFORMANCE HIT *** Response filter blocking content", Id);
 
                         // Stop listening for more data from the server. We are creating our own response.
                         // The session will terminate once this response is sent to the client.
                         UnwireServerEvents();
                         _isFiltered = true;
-                        _clientConnection.BeginSend( Encoding.UTF8.GetBytes( filterResponse ), HandleDataSentToClient );
+                        _clientConnection.BeginSend(Encoding.UTF8.GetBytes(filterResponse), HandleDataSentToClient);
                     }
                     else
                     {
                         // Normal behavior. No filter activated.
-                        _clientConnection.BeginSend( e.GetBuffer(), HandleDataSentToClient );
+                        _clientConnection.BeginSend(e.GetBuffer(), HandleDataSentToClient);
                     }
                 }
                 else
                 {
                     // Prepare to receive the entire HTTP body
-                    ServiceLog.Logger.Info( "{0} Response filter requires entire body. Building HTTP body.", Id );
+                    ServiceLog.Logger.Info("{0} *** PERFORMANCE HIT *** Response filter requires entire body. Building HTTP body.", Id);
 
                     _serverParser.PartialDataAvailable -= HandleServerParserPartialDataAvailable;
                     _serverParser.MessageReadComplete -= HandleServerParserMessageReadComplete;
                     _serverParser.BodyAvailable += HandleServerParserBodyAvailable;
                 }
+                    
             }
             catch ( Exception ex )
             {
-                ServiceLog.Logger.Exception( string.Format( "{0} Error evaluating response filter", Id ), ex );
+                ServiceLog.Logger.Exception( String.Format( "{0} Error evaluating response filter", Id ), ex );
                 EndSession();
             }
         }
+
+
 
         private void HandleServerParserBodyAvailable( object sender, HttpDataEventArgs e )
         {
@@ -516,15 +537,15 @@ namespace Gallatin.Core.Service
                 _serverParser.PartialDataAvailable += HandleServerParserPartialDataAvailable;
                 _serverParser.MessageReadComplete += HandleServerParserMessageReadComplete;
 
-                byte[] filter = _filters.EvaluateResponseFiltersWithBody( HttpResponse.CreateResponse( _responseHeader ),
-                                                                          _clientConnection.ConnectionId,
-                                                                          e.Data );
+                 byte[] filter = _filters.EvaluateResponseFiltersWithBody(HttpResponse.CreateResponse(_responseHeader),
+                                                                            _clientConnection.ConnectionId,
+                                                                            e.Data);
 
                 _clientConnection.BeginSend( _responseHeader.GetBuffer(), HandleDataSentToClient );
 
-                if ( filter != null && filter.Length > 0 )
+                if ( filter != e.Data )
                 {
-                    ServiceLog.Logger.Info( "{0} Response filter activated. Body modified.", Id );
+                    ServiceLog.Logger.Info( "{0} *** PERFORMANCE HIT *** Response filter activated. Body modified.", Id );
                     _isFiltered = true;
                     _clientConnection.BeginSend( filter, HandleDataSentToClient );
                 }
@@ -535,7 +556,7 @@ namespace Gallatin.Core.Service
             }
             catch ( Exception ex )
             {
-                ServiceLog.Logger.Exception( string.Format( "{0} Error sending filtered body to client", Id ), ex );
+                ServiceLog.Logger.Exception( String.Format( "{0} Error sending filtered body to client", Id ), ex );
                 EndSession();
             }
         }
@@ -551,7 +572,7 @@ namespace Gallatin.Core.Service
             try
             {
                 ServiceLog.Logger.Verbose("{0} Additional data needed from client to complete request. Waiting for mutex.", Id);
-                if (_connectingToServerEvent.WaitOne(CoreSettings.Instance.ConnectTimeout))
+                if (_connectingToServerEvent.WaitOne(_settings.ConnectTimeout))
                 {
                     // Ignore the event the parser requires requesting more data if we are changing over to an SSL tunnel
                     if (_requestHeader != null && !_requestHeader.IsSsl)
@@ -567,7 +588,7 @@ namespace Gallatin.Core.Service
             }
             catch ( Exception ex )
             {
-                ServiceLog.Logger.Exception(string.Format("{0} Error handling additional data request from client", Id), ex);
+                ServiceLog.Logger.Exception(String.Format("{0} Error handling additional data request from client", Id), ex);
                 EndSession();
             }
         }
@@ -590,10 +611,32 @@ namespace Gallatin.Core.Service
             }
             catch ( Exception ex )
             {
-                ServiceLog.Logger.Exception(string.Format("{0} Error handling data from client", Id), ex);
+                ServiceLog.Logger.Exception(String.Format("{0} Error handling data from client", Id), ex);
                 EndSession();
             }
 
+        }
+
+        private object _resettingObjectMutex = new object();
+
+        public void Reset()
+        {
+            lock (_resettingObjectMutex)
+            {
+                EndSession();
+
+                _clientParser = null;
+                _connectingToServerEvent.Set();
+
+                _clientConnection = null;
+                _host = null;
+                _isFiltered = false;
+                _port = 0;
+                _requestHeader = null;
+                _responseHeader = null;
+                _serverConnection = null;
+                _serverParser = null;
+            }
         }
     }
 }

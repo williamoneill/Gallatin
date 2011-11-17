@@ -8,7 +8,7 @@ namespace Gallatin.Core.Service
     /// Interface for proxy client sessions
     /// </summary>
     [ContractClass(typeof(ProxySessionContract))]
-    public interface IProxySession
+    public interface IProxySession : IPooledObject
     {
         /// <summary>
         /// Gets the session ID
@@ -41,5 +41,7 @@ namespace Gallatin.Core.Service
         {
             Contract.Requires(connection != null);
         }
+
+        public abstract void Reset();
     }
 }

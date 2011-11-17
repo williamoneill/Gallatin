@@ -1,10 +1,12 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
+using System.Diagnostics.Contracts;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using Gallatin.Contracts;
+using Gallatin.Core.Web;
 
 namespace Gallatin.Core.Service
 {
@@ -15,7 +17,17 @@ namespace Gallatin.Core.Service
         private readonly List<Func<IHttpResponse, string, byte[], byte[]>> _callbackList =
             new List<Func<IHttpResponse, string, byte[], byte[]>>();
 
+        private ICoreSettings _settings;
+
         #region IProxyFilter Members
+
+        [ImportingConstructor]
+        public ProxyFilter(ICoreSettings settings)
+        {
+            Contract.Requires(settings!=null);
+
+            _settings = settings;
+        }
 
         [ImportMany]
         public IEnumerable<IConnectionFilter> ConnectionFilters { get; set; }
@@ -23,24 +35,47 @@ namespace Gallatin.Core.Service
         [ImportMany]
         public IEnumerable<IResponseFilter> ResponseFilters { get; set; }
 
+        private static byte[] DecompressBody(IHttpResponse args, byte[] body)
+        {
+            string contentEncoding = args.Headers["content-encoding"];
+            if (contentEncoding != null
+                && contentEncoding.ToLower().Contains("gzip"))
+            {
+                ServiceLog.Logger.Verbose("Removing compression from HTTP response");
+
+                args.Headers.RemoveKeyValue("content-encoding", "gzip");
+                MemoryStream memoryStream = new MemoryStream(body);
+                using (GZipStream gZipStream = new GZipStream(memoryStream, CompressionMode.Decompress))
+                {
+                    MemoryStream newBody = new MemoryStream();
+                    gZipStream.CopyTo(newBody);
+
+                    body = new byte[newBody.Length];
+                    Array.Copy(newBody.ToArray(), body, body.Length);
+                    args.Headers.UpsertKeyValue("Content-Length", body.Length.ToString());
+                }
+            }
+            return body;
+        }
+
+
         public byte[] EvaluateResponseFiltersWithBody( IHttpResponse args, string connectionId, byte[] body )
         {
             byte[] filteredBody = null;
 
-            if ( body != null
-                 && body.Length > 0 )
+            if ( body != null && body.Length > 0 )
             {
+                ServiceLog.Logger.Verbose( "Evaluating body filters" );
+
                 // The body has been re-assembled. Remove the "chunked" header.
-                args.Headers.RemoveKeyValue( "transfer-encoding", "chunked" );
+                args.Headers.RemoveKeyValue("transfer-encoding", "chunked");
 
                 // Decompress the body so filters don't have to repeatedly do this themselves
-                body = DecompressBody( args, body );
-
-                ServiceLog.Logger.Verbose( "Evaluating body filters" );
+                body = DecompressBody(args, body);
 
                 foreach ( Func<IHttpResponse, string, byte[], byte[]> callback in _callbackList )
                 {
-                    filteredBody = callback( args, connectionId, body );
+                    filteredBody = callback(args, connectionId, body);
 
                     if ( filteredBody != null )
                     {
@@ -67,16 +102,21 @@ namespace Gallatin.Core.Service
 
         public bool TryEvaluateResponseFilters( IHttpResponse args, string connectionId, out string filterResponse )
         {
+            if (!_settings.FilteringEnabled)
+            {
+                filterResponse = null;
+                return true;
+            }
             string errorMessage = null;
 
             _callbackList.Clear();
 
-            foreach ( IResponseFilter filter in ResponseFilters.OrderBy( s => s.FilterSpeedType ) )
+            foreach (IResponseFilter filter in ResponseFilters.OrderBy(s => s.FilterSpeedType))
             {
                 Func<IHttpResponse, string, byte[], byte[]> callback;
-                string filterText = filter.EvaluateFilter( args, connectionId, out callback );
+                string filterText = filter.EvaluateFilter(args, connectionId, out callback);
 
-                if ( !string.IsNullOrEmpty( filterText ) )
+                if (!String.IsNullOrEmpty(filterText))
                 {
                     // Fail fast
                     errorMessage = filterText;
@@ -87,29 +127,29 @@ namespace Gallatin.Core.Service
                     break;
                 }
 
-                if ( callback != null )
+                if (callback != null)
                 {
-                    _callbackList.Add( callback );
+                    _callbackList.Add(callback);
                 }
             }
 
-            if ( !string.IsNullOrEmpty( errorMessage ) )
+            if (!String.IsNullOrEmpty(errorMessage))
             {
-                string body = string.Format( "<html><head><title>Gallatin Proxy - Response Filtered</title></head><body>{0}</body></html>",
-                                             errorMessage );
+                string body = String.Format("<html><head><title>Gallatin Proxy - Response Filtered</title></head><body>{0}</body></html>",
+                                                errorMessage);
 
                 filterResponse =
-                    string.Format( "HTTP/{0} 200 OK\r\nConnection: close\r\nContent length: {1}\r\nContent-Type: text/html\r\n\r\n{2}",
-                                   args.Version,
-                                   body.Length,
-                                   body );
+                    String.Format("HTTP/{0} 200 OK\r\nConnection: close\r\nContent length: {1}\r\nContent-Type: text/html\r\n\r\n{2}",
+                                    args.Version,
+                                    body.Length,
+                                    body);
             }
             else
             {
                 // Clear the filters that require the HTTP body if there will be no body. Filters should
                 // check this themselves. This is a catch-all. Without this, a bad filter could hang the proxy
                 // by waiting for a body that will never arrive.
-                if ( !args.HasBody )
+                if (!args.HasBody)
                 {
                     _callbackList.Clear();
                 }
@@ -118,52 +158,33 @@ namespace Gallatin.Core.Service
             }
 
             return _callbackList.Count == 0;
+                
         }
 
         public string EvaluateConnectionFilters( IHttpRequest args, string connectionId )
         {
-            string errorMessage = ConnectionFilters.OrderBy( s => s.FilterSpeedType )
-                .Select( filter => filter.EvaluateFilter( args, connectionId ) )
-                .FirstOrDefault( filterText => !string.IsNullOrEmpty( filterText ) );
-
-            if ( !string.IsNullOrEmpty( errorMessage ) )
+            if (_settings.FilteringEnabled)
             {
-                string body = string.Format(
-                    "<html><head><title>Gallatin Proxy - Connection Rejected</title></head><body>{0}</body></html>",
-                    errorMessage );
+                string errorMessage = ConnectionFilters.OrderBy(s => s.FilterSpeedType)
+                    .Select(filter => filter.EvaluateFilter(args, connectionId))
+                    .FirstOrDefault(filterText => !String.IsNullOrEmpty(filterText));
 
-                return string.Format( "HTTP/{0} 200 OK\r\nConnection: close\r\nContent length: {1}\r\nContent-Type: text/html\r\n\r\n{2}",
-                                      args.Version,
-                                      body.Length,
-                                      body );
+                if (!String.IsNullOrEmpty(errorMessage))
+                {
+                    string body = String.Format(
+                        "<html><head><title>Gallatin Proxy - Connection Rejected</title></head><body>{0}</body></html>",
+                        errorMessage);
+
+                    return String.Format("HTTP/{0} 200 OK\r\nConnection: close\r\nContent length: {1}\r\nContent-Type: text/html\r\n\r\n{2}",
+                                          args.Version,
+                                          body.Length,
+                                          body);
+                }
             }
 
             return null;
         }
 
         #endregion
-
-        private static byte[] DecompressBody( IHttpMessage args, byte[] body )
-        {
-            string contentEncoding = args.Headers["content-encoding"];
-            if ( contentEncoding != null
-                 && contentEncoding.ToLower().Contains( "gzip" ) )
-            {
-                ServiceLog.Logger.Verbose( "Removing compression from HTTP response" );
-
-                args.Headers.RemoveKeyValue( "content-encoding", "gzip" );
-                MemoryStream memoryStream = new MemoryStream( body );
-                using ( GZipStream gZipStream = new GZipStream( memoryStream, CompressionMode.Decompress ) )
-                {
-                    MemoryStream newBody = new MemoryStream();
-                    gZipStream.CopyTo( newBody );
-
-                    body = new byte[newBody.Length];
-                    Array.Copy( newBody.ToArray(), body, body.Length );
-                    args.Headers.UpsertKeyValue( "Content-Length", body.Length.ToString() );
-                }
-            }
-            return body;
-        }
     }
 }

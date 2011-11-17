@@ -1,6 +1,8 @@
 using System;
 using System.Diagnostics.Contracts;
 using System.Net.Sockets;
+using System.Threading;
+using System.ComponentModel.Composition;
 
 namespace Gallatin.Core.Service
 {
@@ -8,7 +10,7 @@ namespace Gallatin.Core.Service
     {
         private byte[] _receiveBuffer;
         private byte[] _sendBuffer;
-        private bool _shutdown;
+        private bool _hasShutdown;
 
         public NetworkFacade( Socket socket )
         {
@@ -42,37 +44,43 @@ namespace Gallatin.Core.Service
 
         public void BeginSend( byte[] buffer, Action<bool, INetworkFacade> callback )
         {
-            ServiceLog.Logger.Verbose( "{0} Sending data, len: {1}", Id, buffer.Length );
+            if (!_hasShutdown)
+            {
+                ServiceLog.Logger.Verbose("{0} Sending data, len: {1}", Id, buffer.Length);
 
-            _sendBuffer = buffer;
-            Socket.BeginSend(
-                _sendBuffer,
-                0,
-                _sendBuffer.Length,
-                SocketFlags.None,
-                HandleSend,
-                callback );
+                _sendBuffer = buffer;
+                Socket.BeginSend(
+                    _sendBuffer,
+                    0,
+                    _sendBuffer.Length,
+                    SocketFlags.None,
+                    HandleSend,
+                    callback);
+            }
         }
 
         public void BeginReceive( Action<bool, byte[], INetworkFacade> callback )
         {
-            ServiceLog.Logger.Verbose( "{0} Receiving data", Id );
+            const int BufferSize = 8192;
 
-            _receiveBuffer = new byte[CoreSettings.Instance.ReceiveBufferSize];
+            if (!_hasShutdown)
+            {
+                ServiceLog.Logger.Verbose("{0} Receiving data", Id);
 
-            Socket.BeginReceive(
-                _receiveBuffer,
-                0,
-                _receiveBuffer.Length,
-                SocketFlags.None,
-                HandleReceive,
-                callback );
+                _receiveBuffer = new byte[BufferSize];
+
+                Socket.BeginReceive(
+                    _receiveBuffer,
+                    0,
+                    _receiveBuffer.Length,
+                    SocketFlags.None,
+                    HandleReceive,
+                    callback);
+            }
         }
 
         public void BeginClose( Action<bool, INetworkFacade> callback )
         {
-            _shutdown = true;
-
             // After further reseach, this is not needed despite MSDN documentation.
             //_socket.Shutdown(SocketShutdown.Both);
 
@@ -88,7 +96,7 @@ namespace Gallatin.Core.Service
 
             Action<bool, INetworkFacade> callback = ar.AsyncState as Action<bool, INetworkFacade>;
 
-            if ( _shutdown )
+            if ( _hasShutdown )
             {
                 return;
             }
@@ -127,7 +135,7 @@ namespace Gallatin.Core.Service
 
             Action<bool, byte[], INetworkFacade> callback = ar.AsyncState as Action<bool, byte[], INetworkFacade>;
 
-            if ( _shutdown )
+            if ( _hasShutdown )
             {
                 return;
             }
@@ -165,6 +173,13 @@ namespace Gallatin.Core.Service
         {
             Contract.Requires(ar != null);
             Contract.Requires( ar.AsyncState is Action<bool, INetworkFacade> );
+
+            if (_hasShutdown)
+            {
+                return;
+            }
+
+            _hasShutdown = true;
 
             Action<bool, INetworkFacade> callback = ar.AsyncState as Action<bool, INetworkFacade>;
 

@@ -75,20 +75,19 @@ namespace Gallatin.Core.Web
                 // HTTP spec: do not change header order in proxy
                 int index = _headers.IndexOf( header );
 
-                // Check for the trailing ";" if there are multiple values for the key. E.g. "text/html;charset=utf-8"
-                Regex regex = new Regex( string.Format( @"\s*{0}\s*(;?)", value ), RegexOptions.IgnoreCase );
-
-                string newValue = regex.Replace( header.Value, "" );
-                newValue = newValue.TrimEnd( ';' );
+                string[] valueTokens = header.Value.Split(';');
+                string newValue = valueTokens
+                    .Where( valueToken => !valueToken.Equals( value ) )
+                    .Aggregate<string, string>( null, ( current, valueToken ) => current + ( valueToken + ";" ) );
 
                 // Remove the header. We will re-write it below. If the value ends up being empty then remove the 
                 // header from the collection.
-                _headers.Remove( header );
+                _headers.Remove(header);
 
                 // Still something left in the value? Add the key/value pair back, less the value we are removing.
                 if ( !string.IsNullOrEmpty( newValue ) )
                 {
-                    _headers.Insert( index, new KeyValuePair<string, string>( key, newValue ) );
+                    _headers.Insert( index, new KeyValuePair<string, string>( key, newValue.TrimEnd(';') ) );
                 }
             }
         }

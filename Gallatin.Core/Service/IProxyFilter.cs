@@ -104,7 +104,6 @@ namespace Gallatin.Core.Service
             Contract.Requires( args != null );
             Contract.Requires( !string.IsNullOrEmpty( connectionId ) );
             Contract.Requires( ResponseFilters != null );
-            Contract.Ensures( Contract.Result<byte[]>() != null );
 
             throw new NotImplementedException();
         }
