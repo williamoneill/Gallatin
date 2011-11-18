@@ -130,7 +130,7 @@ namespace Gallatin.Core.Tests.Service
         }
 
         [Test]
-        public void VerifyResponseFiltersNoCallback( [Values(true,false)] bool filterEnabled )
+        public void VerifyResponseFiltersNoCallback([Values(true, false)] bool filterEnabled, [Values(true, false)] bool isWhitelisted)
         {
             Mock<ICoreSettings> settings = new Mock<ICoreSettings>();
             settings.SetupGet( m => m.FilteringEnabled ).Returns( filterEnabled );
@@ -141,6 +141,16 @@ namespace Gallatin.Core.Tests.Service
             Mock<IHttpResponse> response = new Mock<IHttpResponse>();
             response.SetupAllProperties();
 
+            Mock<IHttpRequest> requestArgs = new Mock<IHttpRequest>();
+            requestArgs.SetupAllProperties();
+
+            // Whitelister
+            Mock<IWhitelistEvaluator> whiteLister = new Mock<IWhitelistEvaluator>();
+            whiteLister.Setup(m => m.IsWhitlisted(requestArgs.Object, "connectionid")).Returns(isWhitelisted);
+            List<IWhitelistEvaluator> whitelistEvaluators = new List<IWhitelistEvaluator>();
+            whitelistEvaluators.Add(whiteLister.Object);
+
+            // Filter under test
             Mock<IResponseFilter> mockFilter = new Mock<IResponseFilter>();
             mockFilter.SetupGet( s => s.FilterSpeedType ).Returns( FilterSpeedType.Remote );
             Func<IHttpResponse, string, byte[], byte[]> outParm = null;
@@ -148,13 +158,17 @@ namespace Gallatin.Core.Tests.Service
 
             filters.Add( mockFilter.Object );
             filter.ResponseFilters = filters;
+            filter.WhitelistEvaluators = whitelistEvaluators;
+
+            // Needed to set the internal whitelist to short-curcuit evaluation on response
+            filter.EvaluateConnectionFilters( requestArgs.Object, "connectionid" );
 
             string filterResponse;
             bool noBodyNeeded = filter.TryEvaluateResponseFilters( response.Object, "connectionid", out filterResponse );
 
             Assert.That( noBodyNeeded, Is.True );
 
-            if (filterEnabled)
+            if (filterEnabled && !isWhitelisted)
             {
                 Assert.That(filterResponse,
                              Is.EqualTo(
@@ -167,7 +181,7 @@ namespace Gallatin.Core.Tests.Service
         }
 
         [Test]
-        public void VerifyResponseSort([Values(true, false)] bool filterEnabled)
+        public void VerifyConnectionFilterSort([Values(true, false)] bool filterEnabled, [Values(true, false)] bool isWhitelisted)
         {
             Mock<ICoreSettings> settings = new Mock<ICoreSettings>();
             settings.SetupGet(m => m.FilteringEnabled).Returns(filterEnabled);
@@ -177,6 +191,11 @@ namespace Gallatin.Core.Tests.Service
 
             Mock<IHttpRequest> requestArgs = new Mock<IHttpRequest>();
             requestArgs.SetupAllProperties();
+
+            Mock<IWhitelistEvaluator> whiteLister = new Mock<IWhitelistEvaluator>();
+            whiteLister.Setup(m => m.IsWhitlisted(requestArgs.Object, "whatever")).Returns(isWhitelisted);
+            List<IWhitelistEvaluator> whitelistEvaluators = new List<IWhitelistEvaluator>();
+            whitelistEvaluators.Add(whiteLister.Object);
 
             Mock<IConnectionFilter> mockFilter = new Mock<IConnectionFilter>();
             mockFilter.SetupGet( s => s.FilterSpeedType ).Returns( FilterSpeedType.Remote );
@@ -188,10 +207,11 @@ namespace Gallatin.Core.Tests.Service
             filters.Add( mockFilter.Object );
             filters.Add( mockFilter2.Object );
             filter.ConnectionFilters = filters;
+            filter.WhitelistEvaluators = whitelistEvaluators;
 
             string output = filter.EvaluateConnectionFilters( requestArgs.Object, "whatever" );
 
-            if (filterEnabled)
+            if (filterEnabled && !isWhitelisted)
             {
                 Assert.That(output,
                              Is.EqualTo(
@@ -202,5 +222,6 @@ namespace Gallatin.Core.Tests.Service
                 Assert.That( output, Is.Null );
             }
         }
+
     }
 }

@@ -36,6 +36,9 @@ namespace Gallatin.Core.Service
         [ImportMany]
         public IEnumerable<IResponseFilter> ResponseFilters { get; set; }
 
+        [ImportMany]
+        public IEnumerable<IWhitelistEvaluator> WhitelistEvaluators { get; set; }
+
         private static byte[] DecompressBody(IHttpResponse args, byte[] body)
         {
             string contentEncoding = args.Headers["content-encoding"];
@@ -102,14 +105,42 @@ namespace Gallatin.Core.Service
             return filteredBody;
         }
 
+        private List<string> _whiteListedConnections = new List<string>();
+
+        private bool IsWhitelisted( IHttpRequest request, string connectionId )
+        {
+            if (WhitelistEvaluators != null && WhitelistEvaluators.Count() > 0)
+            {
+                bool isWhiteListed = WhitelistEvaluators
+                    .OrderBy( s => s.FilterSpeedType )
+                    .Any( whitelistEvaluator => whitelistEvaluator.IsWhitlisted( request, connectionId ) );
+
+                if (isWhiteListed)
+                {
+                    _whiteListedConnections.Add(connectionId);
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
 
         public bool TryEvaluateResponseFilters( IHttpResponse args, string connectionId, out string filterResponse )
         {
-            if (!_settings.FilteringEnabled)
+            if (!_settings.FilteringEnabled || ResponseFilters == null || ResponseFilters.Count() == 0)
             {
                 filterResponse = null;
                 return true;
             }
+
+            if (_whiteListedConnections.Contains(connectionId))
+            {
+                _whiteListedConnections.Remove( connectionId );
+                filterResponse = null;
+                return true;
+            }
+
             string errorMessage = null;
 
             _callbackList.Clear();
@@ -166,22 +197,28 @@ namespace Gallatin.Core.Service
 
         public string EvaluateConnectionFilters( IHttpRequest args, string connectionId )
         {
-            if (_settings.FilteringEnabled)
+            if (!_settings.FilteringEnabled || IsWhitelisted(args, connectionId))
             {
-                string errorMessage = ConnectionFilters.OrderBy(s => s.FilterSpeedType)
-                    .Select(filter => filter.EvaluateFilter(args, connectionId))
-                    .FirstOrDefault(filterText => !String.IsNullOrEmpty(filterText));
+                return null;
+            }
 
-                if (!String.IsNullOrEmpty(errorMessage))
+            if ( ConnectionFilters !=null && ConnectionFilters.Count() > 0 )
+            {
+                string errorMessage = ConnectionFilters.OrderBy( s => s.FilterSpeedType )
+                    .Select( filter => filter.EvaluateFilter( args, connectionId ) )
+                    .FirstOrDefault( filterText => !String.IsNullOrEmpty( filterText ) );
+
+                if ( !String.IsNullOrEmpty( errorMessage ) )
                 {
                     string body = String.Format(
                         "<html><head><title>Gallatin Proxy - Connection Rejected</title></head><body>{0}</body></html>",
-                        errorMessage);
+                        errorMessage );
 
-                    return String.Format("HTTP/{0} 200 OK\r\nConnection: close\r\nContent length: {1}\r\nContent-Type: text/html\r\n\r\n{2}",
-                                          args.Version,
-                                          body.Length,
-                                          body);
+                    return
+                        String.Format( "HTTP/{0} 200 OK\r\nConnection: close\r\nContent length: {1}\r\nContent-Type: text/html\r\n\r\n{2}",
+                                       args.Version,
+                                       body.Length,
+                                       body );
                 }
             }
 

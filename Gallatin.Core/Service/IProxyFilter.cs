@@ -22,6 +22,11 @@ namespace Gallatin.Core.Service
         IEnumerable<IResponseFilter> ResponseFilters { get; set; }
 
         /// <summary>
+        /// Gets and sets the whitelist evaluators
+        /// </summary>
+        IEnumerable<IWhitelistEvaluator> WhitelistEvaluators { get; set; }
+
+        /// <summary>
         /// Evaluates the connection filters before a connection is established. This is not checked again
         /// for persistent connections.
         /// </summary>
@@ -50,6 +55,7 @@ namespace Gallatin.Core.Service
         /// <param name="body">HTTP body</param>
         /// <returns><c>null</c> if no filter was applied; otherwise, the filtered response</returns>
         byte[] EvaluateResponseFiltersWithBody( IHttpResponse args, string connectionId, byte[] body );
+
     }
 
     [ContractClassFor( typeof (IProxyFilter) )]
@@ -81,11 +87,12 @@ namespace Gallatin.Core.Service
             }
         }
 
+        public abstract IEnumerable<IWhitelistEvaluator> WhitelistEvaluators { get; set; }
+
         public string EvaluateConnectionFilters( IHttpRequest args, string connectionId )
         {
             Contract.Requires( args != null );
             Contract.Requires( !string.IsNullOrEmpty( connectionId ) );
-            Contract.Requires( ConnectionFilters != null );
 
             throw new NotImplementedException();
         }
@@ -94,7 +101,6 @@ namespace Gallatin.Core.Service
         {
             Contract.Requires( args != null );
             Contract.Requires( !string.IsNullOrEmpty( connectionId ) );
-            Contract.Requires( ResponseFilters != null );
 
             throw new NotImplementedException();
         }
@@ -103,7 +109,6 @@ namespace Gallatin.Core.Service
         {
             Contract.Requires( args != null );
             Contract.Requires( !string.IsNullOrEmpty( connectionId ) );
-            Contract.Requires( ResponseFilters != null );
 
             throw new NotImplementedException();
         }
