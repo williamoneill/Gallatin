@@ -5,6 +5,7 @@ using System.Diagnostics.Contracts;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Text;
 using Gallatin.Contracts;
 using Gallatin.Core.Web;
 
@@ -72,6 +73,8 @@ namespace Gallatin.Core.Service
 
                 // Decompress the body so filters don't have to repeatedly do this themselves
                 body = DecompressBody(args, body);
+
+                ServiceLog.Logger.Verbose( () => Encoding.UTF8.GetString(body));
 
                 foreach ( Func<IHttpResponse, string, byte[], byte[]> callback in _callbackList )
                 {

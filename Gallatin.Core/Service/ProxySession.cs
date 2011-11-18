@@ -416,7 +416,7 @@ namespace Gallatin.Core.Service
 
                 if (_responseHeader != null && !_responseHeader.IsPersistent)
                 {
-                    ServiceLog.Logger.Verbose( "{0} Ending connection (explicit close)", Id );
+                    ServiceLog.Logger.Info( "{0} Ending connection, explicit close in HTTP header", Id );
                     EndSession();
                 }
                 else
@@ -547,7 +547,11 @@ namespace Gallatin.Core.Service
                 {
                     ServiceLog.Logger.Info( "{0} *** PERFORMANCE HIT *** Response filter activated. Body modified.", Id );
                     _isFiltered = true;
-                    _clientConnection.BeginSend( filter, HandleDataSentToClient );
+
+                    if (filter.Length > 0)
+                    {
+                        _clientConnection.BeginSend(filter, HandleDataSentToClient);
+                    }
                 }
                 else
                 {
