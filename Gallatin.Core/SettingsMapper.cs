@@ -64,6 +64,8 @@ namespace Gallatin.Core
             settings.ConnectTimeout = SetDefaultValue(settings.ConnectTimeout, 0, 30000);
             settings.ListenAddress = SetDefaultValue(settings.ListenAddress, null, "127.0.0.1");
             settings.ProxyClientListenerBacklog = SetDefaultValue(settings.ProxyClientListenerBacklog, 0, 30);
+            settings.ProxyClientListenerBacklog = SetDefaultValue(settings.ProxyClientListenerBacklog, 0, 30);
+            settings.FilteringEnabled = !settings.FilteringEnabled.HasValue || settings.FilteringEnabled.Value;
 
             // Extra save...just in case we created a new instance in the above else block
             Save( settings );

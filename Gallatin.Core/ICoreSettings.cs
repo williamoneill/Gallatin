@@ -38,6 +38,6 @@
         /// <summary>
         /// Gets and sets a flag indicating if filtering is applied
         /// </summary>
-        bool FilteringEnabled { get; set; }
+        bool? FilteringEnabled { get; set; }
     }
 }

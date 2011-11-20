@@ -1,0 +1,1 @@
+Gallatin uses DotNetZip for file decompression. The DotNetZipLicense.txt contains the license for this software. For more info, please see http://dotnetzip.codeplex.com/

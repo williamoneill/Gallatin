@@ -45,7 +45,7 @@ namespace Gallatin.Core
         /// <summary>
         /// Gets and sets a flag indicating if filtering is applied
         /// </summary>
-        public bool FilteringEnabled
+        public bool? FilteringEnabled
         {
             get; set;
         }

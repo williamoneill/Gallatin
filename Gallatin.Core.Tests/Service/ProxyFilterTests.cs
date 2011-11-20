@@ -130,7 +130,9 @@ namespace Gallatin.Core.Tests.Service
         }
 
         [Test]
-        public void VerifyResponseFiltersNoCallback([Values(true, false)] bool filterEnabled, [Values(true, false)] bool isWhitelisted)
+        public void VerifyResponseFiltersNoCallback(
+            [Values(true, false)] bool filterEnabled, 
+            [Values(true, false)] bool isWhitelisted)
         {
             Mock<ICoreSettings> settings = new Mock<ICoreSettings>();
             settings.SetupGet( m => m.FilteringEnabled ).Returns( filterEnabled );
@@ -168,7 +170,7 @@ namespace Gallatin.Core.Tests.Service
 
             Assert.That( noBodyNeeded, Is.True );
 
-            if (filterEnabled && !isWhitelisted)
+            if (filterEnabled && !isWhitelisted )
             {
                 Assert.That(filterResponse,
                              Is.EqualTo(

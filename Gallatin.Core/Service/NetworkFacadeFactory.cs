@@ -53,6 +53,8 @@ namespace Gallatin.Core.Service
                                   SocketType.Stream,
                                   ProtocolType.Tcp );
 
+            _socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.Linger, false);
+
             IPHostEntry dnsEntry = Dns.GetHostEntry( address );
 
             // For now, we only accept addresses in dotted quad notation that reside on the host.

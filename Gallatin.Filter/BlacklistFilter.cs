@@ -31,14 +31,14 @@ namespace Gallatin.Filter
                     request.Path += "&safe=strict";
                 }
 
-                else if ( contentType != null && contentType.Equals( "text/html" )
-                          && ( host.StartsWith( "ad." ) || host.StartsWith( "ads." ) ) )
-                {
-                    return
-                        string.Format(
-                            "<div style='background:white; padding:5; margin:5; font-size: 10pt; font-weight: bold; color: #000;'>Gallatin Proxy - Advertisement blocked to host: {0}</div>",
-                            host );
-                }
+                //else if ( contentType != null && contentType.Equals( "text/html" )
+                //          && ( host.StartsWith( "ad." ) || host.StartsWith( "ads." ) ) )
+                //{
+                //    return
+                //        string.Format(
+                //            "<div style='background:white; padding:5; margin:5; font-size: 10pt; font-weight: bold; color: #000;'>Gallatin Proxy - Advertisement blocked to host: {0}</div>",
+                //            host );
+                //}
 
                 //else
                 //{

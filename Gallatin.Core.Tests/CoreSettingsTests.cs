@@ -28,6 +28,7 @@ namespace Gallatin.Core.Tests
 
             Assert.That(settings.MaxNumberClients, Is.EqualTo(100));
             Assert.That(settings.ReceiveBufferSize, Is.EqualTo(8192));
+            Assert.That(settings.FilteringEnabled.Value, Is.True);
 
             Assert.That( File.Exists( SettingsMapper.SettingsFileName ), Is.True );
         }

@@ -117,7 +117,10 @@ namespace Gallatin.Core.Service
 
                 if (isWhiteListed)
                 {
-                    _whiteListedConnections.Add(connectionId);
+                    lock (_whiteListedConnections)
+                    {
+                        _whiteListedConnections.Add(connectionId);
+                    }
                     return true;
                 }
             }
@@ -128,17 +131,20 @@ namespace Gallatin.Core.Service
 
         public bool TryEvaluateResponseFilters( IHttpResponse args, string connectionId, out string filterResponse )
         {
-            if (!_settings.FilteringEnabled || ResponseFilters == null || ResponseFilters.Count() == 0)
+            if (!_settings.FilteringEnabled.Value || ResponseFilters == null || ResponseFilters.Count() == 0)
             {
                 filterResponse = null;
                 return true;
             }
 
-            if (_whiteListedConnections.Contains(connectionId))
+            lock (_whiteListedConnections)
             {
-                _whiteListedConnections.Remove( connectionId );
-                filterResponse = null;
-                return true;
+                if (_whiteListedConnections.Contains(connectionId))
+                {
+                    _whiteListedConnections.Remove(connectionId);
+                    filterResponse = null;
+                    return true;
+                }
             }
 
             string errorMessage = null;
@@ -197,7 +203,7 @@ namespace Gallatin.Core.Service
 
         public string EvaluateConnectionFilters( IHttpRequest args, string connectionId )
         {
-            if (!_settings.FilteringEnabled || IsWhitelisted(args, connectionId))
+            if (!_settings.FilteringEnabled.Value || IsWhitelisted(args, connectionId))
             {
                 return null;
             }
