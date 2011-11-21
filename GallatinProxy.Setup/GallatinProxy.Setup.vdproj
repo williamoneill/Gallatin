@@ -15,20 +15,32 @@
     {
         "Entry"
         {
+        "MsmKey" = "8:_06DCE5492233FDD6649FF5624162AE92"
+        "OwnerKey" = "8:_15C3772973374C77A43CEA302899F545"
+        "MsmSig" = "8:_UNDEFINED"
+        }
+        "Entry"
+        {
+        "MsmKey" = "8:_06DCE5492233FDD6649FF5624162AE92"
+        "OwnerKey" = "8:_DFFEF843E6E74F36811DEF3A581374CD"
+        "MsmSig" = "8:_UNDEFINED"
+        }
+        "Entry"
+        {
+        "MsmKey" = "8:_06DCE5492233FDD6649FF5624162AE92"
+        "OwnerKey" = "8:_B330B32B08824F1985E4907153DF602D"
+        "MsmSig" = "8:_UNDEFINED"
+        }
+        "Entry"
+        {
+        "MsmKey" = "8:_06DCE5492233FDD6649FF5624162AE92"
+        "OwnerKey" = "8:_CDCB4483B6EF485863F205F9EBC528E8"
+        "MsmSig" = "8:_UNDEFINED"
+        }
+        "Entry"
+        {
         "MsmKey" = "8:_15C3772973374C77A43CEA302899F545"
         "OwnerKey" = "8:_UNDEFINED"
-        "MsmSig" = "8:_UNDEFINED"
-        }
-        "Entry"
-        {
-        "MsmKey" = "8:_1835BD15E9A2DDF1DE84EAD802CEF396"
-        "OwnerKey" = "8:_A2160E914C054294AD64E15C501906A4"
-        "MsmSig" = "8:_UNDEFINED"
-        }
-        "Entry"
-        {
-        "MsmKey" = "8:_1835BD15E9A2DDF1DE84EAD802CEF396"
-        "OwnerKey" = "8:_15C3772973374C77A43CEA302899F545"
         "MsmSig" = "8:_UNDEFINED"
         }
         "Entry"
@@ -39,37 +51,31 @@
         }
         "Entry"
         {
-        "MsmKey" = "8:_44FEF30ADBF22A8BF96AB048BA0EDD6D"
-        "OwnerKey" = "8:_A2160E914C054294AD64E15C501906A4"
-        "MsmSig" = "8:_UNDEFINED"
-        }
-        "Entry"
-        {
-        "MsmKey" = "8:_44FEF30ADBF22A8BF96AB048BA0EDD6D"
-        "OwnerKey" = "8:_B330B32B08824F1985E4907153DF602D"
-        "MsmSig" = "8:_UNDEFINED"
-        }
-        "Entry"
-        {
-        "MsmKey" = "8:_44FEF30ADBF22A8BF96AB048BA0EDD6D"
+        "MsmKey" = "8:_83C5411BA738941E16057869C518FB72"
         "OwnerKey" = "8:_15C3772973374C77A43CEA302899F545"
         "MsmSig" = "8:_UNDEFINED"
         }
         "Entry"
         {
-        "MsmKey" = "8:_44FEF30ADBF22A8BF96AB048BA0EDD6D"
-        "OwnerKey" = "8:_1835BD15E9A2DDF1DE84EAD802CEF396"
-        "MsmSig" = "8:_UNDEFINED"
-        }
-        "Entry"
-        {
-        "MsmKey" = "8:_A2160E914C054294AD64E15C501906A4"
+        "MsmKey" = "8:_B330B32B08824F1985E4907153DF602D"
         "OwnerKey" = "8:_UNDEFINED"
         "MsmSig" = "8:_UNDEFINED"
         }
         "Entry"
         {
-        "MsmKey" = "8:_B330B32B08824F1985E4907153DF602D"
+        "MsmKey" = "8:_CDCB4483B6EF485863F205F9EBC528E8"
+        "OwnerKey" = "8:_15C3772973374C77A43CEA302899F545"
+        "MsmSig" = "8:_UNDEFINED"
+        }
+        "Entry"
+        {
+        "MsmKey" = "8:_CDCB4483B6EF485863F205F9EBC528E8"
+        "OwnerKey" = "8:_DFFEF843E6E74F36811DEF3A581374CD"
+        "MsmSig" = "8:_UNDEFINED"
+        }
+        "Entry"
+        {
+        "MsmKey" = "8:_DFFEF843E6E74F36811DEF3A581374CD"
         "OwnerKey" = "8:_UNDEFINED"
         "MsmSig" = "8:_UNDEFINED"
         }
@@ -88,19 +94,13 @@
         "Entry"
         {
         "MsmKey" = "8:_UNDEFINED"
-        "OwnerKey" = "8:_A2160E914C054294AD64E15C501906A4"
+        "OwnerKey" = "8:_15C3772973374C77A43CEA302899F545"
         "MsmSig" = "8:_UNDEFINED"
         }
         "Entry"
         {
         "MsmKey" = "8:_UNDEFINED"
-        "OwnerKey" = "8:_1835BD15E9A2DDF1DE84EAD802CEF396"
-        "MsmSig" = "8:_UNDEFINED"
-        }
-        "Entry"
-        {
-        "MsmKey" = "8:_UNDEFINED"
-        "OwnerKey" = "8:_44FEF30ADBF22A8BF96AB048BA0EDD6D"
+        "OwnerKey" = "8:_DFFEF843E6E74F36811DEF3A581374CD"
         "MsmSig" = "8:_UNDEFINED"
         }
         "Entry"
@@ -118,7 +118,19 @@
         "Entry"
         {
         "MsmKey" = "8:_UNDEFINED"
-        "OwnerKey" = "8:_15C3772973374C77A43CEA302899F545"
+        "OwnerKey" = "8:_83C5411BA738941E16057869C518FB72"
+        "MsmSig" = "8:_UNDEFINED"
+        }
+        "Entry"
+        {
+        "MsmKey" = "8:_UNDEFINED"
+        "OwnerKey" = "8:_CDCB4483B6EF485863F205F9EBC528E8"
+        "MsmSig" = "8:_UNDEFINED"
+        }
+        "Entry"
+        {
+        "MsmKey" = "8:_UNDEFINED"
+        "OwnerKey" = "8:_06DCE5492233FDD6649FF5624162AE92"
         "MsmSig" = "8:_UNDEFINED"
         }
     }
@@ -139,6 +151,14 @@
         "PrivateKeyFile" = "8:"
         "TimeStampServer" = "8:"
         "InstallerBootstrapper" = "3:2"
+            "BootstrapperCfg:{63ACBE69-63AA-4F98-B2B6-99F9E24495F2}"
+            {
+            "Enabled" = "11:TRUE"
+            "PromptEnabled" = "11:TRUE"
+            "PrerequisitesLocation" = "2:1"
+            "Url" = "8:"
+            "ComponentsUrl" = "8:"
+            }
         }
         "Release"
         {
@@ -155,6 +175,14 @@
         "PrivateKeyFile" = "8:"
         "TimeStampServer" = "8:"
         "InstallerBootstrapper" = "3:2"
+            "BootstrapperCfg:{63ACBE69-63AA-4F98-B2B6-99F9E24495F2}"
+            {
+            "Enabled" = "11:TRUE"
+            "PromptEnabled" = "11:TRUE"
+            "PrerequisitesLocation" = "2:1"
+            "Url" = "8:"
+            "ComponentsUrl" = "8:"
+            }
         }
     }
     "Deployable"
@@ -240,20 +268,20 @@
         }
         "File"
         {
-            "{9F6F8455-1EF1-4B85-886A-4223BCC8E7F7}:_1835BD15E9A2DDF1DE84EAD802CEF396"
+            "{9F6F8455-1EF1-4B85-886A-4223BCC8E7F7}:_06DCE5492233FDD6649FF5624162AE92"
             {
             "AssemblyRegister" = "3:1"
             "AssemblyIsInGAC" = "11:FALSE"
-            "AssemblyAsmDisplayName" = "8:Gallatin.Core, Version=0.1.0.2, Culture=neutral, processorArchitecture=MSIL"
+            "AssemblyAsmDisplayName" = "8:Gallatin.Contracts, Version=0.1.0.3, Culture=neutral, processorArchitecture=MSIL"
                 "ScatterAssemblies"
                 {
-                    "_1835BD15E9A2DDF1DE84EAD802CEF396"
+                    "_06DCE5492233FDD6649FF5624162AE92"
                     {
-                    "Name" = "8:Gallatin.Core.dll"
+                    "Name" = "8:Gallatin.Contracts.dll"
                     "Attributes" = "3:512"
                     }
                 }
-            "SourcePath" = "8:Gallatin.Core.dll"
+            "SourcePath" = "8:Gallatin.Contracts.dll"
             "TargetName" = "8:"
             "Tag" = "8:"
             "Folder" = "8:_44B8E5FAD6A34DCDB99F814771A1621A"
@@ -291,20 +319,51 @@
             "IsDependency" = "11:FALSE"
             "IsolateTo" = "8:"
             }
-            "{9F6F8455-1EF1-4B85-886A-4223BCC8E7F7}:_44FEF30ADBF22A8BF96AB048BA0EDD6D"
+            "{9F6F8455-1EF1-4B85-886A-4223BCC8E7F7}:_83C5411BA738941E16057869C518FB72"
             {
             "AssemblyRegister" = "3:1"
             "AssemblyIsInGAC" = "11:FALSE"
-            "AssemblyAsmDisplayName" = "8:Gallatin.Contracts, Version=0.1.0.2, Culture=neutral, processorArchitecture=MSIL"
+            "AssemblyAsmDisplayName" = "8:Ionic.Zip, Version=1.9.1.8, Culture=neutral, PublicKeyToken=edbe51ad942a3f5c, processorArchitecture=MSIL"
                 "ScatterAssemblies"
                 {
-                    "_44FEF30ADBF22A8BF96AB048BA0EDD6D"
+                    "_83C5411BA738941E16057869C518FB72"
                     {
-                    "Name" = "8:Gallatin.Contracts.dll"
+                    "Name" = "8:Ionic.Zip.dll"
                     "Attributes" = "3:512"
                     }
                 }
-            "SourcePath" = "8:Gallatin.Contracts.dll"
+            "SourcePath" = "8:Ionic.Zip.dll"
+            "TargetName" = "8:"
+            "Tag" = "8:"
+            "Folder" = "8:_44B8E5FAD6A34DCDB99F814771A1621A"
+            "Condition" = "8:"
+            "Transitive" = "11:FALSE"
+            "Vital" = "11:TRUE"
+            "ReadOnly" = "11:FALSE"
+            "Hidden" = "11:FALSE"
+            "System" = "11:FALSE"
+            "Permanent" = "11:FALSE"
+            "SharedLegacy" = "11:FALSE"
+            "PackageAs" = "3:1"
+            "Register" = "3:1"
+            "Exclude" = "11:FALSE"
+            "IsDependency" = "11:TRUE"
+            "IsolateTo" = "8:"
+            }
+            "{9F6F8455-1EF1-4B85-886A-4223BCC8E7F7}:_CDCB4483B6EF485863F205F9EBC528E8"
+            {
+            "AssemblyRegister" = "3:1"
+            "AssemblyIsInGAC" = "11:FALSE"
+            "AssemblyAsmDisplayName" = "8:Gallatin.Core, Version=0.1.0.3, Culture=neutral, processorArchitecture=MSIL"
+                "ScatterAssemblies"
+                {
+                    "_CDCB4483B6EF485863F205F9EBC528E8"
+                    {
+                    "Name" = "8:Gallatin.Core.dll"
+                    "Attributes" = "3:512"
+                    }
+                }
+            "SourcePath" = "8:Gallatin.Core.dll"
             "TargetName" = "8:"
             "Tag" = "8:"
             "Folder" = "8:_44B8E5FAD6A34DCDB99F814771A1621A"
@@ -942,7 +1001,7 @@
         {
             "{5259A561-127C-4D43-A0A1-72F10C7B3BF8}:_15C3772973374C77A43CEA302899F545"
             {
-            "SourcePath" = "8:..\\Gallatin.Service\\obj\\x86\\Debug\\Gallatin.Service.exe"
+            "SourcePath" = "8:..\\Gallatin.Service\\obj\\x86\\Release\\Gallatin.Service.exe"
             "TargetName" = "8:"
             "Tag" = "8:"
             "Folder" = "8:_44B8E5FAD6A34DCDB99F814771A1621A"
@@ -968,37 +1027,9 @@
                 {
                 }
             }
-            "{5259A561-127C-4D43-A0A1-72F10C7B3BF8}:_A2160E914C054294AD64E15C501906A4"
-            {
-            "SourcePath" = "8:..\\Runner\\obj\\x86\\Debug\\Gallatin.Runner.exe"
-            "TargetName" = "8:"
-            "Tag" = "8:"
-            "Folder" = "8:_7CA64F76E2844F3AAF73E19F3D787A59"
-            "Condition" = "8:"
-            "Transitive" = "11:FALSE"
-            "Vital" = "11:TRUE"
-            "ReadOnly" = "11:FALSE"
-            "Hidden" = "11:FALSE"
-            "System" = "11:FALSE"
-            "Permanent" = "11:FALSE"
-            "SharedLegacy" = "11:FALSE"
-            "PackageAs" = "3:1"
-            "Register" = "3:1"
-            "Exclude" = "11:FALSE"
-            "IsDependency" = "11:FALSE"
-            "IsolateTo" = "8:"
-            "ProjectOutputGroupRegister" = "3:1"
-            "OutputConfiguration" = "8:"
-            "OutputGroupCanonicalName" = "8:Built"
-            "OutputProjectGuid" = "8:{8F511FC1-69E6-4DCD-857F-932CFD8723C3}"
-            "ShowKeyOutput" = "11:TRUE"
-                "ExcludeFilters"
-                {
-                }
-            }
             "{5259A561-127C-4D43-A0A1-72F10C7B3BF8}:_B330B32B08824F1985E4907153DF602D"
             {
-            "SourcePath" = "8:..\\Gallatin.Filter\\obj\\Debug\\Gallatin.Filter.dll"
+            "SourcePath" = "8:..\\Gallatin.Filter\\obj\\Release\\Gallatin.Filter.dll"
             "TargetName" = "8:"
             "Tag" = "8:"
             "Folder" = "8:_65417E1CF8714E9891895E87A97798F7"
@@ -1024,9 +1055,37 @@
                 {
                 }
             }
+            "{5259A561-127C-4D43-A0A1-72F10C7B3BF8}:_DFFEF843E6E74F36811DEF3A581374CD"
+            {
+            "SourcePath" = "8:..\\Gallatin.Runner\\obj\\x86\\Release\\Gallatin.Runner.exe"
+            "TargetName" = "8:"
+            "Tag" = "8:"
+            "Folder" = "8:_7CA64F76E2844F3AAF73E19F3D787A59"
+            "Condition" = "8:"
+            "Transitive" = "11:FALSE"
+            "Vital" = "11:TRUE"
+            "ReadOnly" = "11:FALSE"
+            "Hidden" = "11:FALSE"
+            "System" = "11:FALSE"
+            "Permanent" = "11:FALSE"
+            "SharedLegacy" = "11:FALSE"
+            "PackageAs" = "3:1"
+            "Register" = "3:1"
+            "Exclude" = "11:FALSE"
+            "IsDependency" = "11:FALSE"
+            "IsolateTo" = "8:"
+            "ProjectOutputGroupRegister" = "3:1"
+            "OutputConfiguration" = "8:"
+            "OutputGroupCanonicalName" = "8:Built"
+            "OutputProjectGuid" = "8:{8F511FC1-69E6-4DCD-857F-932CFD8723C3}"
+            "ShowKeyOutput" = "11:TRUE"
+                "ExcludeFilters"
+                {
+                }
+            }
             "{5259A561-127C-4D43-A0A1-72F10C7B3BF8}:_FF772656142E44E7B221CC14F42E77D2"
             {
-            "SourcePath" = "8:..\\Gallatin.Contracts\\obj\\Debug\\Gallatin.Contracts.dll"
+            "SourcePath" = "8:..\\Gallatin.Contracts\\obj\\Release\\Gallatin.Contracts.dll"
             "TargetName" = "8:"
             "Tag" = "8:"
             "Folder" = "8:_65417E1CF8714E9891895E87A97798F7"

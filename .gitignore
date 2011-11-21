@@ -9,3 +9,6 @@ obj
 debug
 release
 packages
+Distribution
+*.dgml
+*.vsmdi

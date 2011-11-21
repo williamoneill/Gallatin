@@ -28,14 +28,24 @@
         /// </summary>
         private void InitializeComponent()
         {
+            this.GallatinEventLog = new System.Diagnostics.EventLog();
+            ((System.ComponentModel.ISupportInitialize)(this.GallatinEventLog)).BeginInit();
+            // 
+            // GallatinEventLog
+            // 
+            this.GallatinEventLog.Log = "Application";
+            this.GallatinEventLog.Source = "Gallatin Proxy";
             // 
             // GallatinProxy
             // 
             this.ServiceName = "GallatinProxy";
+            ((System.ComponentModel.ISupportInitialize)(this.GallatinEventLog)).EndInit();
 
         }
 
         #endregion
+
+        private System.Diagnostics.EventLog GallatinEventLog;
 
 
 

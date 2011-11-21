@@ -32,33 +32,51 @@ namespace Gallatin.Service
             {
                 if (AutoUpdater.CheckForUpdates(new ManifestProvider()))
                 {
+                    GallatinEventLog.WriteEntry(
+                        "Updates found. Downloading updates and restarting proxy server.", 
+                        EventLogEntryType.Information);
+
                     StopFromDomain();
-                    Thread.Sleep(5000);
                     StartInDomain();
                 }
             }
-            catch
+            catch( Exception ex )
             {
+                GallatinEventLog.WriteEntry( 
+                    "An error was encountered when trying to auto-update assemblies. " + ex.Message, 
+                    EventLogEntryType.Error );
             }
         }
 
         private void StartInDomain()
         {
+            GallatinEventLog.WriteEntry("Starting Gallatin Proxy", EventLogEntryType.Information);
+
             AppDomainSetup appDomainSetup = new AppDomainSetup();
             appDomainSetup.ApplicationName = "GallatinProxyAppDomain";
             appDomainSetup.ShadowCopyFiles = "true";
 
             _domain = AppDomain.CreateDomain("GallatinDomain", AppDomain.CurrentDomain.Evidence, appDomainSetup);
+            _domain.UnhandledException += HandleDomainUnhandledException;
             _domain.InitializeLifetimeService();
             _service = (IProxyService)_domain.CreateInstanceAndUnwrap("Gallatin.Core", "Gallatin.Core.Service.CrossDomainProxyService");
             _service.Start();
+        }
+
+        void HandleDomainUnhandledException(object sender, UnhandledExceptionEventArgs e)
+        {
+            Exception ex = e.ExceptionObject as Exception;
+            GallatinEventLog.WriteEntry("Unhandled exception in AppDomain. " + ex.Message, EventLogEntryType.Error );
         }
 
         private void StopFromDomain()
         {
             if (_service != null)
             {
+                GallatinEventLog.WriteEntry("Stopping Gallatin Proxy", EventLogEntryType.Information);
+
                 _service.Stop();
+                _domain.UnhandledException -= HandleDomainUnhandledException;
                 AppDomain.Unload(_domain);
             }
         }
