@@ -20,6 +20,10 @@ namespace Gallatin.Contracts
         /// the filtering decision while other filters require the HTTP body. Assembling the HTTP
         /// body is expensive so it must be requested explicitly. The request for the body is made
         /// by returning a callback delegate using the out parameter.
+        /// <para>
+        /// The parameters to the delegate are the HTTP response, connection ID, HTTP body, and the return
+        /// value is the new body value or <c>null</c> if the body was not modified.
+        /// </para>
         /// </remarks>
         /// <param name="response">HTTP response</param>
         /// <param name="connectionId">Client connection ID</param>

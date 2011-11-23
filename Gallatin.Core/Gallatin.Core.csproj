@@ -106,6 +106,7 @@
     <Compile Include="Service\ProxyService.cs" />
     <Compile Include="Service\ProxySession.cs" />
     <Compile Include="Util\CoreFactory.cs" />
+    <Compile Include="Util\FilterLogger.cs" />
     <Compile Include="Util\IPooledObject.cs" />
     <Compile Include="Util\Logger.cs" />
     <Compile Include="Util\Pool.cs" />

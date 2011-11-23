@@ -99,6 +99,7 @@
     <Compile Include="IConnectionFilter.cs" />
     <Compile Include="IHttpHeaders.cs" />
     <Compile Include="IHttpRequest.cs" />
+    <Compile Include="ILogger.cs" />
     <Compile Include="IResponseFilter.cs" />
     <Compile Include="IWhitelistEvaluator.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

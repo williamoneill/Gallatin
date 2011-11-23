@@ -1,0 +1,23 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<!-- *** IMPORTANT ***
+Please, do not modify these files directly. They will be overwritten during an update
+and you will lose your changes.
+If you choose to modify these settings, please copy the file to the "UserProvided" subdirectory. 
+Gallatin Proxy will use the files in that directory before it uses the stock settings files.
+Please note you are responsible for synchronizing changes manually should you wish to 
+pick up new settings.
+-->
+<Blacklist>
+	<Hosts>
+		<!--These are three sample IP address formats acceptable by Gallatin Proxy-->
+		<!--<IP address="192.168.0.1"/>-->
+		<!--<IP address="10.0.0.1-10.0.0.3"/>-->
+		<!--<IP address="10.0.0.1/24"/>-->
+	</Hosts>
+	<Urls>
+		<!--Only specify the end of the host/domain name without the 'www'. Gallatin Proxy 
+		matches the domain by searching from the end of the text. For example, 
+		the filter ".gov" will match "www.whitehouse.gov", "congress.gov", etc. -->
+		<Url name=".xxx"/>
+	</Urls>
+</Blacklist>

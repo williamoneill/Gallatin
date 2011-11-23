@@ -1,6 +1,4 @@
 ﻿<?xml version="1.0" encoding="utf-8" ?>
 <Manifest>
-	<CurrentVersion value="3">
-		<Payload url="http://www.gallatinproxy.com/releases/mytest.zip"/>
-	</CurrentVersion>
+	<Version value="1" url="http://www.gallatinproxy.com/releases/payload.1.zip"/>
 </Manifest>

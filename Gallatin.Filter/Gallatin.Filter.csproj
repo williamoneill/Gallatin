@@ -48,10 +48,15 @@
     <Compile Include="..\Gallatin.Core\SharedAssemblyInfo.cs">
       <Link>SharedAssemblyInfo.cs</Link>
     </Compile>
-    <Compile Include="BadWordsResponseFilter.cs" />
+    <Compile Include="HtmlBodyFilter.cs" />
     <Compile Include="BlacklistFilter.cs" />
+    <Compile Include="ExtensionFilter.cs" />
+    <Compile Include="MimeTypeFilter.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Util\IpAddressParser.cs" />
+    <Compile Include="Util\ISettingsFileLoader.cs" />
+    <Compile Include="Util\SettingsFileLoader.cs" />
+    <Compile Include="Util\SettingsFileType.cs" />
     <Compile Include="WhiteList.cs" />
   </ItemGroup>
   <ItemGroup>
@@ -60,15 +65,19 @@
       <Name>Gallatin.Contracts</Name>
     </ProjectReference>
   </ItemGroup>
-  <ItemGroup />
   <ItemGroup>
-    <Content Include="FilterSettings.xml" />
-    <Content Include="GoogleSafeBrowsing\googleBlack.txt">
+    <None Include="Settings\Blacklist.xml">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="GoogleSafeBrowsing\googleMalware.txt">
+    </None>
+    <None Include="Settings\FilterSettings.xml">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
+    </None>
+    <None Include="Settings\WhiteList.xml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Settings\UserProvided\" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

@@ -31,6 +31,9 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="Moq">
+      <HintPath>..\Gallatin.Service.Tests\bin\Debug\Moq.dll</HintPath>
+    </Reference>
     <Reference Include="nunit.framework, Version=2.5.10.11092, Culture=neutral, PublicKeyToken=96d09a1eb7f44a77, processorArchitecture=MSIL">
       <HintPath>..\Gallatin.Core.Tests\bin\Debug\nunit.framework.dll</HintPath>
     </Reference>
@@ -43,14 +46,28 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Class1.cs" />
+    <Compile Include="BlackListTests.cs" />
+    <Compile Include="HtmlBodyFilterTests.cs" />
+    <Compile Include="Util\IpAddressParserTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="WhiteListTests.cs" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\Gallatin.Contracts\Gallatin.Contracts.csproj">
+      <Project>{03BA4FC5-AF79-46EB-92C0-F0ED50AD0744}</Project>
+      <Name>Gallatin.Contracts</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Gallatin.Core\Gallatin.Core.csproj">
+      <Project>{FFDB4E9F-EB29-42E5-AC61-2017FC358D86}</Project>
+      <Name>Gallatin.Core</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Gallatin.Filter\Gallatin.Filter.csproj">
       <Project>{FF5488C3-1E70-4EAE-ACAF-396C47DFD366}</Project>
       <Name>Gallatin.Filter</Name>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="TestFiles\" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
