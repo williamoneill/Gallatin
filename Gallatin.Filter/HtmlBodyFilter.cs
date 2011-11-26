@@ -7,6 +7,7 @@ using System.Text.RegularExpressions;
 using System.Xml.Linq;
 using Gallatin.Contracts;
 using Gallatin.Filter.Util;
+using HtmlAgilityPack;
 
 namespace Gallatin.Filter
 {
@@ -16,10 +17,6 @@ namespace Gallatin.Filter
     [Export( typeof (IResponseFilter) )]
     public class HtmlBodyFilter : IResponseFilter
     {
-        private static readonly Regex _removeHtmlTags = new Regex( @"<(script|style)[\d\D]*?>[\d\D]*?</(script|style)>|(\<[^\>]*?\>)",
-                                                                   RegexOptions.Singleline );
-
-        private static readonly Regex _shortenWs = new Regex( @"\s{2,}", RegexOptions.Singleline );
         private readonly List<RegexFilter> _filters;
         private readonly ILogger _logger;
 
@@ -89,44 +86,114 @@ namespace Gallatin.Filter
 
         #endregion
 
-        private static string FindRawHtmlText( byte[] htmlContent )
+        private static byte[] CheckMetaContentRatings( HtmlDocument doc )
         {
-            string html = Encoding.UTF8.GetString( htmlContent );
+            HtmlNodeCollection metaTags = doc.DocumentNode.SelectNodes( "//meta[@name='rating']" );
 
-            string modifiedHtml = _removeHtmlTags.Replace( html, "" );
+            if ( metaTags != null )
+            {
+                foreach ( HtmlNode tag in metaTags )
+                {
+                    foreach ( HtmlAttribute attrib in tag.Attributes )
+                    {
+                        if ( attrib.Name == "content"
+                             && ( attrib.Value == "mature" || attrib.Value == "adult" || attrib.Value == "rta-5042-1996-1400-1577-rta" ) )
+                        {
+                            return Encoding.UTF8.GetBytes( "Page contains adult content" );
+                        }
+                    }
+                }
+            }
 
-            return _shortenWs.Replace( modifiedHtml, "  " );
+            return null;
+        }
+
+        private static string CensorWord( string word )
+        {
+            if (word.Length < 4)
+            {
+                return "***";
+            }
+
+            char[] chars = word.ToCharArray();
+
+            for ( int i = 2; i < word.Length; i += 3 )
+            {
+                chars[i] = '*';
+            }
+
+            return new string(chars);
+        }
+
+        private static string FindRawHtmlText( HtmlDocument doc )
+        {
+            StringBuilder builder = new StringBuilder();
+
+            foreach (
+                HtmlNode text in
+                    doc.DocumentNode.Descendants().Where(
+                        n =>
+                        n.NodeType == HtmlNodeType.Text
+                        && ( n.ParentNode.Name != "script" && n.ParentNode.Name != "comment" && n.ParentNode.Name != "style" ) ) )
+            {
+                builder.AppendFormat( " {0} ", text.InnerHtml );
+            }
+
+            return builder.ToString();
         }
 
         private byte[] ParseBody( IHttpResponse response, string connectionId, byte[] body )
         {
+            DateTime start = DateTime.Now;
+
+            HtmlDocument doc = new HtmlDocument();
+
+            // This ToLower is important for a variety of reasons. Do not remove.
+            doc.LoadHtml( Encoding.UTF8.GetString( body ).ToLower() );
+
+            byte[] returnValue = CheckMetaContentRatings( doc );
+
+            if ( returnValue == null )
+            {
+                returnValue = ApplyRegexFiltering( doc );
+            }
+
+            DateTime end = DateTime.Now;
+
+            _logger.WriteInfo( string.Format( "HTML Body filtering took {0} ms", ( end - start ).TotalMilliseconds ) );
+
+            return returnValue;
+        }
+
+        private byte[] ApplyRegexFiltering( HtmlDocument doc )
+        {
             const int MaxWeight = 100;
 
             byte[] returnValue = null;
-
-            // ToLower 'cause none of the regex expressions are built to ignore case (performance)
-            string htmlBody = FindRawHtmlText( body ).ToLower();
+            string htmlBody = FindRawHtmlText( doc );
             if ( htmlBody != null )
             {
                 int weight = 0;
-
-                DateTime start = DateTime.Now;
 
                 string message = null;
 
                 foreach ( RegexFilter regex in _filters )
                 {
-                    Match match = regex.Regex.Match( htmlBody );
+                    MatchCollection matches = regex.Regex.Matches( htmlBody );
 
-                    if ( match.Success )
+                    foreach ( Match match in matches )
                     {
-                        message += string.Format( "<p>Filter <strong>{0}</strong> with weight of {1} had {2} matches",
-                                                  regex.Name,
-                                                  regex.Weight,
-                                                  match.Groups[0].Length );
+                        if ( match.Success )
+                        {
+                            message += string.Format( "<p>{0} {1} {2}",
+                                                      regex.Name,
+                                                      regex.Weight,
+                                                      CensorWord(  match.Groups[0].Value ) );
 
-                        weight += match.Groups[0].Length * regex.Weight;
+                            weight += regex.Weight;
+                        }
                     }
+
 
                     if ( weight >= MaxWeight )
                     {
@@ -134,12 +201,7 @@ namespace Gallatin.Filter
                         break;
                     }
                 }
-
-                DateTime end = DateTime.Now;
-
-                _logger.WriteInfo( string.Format( "HTML Body filtering took {0} ms", ( end - start ).TotalMilliseconds ) );
             }
-
             return returnValue;
         }
 

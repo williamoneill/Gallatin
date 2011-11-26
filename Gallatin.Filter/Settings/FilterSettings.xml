@@ -163,36 +163,83 @@ pick up new settings.
 	<BannedWords>
 		<!--Every match in the regular expression counts as one hit. Each hit is multipled by the weight. When the weight exceeds 100, the page is banned.-->
 		<!--This proxy uses the .NET (Microsoft) regular expression engine and regex syntax.-->
-		<Regex name="No Proxy (English)" value="(prox\w{1,4})" weight="50"/>
-		<Regex name="Pornography (English)" value="\s(cunt|anal|anal.*?sex|fuck\w{0,4}|cock.*?suck|ass.*?probe)\s" weight="100"/>
-		<Regex name="Profanity (English)" value="\s(shit\w{0,4}|god.*?damn|ass hole|whore\w{0,1}|slut\w{0,3}|porn|p0rn|tit\w{0,4}|ass\w{0,2}|bastard\w{0,1}|bitch\w{0,2})\s" weight="50"/>
-		<Regex name="Fetish (English)" value="\s(foot|feet|girl|pee|wet).*?fetish\s" weight="35"/>
-		<Regex name="Sex (English)" value="\s((anal.*?(porn|xxx|fuck|horny))|beastiality|buttplug|biatch|bigteets|bizzare.*?(fuck|pussy|sex)(bbw.*?(horny|porn|slut|twat|xxx|fuck))|bbw\w{0,1}|bdsm|beppin|biguns|churd|clit\w{0,1}|cum\w{0,7}.*?(swallow|fuck|horny|pussy)?|prostitute|nude|dildo|do not enter|fallatio|fisting|fist.*?(anal|horny|porn|slut|twat)|hardcore|hardon|milf|newd|barely legal|sex\w{0,6}|sensual|naked|hooker|jerk off)\s" weight="35"/>
-		<Regex name="Questionable (English)" value="\s(explicit|erotic|poop\w{0,2}|boff|bra\w{0,1}|butt|gay|lesbian\w{0,4}|negligee|boner)\s" weight="10"/>
-		<Regex name="Nudism (English)" value="\s(cloth\w{0,3}.*?(free|optional)|nekkid|naturist\w{0,1}|nudism|nudist|visual depiction)\s" weight="35"/>
-		<Regex name="Credit (English)" value="\s(health|cancer)\s" weight="-20"/>
-		<Regex name="Domains for sale (English)" value="\s(the domain*?for sale|search our cata\w{1,6} for more domains|domain.*?owner|buy.*?domain\w{0,1}|this page is parked|popular searches)\s" weight="50"/>
-		<Regex name="Vulgar (Dutch)" value="\s(apenaaier|hoerenjong|kutwijf|moederneuker|pik omhoog|reetneuker|smerige kankerhoer|sufkut|vuile kankerlijer)\s" weight="100"/>
-		<Regex name="Profanity (Dutch)" value="\s(bruinweker|flikker|hondelul|klootzak|lul|nauwe gaatje|paardenlul|rukker|schijt|schijtlul|slet|spast|zakkewasser)\s" weight="50"/>
-		<Regex name="Questionable (Dutch)" value="\s(droogkloot|hoer|kak|kut|stront|sukkel|zakkewasser)\s" weight="50"/>
-		<Regex name="ID Theft (English)" value="\s(false id|fake id|change your identity|(whole|use a) new identity|steal.*?ident\w{0,3}|create.*?ident\w{0,3}|counterfeit.*?birth|separate ident\w{0,3}|counterfeit)\s" weight="30"/>
-		<Regex name="ID Theft [prevention] (English)" value="\s((prevent|avoid)\w{0,1}.*?ident\w{0,4}.*?theft)\s" weight="-20"/>
+		<Regex name="No Proxy (English)" 
+			   value="(prox\w{1,4})" 
+			   weight="50"/>
+		<Regex name="Profanity (English)" 
+			   value="\s(ass\w{0,2}|bastard\w{0,1}|bitch\w{0,2}|jerk off)\s" 
+			   weight="25"/>
+		<Regex name="Profanity - offensive (English)"
+			   value="\s(cunt|shit\w{0,4}|god.*?damn|ass hole|whore\w{0,1}|slut\w{0,3}|fuck\w{0,4})\s"
+			   weight="50"/>
+		<Regex name="Fetish (English)" 
+			   value="\s(foot|feet|girl|pee|wet).*?fetish\s" 
+			   weight="35"/>
+		<Regex name="Sex (English)" 
+			   value="\s(
+					(anal.*?(probe|sex|porn|xxx|fuck))
+					|bbw.*?(horny|porn|slut|twat|xxx|fuck)
+					|barely legal
+					|bbw\w{0,1}
+					|bdsm
+					|beastiality
+					|beppin
+					|biatch
+					|bigteets
+					|big.*?tits
+					|bizzare.*?(fuck|pussy|sex|pics)
+					|biguns
+					|butt.*?plug
+					|churd
+					|clit\w{0,1}
+					|cock.*?suck
+					|cum\w{0,7}
+					|cunt\w{0,1}
+					|dildo
+					|do not enter
+					|faggot\w{0,1}
+					|fallatio
+					|fisting
+					|fist.*?(anal|horny|porn|slut|twat)
+					|hardcore.*?(porn|fuck|screw|bitch)
+					|hardon
+					|hooker
+					|milf
+					|newd
+					|porn
+					|p0rn
+					|tit\w{0,1}
+					|titties
+					)\s"
+			   weight="35"/>
+		<Regex name="Questionable (English)" 
+			   value="\s(sensual|sex\w{0,4}|naked|nud\w{0,5}|prostitute|explicit|erotic|poop\w{0,2}|boff|bra\w{0,1}|butt|gay|lesbian\w{0,4}|negligee|boner)\s" 
+			   weight="10"/>
+		<Regex name="Nudism (English)" 
+			   value="\s(cloth\w{0,3}.*?(free|optional)|nekkid|naturist\w{0,1}|nudism|nudist|visual depiction)\s" 
+			   weight="35"/>
+		<Regex name="Credit (English)" 
+			   value="\s(health|cancer)\s" 
+			   weight="-20"/>
+		<Regex name="Domains for sale (English)" 
+			   value="\s(the domain*?for sale|search our cata\w{1,6} for more domains|domain.*?owner|buy.*?domain\w{0,1}|this page is parked|popular searches)\s" 
+			   weight="50"/>
+		<Regex name="Vulgar (Dutch)" 
+			   value="\s(apenaaier|hoerenjong|kutwijf|moederneuker|pik omhoog|reetneuker|smerige kankerhoer|sufkut|vuile kankerlijer)\s" 
+			   weight="100"/>
+		<Regex name="Profanity (Dutch)" 
+			   value="\s(bruinweker|flikker|hondelul|klootzak|lul|nauwe gaatje|paardenlul|rukker|schijt|schijtlul|slet|spast|zakkewasser)\s" 
+			   weight="50"/>
+		<Regex name="Questionable (Dutch)" 
+			   value="\s(droogkloot|hoer|kak|kut|stront|sukkel|zakkewasser)\s" 
+			   weight="50"/>
+		<Regex name="ID Theft (English)" 
+			   value="\s(false id|fake id|change your identity|(whole|use a) new identity|steal.*?ident\w{0,3}|create.*?ident\w{0,3}|counterfeit.*?birth|separate ident\w{0,3}|counterfeit)\s" 
+			   weight="30"/>
+		<Regex name="ID Theft [prevention] (English)" 
+			   value="\s((prevent|avoid)\w{0,1}.*?ident\w{0,4}.*?theft)\s" 
+			   weight="-20"/>
 		<!--<Regex name="Chat (English)" value="\s(javachat|webchat|webbtjatt|webchat|chatkamer|chatroom|irc|ircd|gaim|irc|msn2go|aimexpress|wbmsn|iloveim|kiwibox|webmessenger|msnger|onlinemessenger|jpager|easymessage|trillian|instance messenger|web based.*?mess\w*|yahoo!|messenger)\s" weight="30"/>-->
 	</BannedWords>
-	<!--TODO: google safe search and ad sites-->
-	<!--See http://www.fosi.org/icra/-->
-	<ContentRatings>
-		<ICRA>
-		</ICRA>
-		<RSAC></RSAC>
-		<evaluWEB></evaluWEB>
-		<cyberNOT></cyberNOT>
-		<SafeSurf></SafeSurf>
-		<Weburbia></Weburbia>
-
-		<Vancouver></Vancouver>
-		<ICEC></ICEC>
-		<SafeNet></SafeNet>
-
-	</ContentRatings>
+	<!--TODO: google safe browsing and ad sites-->
 </ContentFiltering>
