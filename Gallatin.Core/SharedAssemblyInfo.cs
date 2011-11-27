@@ -9,5 +9,5 @@
 [assembly: AssemblyCopyright("Copyright © Bill O'Neill 2011")]
 
 [assembly: AssemblyVersion("0.1.0.3")]
-[assembly: AssemblyFileVersion("0.1.0.5")]
+[assembly: AssemblyFileVersion("0.1.0.7")]
 

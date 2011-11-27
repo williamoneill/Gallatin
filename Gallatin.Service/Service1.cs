@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
+using System.Runtime.Remoting.Lifetime;
 using System.ServiceProcess;
 using System.Threading;
 using Gallatin.Core.Service;
@@ -11,6 +12,7 @@ namespace Gallatin.Service
     {
         private AppDomain _domain;
         private IProxyService _service;
+        private ClientSponsor _sponsor;
         private Timer _updateTimer;
 
         public GallatinProxy()
@@ -53,14 +55,23 @@ namespace Gallatin.Service
             _domain.InitializeLifetimeService();
             _service = (IProxyService) _domain.CreateInstanceAndUnwrap( "Gallatin.Core", "Gallatin.Core.Service.CrossDomainProxyService" );
             _service.Start();
+
+            MarshalByRefObject marshalByRefObject = _service as MarshalByRefObject;
+            if ( marshalByRefObject == null )
+            {
+                throw new InvalidCastException( "Unable to cast service as a MarshalByRefObject" );
+            }
+
+            _sponsor = new ClientSponsor();
+            _sponsor.Register( marshalByRefObject );
         }
 
         private void HandleDomainUnhandledException( object sender, UnhandledExceptionEventArgs e )
         {
             Exception ex = e.ExceptionObject as Exception;
-            if (ex != null)
+            if ( ex != null )
             {
-                GallatinEventLog.WriteEntry("Unhandled exception in AppDomain. " + ex.Message, EventLogEntryType.Error);
+                GallatinEventLog.WriteEntry( "Unhandled exception in AppDomain. " + ex.Message, EventLogEntryType.Error );
             }
 
             StopFromDomain();
@@ -73,6 +84,7 @@ namespace Gallatin.Service
                 GallatinEventLog.WriteEntry( "Stopping Gallatin Proxy", EventLogEntryType.Information );
 
                 _service.Stop();
+                _sponsor.Unregister( _service as MarshalByRefObject );
                 _domain.UnhandledException -= HandleDomainUnhandledException;
                 AppDomain.Unload( _domain );
             }
