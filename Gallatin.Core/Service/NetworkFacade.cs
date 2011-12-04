@@ -87,6 +87,17 @@ namespace Gallatin.Core.Service
             Socket.BeginDisconnect( false, HandleDisconnect, callback );
         }
 
+        private void OnConnectionClosed()
+        {
+            EventHandler connectionClosed = ConnectionClosed;
+            if (connectionClosed != null)
+            {
+                connectionClosed(this, new EventArgs());
+            }
+        }
+
+        public event EventHandler ConnectionClosed;
+
         #endregion
 
         private void HandleSend( IAsyncResult ar )
@@ -109,11 +120,13 @@ namespace Gallatin.Core.Service
                 if ( bytesSent == 0 )
                 {
                     ServiceLog.Logger.Info( "{0} Socket disconnected", Id );
+                    OnConnectionClosed();
                     callback( false, this );
                 }
                 else if ( socketError != SocketError.Success )
                 {
                     ServiceLog.Logger.Error( "{0} Socket error: {1}", Id, socketError );
+                    OnConnectionClosed();
                     callback( false, this );
                 }
                 else
@@ -124,7 +137,8 @@ namespace Gallatin.Core.Service
             catch ( Exception ex )
             {
                 ServiceLog.Logger.Exception( string.Format( "{0} Unhandled exception while sending network data", Id ), ex );
-                callback( false, this );
+                OnConnectionClosed();
+                callback(false, this);
             }
         }
 
@@ -148,11 +162,13 @@ namespace Gallatin.Core.Service
                 if ( bytesReceived == 0 )
                 {
                     ServiceLog.Logger.Info( "{0} Lost connection while receiving data", Id );
+                    OnConnectionClosed();
                     callback( false, null, this );
                 }
                 else if ( socketError != SocketError.Success )
                 {
                     ServiceLog.Logger.Info( "{0} Network error encountered while receiving data: {1}", Id, socketError );
+                    OnConnectionClosed();
                     callback( false, null, this );
                 }
                 else
@@ -165,7 +181,8 @@ namespace Gallatin.Core.Service
             catch ( Exception ex )
             {
                 ServiceLog.Logger.Exception( string.Format( "{0} Unhandled exception while receiving data", Id ), ex );
-                callback( false, null, this );
+                OnConnectionClosed();
+                callback(false, null, this);
             }
         }
 
@@ -187,12 +204,14 @@ namespace Gallatin.Core.Service
             {
                 Socket.EndDisconnect( ar );
                 Socket.Close();
+                OnConnectionClosed();
                 callback( true, this );
             }
             catch ( Exception ex )
             {
                 ServiceLog.Logger.Exception( string.Format( "{0} Unhandled exception when shutting down connection", Id ), ex );
-                callback( false, this );
+                OnConnectionClosed();
+                callback(false, this);
             }
         }
     }

@@ -61,6 +61,7 @@
     <Compile Include="Service\ProxySessionTests.cs" />
     <Compile Include="Service\SslTunnelTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Web\HttpHeaderEventArgsTests.cs" />
     <Compile Include="Web\HttpHeadersTests.cs" />
     <Compile Include="Web\HttpRequestHeaderEventArgsTests.cs" />
     <Compile Include="Web\HttpResponseHeaderEventArgsTests.cs" />

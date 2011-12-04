@@ -21,6 +21,10 @@ namespace Gallatin.Core.Web
         {
             get
             {
+                // HTTP 1.0 always has the potential for a body even if the content-length is not specified.
+                if (Version == "1.0")
+                    return true;
+
                 string contentLength = Headers["content-length"];
                 string chunkedData = Headers["transfer-encoding"];
 

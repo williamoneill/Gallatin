@@ -34,6 +34,12 @@ namespace Gallatin.Core.Web
             }
         }
 
+        public void Flush()
+        {
+            OnBodyAvailable();
+            OnMessageReadComplete();
+        }
+
         #endregion
 
         #region IHttpStreamParserContext Members

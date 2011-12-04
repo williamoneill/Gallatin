@@ -45,6 +45,13 @@ namespace Gallatin.Core.Web
         /// </summary>
         /// <param name = "data"></param>
         void AppendData( byte[] data );
+
+        /// <summary>
+        /// Flushes all pending events. Usually invoked if the underlying connection closed
+        /// unexpectedly and possible data exists in the parser state.
+        /// </summary>
+        void Flush();
+
     }
 
     [ContractClassFor( typeof (IHttpStreamParser) )]
@@ -64,6 +71,8 @@ namespace Gallatin.Core.Web
             Contract.Requires(data != null);
             Contract.Requires(data.Length > 0);
         }
+
+        public abstract void Flush();
 
         #endregion
 

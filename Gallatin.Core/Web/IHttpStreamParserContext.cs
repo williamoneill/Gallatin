@@ -56,5 +56,10 @@ namespace Gallatin.Core.Web
         /// </summary>
         /// <param name="buffer">Data to append to the buffer</param>
         void AppendBodyData( byte[] buffer );
+
+        /// <summary>
+        /// Flushes all pending data-related events. Usually invoked when the end of a HTTP message is detected.
+        /// </summary>
+        void Flush();
     }
 }

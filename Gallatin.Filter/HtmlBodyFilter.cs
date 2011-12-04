@@ -7,7 +7,6 @@ using System.Text.RegularExpressions;
 using System.Xml.Linq;
 using Gallatin.Contracts;
 using Gallatin.Filter.Util;
-using HtmlAgilityPack;
 
 namespace Gallatin.Filter
 {
@@ -86,28 +85,6 @@ namespace Gallatin.Filter
 
         #endregion
 
-        private static byte[] CheckMetaContentRatings( HtmlDocument doc )
-        {
-            HtmlNodeCollection metaTags = doc.DocumentNode.SelectNodes( "//meta[@name='rating']" );
-
-            if ( metaTags != null )
-            {
-                foreach ( HtmlNode tag in metaTags )
-                {
-                    foreach ( HtmlAttribute attrib in tag.Attributes )
-                    {
-                        if ( attrib.Name == "content"
-                             && ( attrib.Value == "mature" || attrib.Value == "adult" || attrib.Value == "rta-5042-1996-1400-1577-rta" ) )
-                        {
-                            return Encoding.UTF8.GetBytes( "Page contains adult content" );
-                        }
-                    }
-                }
-            }
-
-            return null;
-        }
-
         private static string CensorWord( string word )
         {
             if (word.Length < 4)
@@ -125,37 +102,31 @@ namespace Gallatin.Filter
             return new string(chars);
         }
 
-        private static string FindRawHtmlText( HtmlDocument doc )
+        private static readonly Regex _removeHtmlTags = new Regex(@"<(script|style)[\d\D]*?>[\d\D]*?</(script|style)>|(\<[^\>]*?\>)|<!--[\d\D]*?-->",
+                                                                   RegexOptions.Singleline|RegexOptions.Compiled);
+
+        private static readonly Regex _ratingCheck = new Regex(@"<meta name=.*?rating.*? content.*?(rta-5042-1996-1400-1577-rta|mature|adult)", RegexOptions.Singleline|RegexOptions.Compiled);
+
+        private static string FindRawHtmlText( string body )
         {
-            StringBuilder builder = new StringBuilder();
-
-            foreach (
-                HtmlNode text in
-                    doc.DocumentNode.Descendants().Where(
-                        n =>
-                        n.NodeType == HtmlNodeType.Text
-                        && ( n.ParentNode.Name != "script" && n.ParentNode.Name != "comment" && n.ParentNode.Name != "style" ) ) )
-            {
-                builder.AppendFormat( " {0} ", text.InnerHtml );
-            }
-
-            return builder.ToString();
+            return _removeHtmlTags.Replace( body, " " );
         }
 
         private byte[] ParseBody( IHttpResponse response, string connectionId, byte[] body )
         {
             DateTime start = DateTime.Now;
 
-            HtmlDocument doc = new HtmlDocument();
+            string htmlBody = Encoding.UTF8.GetString( body ).ToLower();
 
-            // This ToLower is important for a variety of reasons. Do not remove.
-            doc.LoadHtml( Encoding.UTF8.GetString( body ).ToLower() );
+            byte[] returnValue = null;
 
-            byte[] returnValue = CheckMetaContentRatings( doc );
-
-            if ( returnValue == null )
+            if (_ratingCheck.Match(htmlBody).Success)
             {
-                returnValue = ApplyRegexFiltering( doc );
+                returnValue = Encoding.UTF8.GetBytes( "Page contains adult content" );
+            }
+            else
+            {
+                returnValue = ApplyRegexFiltering(FindRawHtmlText(htmlBody));
             }
 
             DateTime end = DateTime.Now;
@@ -165,17 +136,16 @@ namespace Gallatin.Filter
             return returnValue;
         }
 
-        private byte[] ApplyRegexFiltering( HtmlDocument doc )
+        private byte[] ApplyRegexFiltering( string htmlBody )
         {
             const int MaxWeight = 100;
 
             byte[] returnValue = null;
-            string htmlBody = FindRawHtmlText( doc );
             if ( htmlBody != null )
             {
                 int weight = 0;
 
-                string message = null;
+                string message = "This page has been blocked because it contains potentially inappropriate content.<p>";
 
                 foreach ( RegexFilter regex in _filters )
                 {
@@ -185,7 +155,7 @@ namespace Gallatin.Filter
                     {
                         if ( match.Success )
                         {
-                            message += string.Format( "<p>{0} {1} {2}",
+                            message += string.Format( "<p>Filter: <em>{0}</em> with weight {1} identified word <em>{2}</em>",
                                                       regex.Name,
                                                       regex.Weight,
                                                       CensorWord(  match.Groups[0].Value ) );

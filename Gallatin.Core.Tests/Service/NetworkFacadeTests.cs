@@ -44,9 +44,18 @@ namespace Gallatin.Core.Tests.Service
             Assert.That( resetEvent.WaitOne( 30000 ), Is.True );
             Assert.That( client.Connected, Is.True );
 
+            // Release the event when the connection is closed. This event is raised before the callback
+            // is invoked.
+            bool eventRaised = false;
+            facadeUnderTest.ConnectionClosed += ( object sender, System.EventArgs e ) => eventRaised = true;
+
+            // Reset the event so we'll block
+            resetEvent.Reset();
+
             // Close connection
-            facadeUnderTest.BeginClose( ( b, f ) =>
+            facadeUnderTest.BeginClose((b, f) =>
                                         {
+                                            // Delegate invoked when closed
                                             Assert.That( f, Is.SameAs( facadeUnderTest ) );
                                             Assert.That( b, Is.True );
                                             resetEvent.Set();
@@ -55,7 +64,7 @@ namespace Gallatin.Core.Tests.Service
             // Wait for close
             Assert.That( resetEvent.WaitOne( 30000 ), Is.True );
 
-            Thread.Sleep( 1000 );
+            Assert.That(eventRaised);
 
             NetworkStream stream = client.GetStream();
             stream.Write( new byte[]
@@ -68,6 +77,7 @@ namespace Gallatin.Core.Tests.Service
             byte[] buffer = new byte[300];
             Assert.Throws<IOException>( () => stream.Read( buffer, 0, buffer.Length ) );
         }
+
 
         [Test]
         public void BeginReceiveTest()
@@ -184,5 +194,62 @@ namespace Gallatin.Core.Tests.Service
             Assert.That( bufferFromClient[1], Is.EqualTo( 0x05 ) );
             Assert.That( bufferFromClient[2], Is.EqualTo( 0x06 ) );
         }
+
+        [Test]
+        public void VerifyDisconnectBehaviorOnReceive()
+        {
+            bool wasEventRaised = false;
+
+            AutoResetEvent resetEvent = new AutoResetEvent(false);
+
+            NetworkFacade facadeUnderTest = null;
+
+            // Set up the "server"
+            TcpListener server = new TcpListener(Dns.GetHostEntry("localhost").AddressList[0], 4003);
+            server.Start();
+
+            TcpClient serversClientSocket = null;
+
+            // When the client connects, set up the object under test
+            server.BeginAcceptTcpClient(
+                ar =>
+                {
+                    TcpListener s = ar.AsyncState as TcpListener;
+                    serversClientSocket = s.EndAcceptTcpClient(ar);
+                    facadeUnderTest = new NetworkFacade(serversClientSocket.Client);
+                    resetEvent.Set();
+                }
+                ,
+                server);
+
+            //
+            // Setup complete...
+            //
+
+            // Connect to the above "server" from a web client
+            TcpClient client = new TcpClient("localhost", 4003);
+
+            // Wait for client connect
+            Assert.That(resetEvent.WaitOne(30000), Is.True);
+
+            resetEvent.Reset();
+
+            facadeUnderTest.ConnectionClosed += ( object sender, System.EventArgs e ) =>
+                                                {
+                                                    wasEventRaised = true;
+                                                    resetEvent.Set();
+                                                };
+
+            facadeUnderTest.BeginReceive((s,d,n) => Assert.That(s, Is.False));
+
+            // After the client connects, close the connection and check for the event
+            serversClientSocket.Client.Close();
+
+            Assert.That(resetEvent.WaitOne(30000), Is.True);
+
+            Assert.That(wasEventRaised);
+            
+        }
+
     }
 }

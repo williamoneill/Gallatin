@@ -48,8 +48,8 @@ namespace Gallatin.Core.Web
                     || (_trailerData.Length > 2 && _consecutiveCrCount == 2 && _consecutiveLfCount == 2) )
                 {
                     _context.OnPartialDataAvailable(_trailerData.ToArray());
-                    _context.OnMessageReadComplete();
-                    _context.OnBodyAvailable();
+                    
+                    _context.Flush();
 
                     _context.State = new ReadHeaderState(_context);
 

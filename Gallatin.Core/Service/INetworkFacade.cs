@@ -38,6 +38,11 @@ namespace Gallatin.Core.Service
         /// </summary>
         /// <param name="callback">Delegate to invoke when the connection has been closed</param>
         void BeginClose( Action<bool, INetworkFacade> callback );
+
+        /// <summary>
+        /// Raised when the connection is closed
+        /// </summary>
+        event EventHandler ConnectionClosed;
     }
 
     [ContractClassFor( typeof (INetworkFacade) )]
@@ -65,6 +70,8 @@ namespace Gallatin.Core.Service
         {
             Contract.Requires( callback != null );
         }
+
+        public abstract event EventHandler ConnectionClosed;
 
         public abstract int Id { get; }
 

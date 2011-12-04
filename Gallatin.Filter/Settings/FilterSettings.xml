@@ -176,41 +176,7 @@ pick up new settings.
 			   value="\s(foot|feet|girl|pee|wet).*?fetish\s" 
 			   weight="35"/>
 		<Regex name="Sex (English)" 
-			   value="\s(
-					(anal.*?(probe|sex|porn|xxx|fuck))
-					|bbw.*?(horny|porn|slut|twat|xxx|fuck)
-					|barely legal
-					|bbw\w{0,1}
-					|bdsm
-					|beastiality
-					|beppin
-					|biatch
-					|bigteets
-					|big.*?tits
-					|bizzare.*?(fuck|pussy|sex|pics)
-					|biguns
-					|butt.*?plug
-					|churd
-					|clit\w{0,1}
-					|cock.*?suck
-					|cum\w{0,7}
-					|cunt\w{0,1}
-					|dildo
-					|do not enter
-					|faggot\w{0,1}
-					|fallatio
-					|fisting
-					|fist.*?(anal|horny|porn|slut|twat)
-					|hardcore.*?(porn|fuck|screw|bitch)
-					|hardon
-					|hooker
-					|milf
-					|newd
-					|porn
-					|p0rn
-					|tit\w{0,1}
-					|titties
-					)\s"
+			   value="\s(anal.*?(probe|sex|porn|xxx|fuck)|bbw.*?(horny|porn|slut|twat|xxx|fuck)|barely legal|bbw\w{0,1}|bdsm|beastiality|beppin|biatch|bigteets|big.*?tits|bizzare.*?(fuck|pussy|sex|pics)|biguns|butt.*?plug|churd|clit\w{0,1}|cock.*?suck|cum\w{0,7}|cunt\w{0,1}|dildo|do not enter|faggot\w{0,1}|fallatio|fisting|fist.*?(anal|horny|porn|slut|twat)|hardcore.*?(porn|fuck|screw|bitch)|hardon|hooker|milf|newd|porn|p0rn|tit\w{0,1}|titties)\s"
 			   weight="35"/>
 		<Regex name="Questionable (English)" 
 			   value="\s(sensual|sex\w{0,4}|naked|nud\w{0,5}|prostitute|explicit|erotic|poop\w{0,2}|boff|bra\w{0,1}|butt|gay|lesbian\w{0,4}|negligee|boner)\s" 

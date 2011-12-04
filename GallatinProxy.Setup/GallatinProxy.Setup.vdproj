@@ -28,12 +28,6 @@
         "Entry"
         {
         "MsmKey" = "8:_06DCE5492233FDD6649FF5624162AE92"
-        "OwnerKey" = "8:_789A38988DF841828E4A66DF70CB3CDB"
-        "MsmSig" = "8:_UNDEFINED"
-        }
-        "Entry"
-        {
-        "MsmKey" = "8:_06DCE5492233FDD6649FF5624162AE92"
         "OwnerKey" = "8:_CDCB4483B6EF485863F205F9EBC528E8"
         "MsmSig" = "8:_UNDEFINED"
         }
@@ -57,12 +51,6 @@
         }
         "Entry"
         {
-        "MsmKey" = "8:_789A38988DF841828E4A66DF70CB3CDB"
-        "OwnerKey" = "8:_UNDEFINED"
-        "MsmSig" = "8:_UNDEFINED"
-        }
-        "Entry"
-        {
         "MsmKey" = "8:_79B5B018A10642AEBD31AB6315EEEFBF"
         "OwnerKey" = "8:_UNDEFINED"
         "MsmSig" = "8:_UNDEFINED"
@@ -75,12 +63,6 @@
         }
         "Entry"
         {
-        "MsmKey" = "8:_87F1824737CAADB29DF5A786BB92E53F"
-        "OwnerKey" = "8:_A90601D3857A4F5FABE33216CF33357C"
-        "MsmSig" = "8:_UNDEFINED"
-        }
-        "Entry"
-        {
         "MsmKey" = "8:_A90601D3857A4F5FABE33216CF33357C"
         "OwnerKey" = "8:_UNDEFINED"
         "MsmSig" = "8:_UNDEFINED"
@@ -89,12 +71,6 @@
         {
         "MsmKey" = "8:_CDCB4483B6EF485863F205F9EBC528E8"
         "OwnerKey" = "8:_15C3772973374C77A43CEA302899F545"
-        "MsmSig" = "8:_UNDEFINED"
-        }
-        "Entry"
-        {
-        "MsmKey" = "8:_CDCB4483B6EF485863F205F9EBC528E8"
-        "OwnerKey" = "8:_789A38988DF841828E4A66DF70CB3CDB"
         "MsmSig" = "8:_UNDEFINED"
         }
         "Entry"
@@ -118,25 +94,13 @@
         "Entry"
         {
         "MsmKey" = "8:_UNDEFINED"
-        "OwnerKey" = "8:_A90601D3857A4F5FABE33216CF33357C"
-        "MsmSig" = "8:_UNDEFINED"
-        }
-        "Entry"
-        {
-        "MsmKey" = "8:_UNDEFINED"
-        "OwnerKey" = "8:_87F1824737CAADB29DF5A786BB92E53F"
-        "MsmSig" = "8:_UNDEFINED"
-        }
-        "Entry"
-        {
-        "MsmKey" = "8:_UNDEFINED"
         "OwnerKey" = "8:_FF772656142E44E7B221CC14F42E77D2"
         "MsmSig" = "8:_UNDEFINED"
         }
         "Entry"
         {
         "MsmKey" = "8:_UNDEFINED"
-        "OwnerKey" = "8:_789A38988DF841828E4A66DF70CB3CDB"
+        "OwnerKey" = "8:_A90601D3857A4F5FABE33216CF33357C"
         "MsmSig" = "8:_UNDEFINED"
         }
         "Entry"
@@ -440,37 +404,6 @@
             "IsDependency" = "11:TRUE"
             "IsolateTo" = "8:"
             }
-            "{9F6F8455-1EF1-4B85-886A-4223BCC8E7F7}:_87F1824737CAADB29DF5A786BB92E53F"
-            {
-            "AssemblyRegister" = "3:1"
-            "AssemblyIsInGAC" = "11:FALSE"
-            "AssemblyAsmDisplayName" = "8:HtmlAgilityPack, Version=1.4.0.0, Culture=neutral, PublicKeyToken=bd319b19eaf3b43a, processorArchitecture=MSIL"
-                "ScatterAssemblies"
-                {
-                    "_87F1824737CAADB29DF5A786BB92E53F"
-                    {
-                    "Name" = "8:HtmlAgilityPack.dll"
-                    "Attributes" = "3:512"
-                    }
-                }
-            "SourcePath" = "8:HtmlAgilityPack.dll"
-            "TargetName" = "8:"
-            "Tag" = "8:"
-            "Folder" = "8:_65417E1CF8714E9891895E87A97798F7"
-            "Condition" = "8:"
-            "Transitive" = "11:FALSE"
-            "Vital" = "11:TRUE"
-            "ReadOnly" = "11:FALSE"
-            "Hidden" = "11:FALSE"
-            "System" = "11:FALSE"
-            "Permanent" = "11:FALSE"
-            "SharedLegacy" = "11:FALSE"
-            "PackageAs" = "3:1"
-            "Register" = "3:1"
-            "Exclude" = "11:FALSE"
-            "IsDependency" = "11:TRUE"
-            "IsolateTo" = "8:"
-            }
             "{9F6F8455-1EF1-4B85-886A-4223BCC8E7F7}:_CDCB4483B6EF485863F205F9EBC528E8"
             {
             "AssemblyRegister" = "3:1"
@@ -580,17 +513,6 @@
                                     }
                                 }
                             }
-                        }
-                    }
-                    "{9EF0B969-E518-4E46-987F-47570745A589}:_7CA64F76E2844F3AAF73E19F3D787A59"
-                    {
-                    "Name" = "8:CommandLine"
-                    "AlwaysCreate" = "11:FALSE"
-                    "Condition" = "8:"
-                    "Transitive" = "11:FALSE"
-                    "Property" = "8:_6C8E7BECD59A4C0C9D839B739CA5ACD4"
-                        "Folders"
-                        {
                         }
                     }
                 }
@@ -1144,7 +1066,7 @@
         {
             "{5259A561-127C-4D43-A0A1-72F10C7B3BF8}:_15C3772973374C77A43CEA302899F545"
             {
-            "SourcePath" = "8:..\\Gallatin.Service\\obj\\x86\\Release\\Gallatin.Service.exe"
+            "SourcePath" = "8:..\\Gallatin.Service\\obj\\x86\\Debug\\Gallatin.Service.exe"
             "TargetName" = "8:"
             "Tag" = "8:"
             "Folder" = "8:_44B8E5FAD6A34DCDB99F814771A1621A"
@@ -1170,37 +1092,9 @@
                 {
                 }
             }
-            "{5259A561-127C-4D43-A0A1-72F10C7B3BF8}:_789A38988DF841828E4A66DF70CB3CDB"
-            {
-            "SourcePath" = "8:..\\Gallatin.Runner\\obj\\x86\\Release\\Gallatin.Runner.exe"
-            "TargetName" = "8:"
-            "Tag" = "8:"
-            "Folder" = "8:_7CA64F76E2844F3AAF73E19F3D787A59"
-            "Condition" = "8:"
-            "Transitive" = "11:FALSE"
-            "Vital" = "11:TRUE"
-            "ReadOnly" = "11:FALSE"
-            "Hidden" = "11:FALSE"
-            "System" = "11:FALSE"
-            "Permanent" = "11:FALSE"
-            "SharedLegacy" = "11:FALSE"
-            "PackageAs" = "3:1"
-            "Register" = "3:1"
-            "Exclude" = "11:FALSE"
-            "IsDependency" = "11:FALSE"
-            "IsolateTo" = "8:"
-            "ProjectOutputGroupRegister" = "3:1"
-            "OutputConfiguration" = "8:"
-            "OutputGroupCanonicalName" = "8:Built"
-            "OutputProjectGuid" = "8:{8F511FC1-69E6-4DCD-857F-932CFD8723C3}"
-            "ShowKeyOutput" = "11:TRUE"
-                "ExcludeFilters"
-                {
-                }
-            }
             "{5259A561-127C-4D43-A0A1-72F10C7B3BF8}:_A90601D3857A4F5FABE33216CF33357C"
             {
-            "SourcePath" = "8:..\\Gallatin.Filter\\obj\\Release\\Gallatin.Filter.dll"
+            "SourcePath" = "8:..\\Gallatin.Filter\\obj\\Debug\\Gallatin.Filter.dll"
             "TargetName" = "8:"
             "Tag" = "8:"
             "Folder" = "8:_65417E1CF8714E9891895E87A97798F7"
@@ -1228,7 +1122,7 @@
             }
             "{5259A561-127C-4D43-A0A1-72F10C7B3BF8}:_FF772656142E44E7B221CC14F42E77D2"
             {
-            "SourcePath" = "8:..\\Gallatin.Contracts\\obj\\Release\\Gallatin.Contracts.dll"
+            "SourcePath" = "8:..\\Gallatin.Contracts\\obj\\Debug\\Gallatin.Contracts.dll"
             "TargetName" = "8:"
             "Tag" = "8:"
             "Folder" = "8:_65417E1CF8714E9891895E87A97798F7"

@@ -36,8 +36,7 @@ namespace Gallatin.Core.Web
 
                 if (_dataRemaining == 0)
                 {
-                    _context.OnBodyAvailable();
-                    _context.OnMessageReadComplete();
+                    _context.Flush();
 
                     _context.State = new ReadHeaderState(_context);
                     _context.OnAdditionalDataRequested();
@@ -59,8 +58,7 @@ namespace Gallatin.Core.Web
 
                 _context.AppendBodyData(remainingDataBuffer);
                 _context.OnPartialDataAvailable(remainingDataBuffer);
-                _context.OnBodyAvailable();
-                _context.OnMessageReadComplete();
+                _context.Flush();
                 _context.State = new ReadHeaderState(_context);
 
                 _context.State.AcceptData( data.Skip(remainingDataBuffer.Length).ToArray() );

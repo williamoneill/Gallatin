@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -190,6 +191,56 @@ namespace Gallatin.Core.Tests.Web
             Assert.IsTrue( bodyReadCompleteCalled );
             Assert.IsTrue( readCompleteCalled );
             Assert.That(additionalDataRequestedCount, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void Http10NoContentLengthInHeader()
+        {
+            byte[] data = Encoding.UTF8.GetBytes("HTTP/1.0 200 OK\r\nContent-Type: text/html;charset=utf-8\r\n\r\nthis is the body");
+            byte[] data2 = Encoding.UTF8.GetBytes( "more body data" );
+
+            HttpStreamParser parser = new HttpStreamParser();
+
+            int bodyAvailable = 0;
+            int additionalDataRequests = 0;
+            int messageReadComplete = 0;
+            int readRequestHeaderComplete = 0;
+            int readResponseHeaderComplete = 0;
+            int partialDataAvailable = 0;
+
+            parser.BodyAvailable += ( s, e ) => bodyAvailable++;
+            parser.AdditionalDataRequested += ( s, e ) => additionalDataRequests++;
+            parser.MessageReadComplete += ( s, e ) => messageReadComplete++;
+            parser.ReadRequestHeaderComplete += ( s, e ) => readRequestHeaderComplete++;
+            parser.ReadResponseHeaderComplete += ( s, e ) => readResponseHeaderComplete++;
+            parser.PartialDataAvailable += ( s, e ) => partialDataAvailable++;
+
+            parser.AppendData(data);
+
+            Assert.That(bodyAvailable, Is.EqualTo(0));
+            Assert.That(additionalDataRequests, Is.EqualTo(1));
+            Assert.That(messageReadComplete, Is.EqualTo(0));
+            Assert.That(readRequestHeaderComplete, Is.EqualTo(0));
+            Assert.That(readResponseHeaderComplete, Is.EqualTo(1));
+            Assert.That(partialDataAvailable, Is.EqualTo(1));
+
+            parser.AppendData(data2);
+
+            Assert.That(bodyAvailable, Is.EqualTo(0));
+            Assert.That(additionalDataRequests, Is.EqualTo(2));
+            Assert.That(messageReadComplete, Is.EqualTo(0));
+            Assert.That(readRequestHeaderComplete, Is.EqualTo(0));
+            Assert.That(readResponseHeaderComplete, Is.EqualTo(1));
+            Assert.That(partialDataAvailable, Is.EqualTo(2));
+
+            parser.Flush();
+
+            Assert.That(bodyAvailable, Is.EqualTo(1));
+            Assert.That(additionalDataRequests, Is.EqualTo(2));
+            Assert.That(messageReadComplete, Is.EqualTo(1));
+            Assert.That(readRequestHeaderComplete, Is.EqualTo(0));
+            Assert.That(readResponseHeaderComplete, Is.EqualTo(1));
+            Assert.That(partialDataAvailable, Is.EqualTo(2));
         }
     }
 }

@@ -47,6 +47,8 @@ namespace Gallatin.Core.Service
                 throw new InvalidOperationException( "Factory already listening for connections. Listen method called twice." );
             }
 
+            ServiceLog.Logger.Info("Listening to client connections -- Address {0}, port {1}", address, port);
+
             _clientConnectCallback = callback;
 
             _socket = new Socket( AddressFamily.InterNetwork,

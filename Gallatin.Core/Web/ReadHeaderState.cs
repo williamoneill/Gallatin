@@ -94,7 +94,7 @@ namespace Gallatin.Core.Web
             //}
         }
 
-        private void InterpretHttpHeaders( HttpHeaders headers )
+        private void InterpretHttpHeaders( HttpHeaders headers, string httpVersion )
         {
             int length = 0;
             string contentLength = headers["content-length"];
@@ -131,12 +131,17 @@ namespace Gallatin.Core.Web
                     _context.OnAdditionalDataRequested();
                 }
             }
+            else if ( !string.IsNullOrEmpty(httpVersion) && httpVersion == "1.0")
+            {
+                _context.State = new ReadHttp10BodyState( _context );
+                _context.State.AcceptData(_bodyData.ToArray());
+            }
             else
             {
                 _context.OnMessageReadComplete();
 
                 // 0-byte message. Start reading the next header.
-                _context.State = new ReadHeaderState( _context );
+                _context.State = new ReadHeaderState(_context);
                 _context.OnAdditionalDataRequested();
             }
         }
@@ -158,6 +163,7 @@ namespace Gallatin.Core.Web
             var headers = CreateHeaders( headerLines );
 
             bool parseOk = false;
+            string httpVersion = null;
 
             const int TokensInHttpVersionString = 2;
 
@@ -187,8 +193,10 @@ namespace Gallatin.Core.Web
                                 }
                             }
 
+                            httpVersion = versionTokens[1];
+
                             _context.OnReadResponseHeaderComplete(
-                                versionTokens[1],
+                                httpVersion,
                                 headers,
                                 statusCode,
                                 statusString.Trim() );
@@ -213,8 +221,10 @@ namespace Gallatin.Core.Web
                     {
                         parseOk = true;
 
+                        httpVersion = versionTokens[1];
+
                         _context.OnReadRequestHeaderComplete(
-                            versionTokens[1],
+                            httpVersion,
                             headers,
                             tokens[0],
                             tokens[1]);
@@ -229,7 +239,7 @@ namespace Gallatin.Core.Web
                 
             }
 
-            InterpretHttpHeaders( headers );
+            InterpretHttpHeaders( headers, httpVersion );
         }
 
         private static HttpHeaders CreateHeaders( string[] headerLines )

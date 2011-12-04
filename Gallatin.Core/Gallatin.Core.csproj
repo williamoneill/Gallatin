@@ -135,6 +135,8 @@
     <Compile Include="Web\ReadChunkedHeaderState.cs" />
     <Compile Include="Web\ReadChunkedTrailerState.cs" />
     <Compile Include="Web\ReadHeaderState.cs" />
+    <Compile Include="Web\ReadHttp10BodyCompleteState.cs" />
+    <Compile Include="Web\ReadHttp10BodyState.cs" />
     <Compile Include="Web\ReadNormalBodyState.cs" />
     <Compile Include="Web\WebLog.cs" />
   </ItemGroup>

@@ -30,6 +30,8 @@ namespace Gallatin.Core.Service
 
         public void Start()
         {
+            ServiceLog.Logger.Info("Starting proxy service");
+
             lock ( _mutex )
             {
                 if ( _isRunning )
@@ -47,6 +49,8 @@ namespace Gallatin.Core.Service
 
         public void Stop()
         {
+            ServiceLog.Logger.Info("Stopping proxy service");
+
             lock ( _mutex )
             {
                 if ( !_isRunning )
