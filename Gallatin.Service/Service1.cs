@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
+using System.IO;
 using System.Runtime.Remoting.Lifetime;
 using System.ServiceProcess;
 using System.Threading;
@@ -92,12 +93,15 @@ namespace Gallatin.Service
 
         protected override void OnStart( string[] args )
         {
-            // I considered checking for updates here but it slows down the service start-up time.
+            foreach (var fileInfo in new DirectoryInfo(".").GetFiles(string.Format("*{0}*", AutoUpdater.BackupExtension)))
+            {
+                fileInfo.Delete();                
+            }
 
             StartInDomain();
 
             const int OneMinute = 60000;
-            const int DueTime = 120 * OneMinute;
+            const int DueTime = 30 * OneMinute;
             const int IntervalTime = 240 * OneMinute;
 
             _updateTimer = new Timer( CheckForUpdates, null, DueTime, IntervalTime );

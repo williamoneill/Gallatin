@@ -26,6 +26,9 @@ namespace Gallatin.Service.Update
         {
             using ( WebClient client = new WebClient() )
             {
+                if(destination.Exists)
+                    destination.Delete();
+
                 client.DownloadFile( source, destination.FullName );
             }
         }

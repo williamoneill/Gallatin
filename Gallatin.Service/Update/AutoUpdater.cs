@@ -13,13 +13,82 @@ namespace Gallatin.Service.Update
     /// </summary>
     public class AutoUpdater
     {
+        public const string BackupExtension = ".backup.";
+
+        private const string GallatinCoreName = "Gallatin.Core.dll";
+        private const string GallatinServiceName = "Gallatin.Service.exe";
+        private const string GallatinCoreBackup = GallatinCoreName + BackupExtension;
+        private const string GallatinServiceBackup = GallatinServiceName + BackupExtension;
+
+        private static Guid _guid;
+
+        private static void RenameExecutingExecutables()
+        {
+            _guid = Guid.NewGuid();
+
+            // Rename files in use that cannot be shadow copied
+
+            FileInfo coreSource = new FileInfo( GallatinCoreName );
+            FileInfo coreTarget = new FileInfo( GallatinCoreBackup + _guid );
+
+            if ( coreTarget.Exists )
+            {
+                coreTarget.Delete();
+            }
+
+            coreSource.MoveTo( coreTarget.FullName );
+
+            FileInfo serviceSource = new FileInfo( GallatinServiceName );
+            FileInfo serviceTarget = new FileInfo( GallatinServiceBackup + _guid);
+
+            if ( serviceTarget.Exists )
+            {
+                serviceTarget.Delete();
+            }
+
+            serviceSource.MoveTo( serviceTarget.FullName );
+        }
+
+        private static bool RevertExecutableNamesIfNotUpdated()
+        {
+            bool wereFilesUpdated = false;
+
+            FileInfo coreSource = new FileInfo( GallatinCoreBackup + _guid);
+            FileInfo coreTarget = new FileInfo( GallatinCoreName );
+
+            FileInfo serviceSource = new FileInfo( GallatinServiceBackup + _guid);
+            FileInfo serviceTarget = new FileInfo( GallatinServiceName );
+
+            if ( coreTarget.Exists )
+            {
+                wereFilesUpdated = true;
+            }
+            else
+            {
+                coreSource.MoveTo( coreTarget.FullName );
+            }
+
+            if ( serviceTarget.Exists )
+            {
+                wereFilesUpdated = true;
+            }
+            else
+            {
+                serviceSource.MoveTo( serviceTarget.FullName );
+            }
+
+            return wereFilesUpdated;
+        }
+
         /// <summary>
         /// Compares the new manifest against the installed files to determine if updates are available
         /// </summary>
-        /// <param name="manifestProvider"></param>
-        /// <returns></returns>
+        /// <param name="manifestProvider">Reference to the manifest provider</param>
+        /// <returns><c>True</c> if files were updated</returns>
         public static bool CheckForUpdates( IManifestProvider manifestProvider )
         {
+            bool wereFilesUpdated = false;
+
             const string FileName = "updatemanifest.xml";
             const int NeverUpdate = -1;
 
@@ -35,19 +104,21 @@ namespace Gallatin.Service.Update
                 return false;
             }
 
-            // Check what's available on the server
-            string manifestContent = manifestProvider.ManifestContent;
-            XDocument newDoc = XDocument.Parse( manifestContent );
-            ParseXmlToList( availableVersions, newDoc );
-
-            // Apply the updates in order
-            int highestInstalledVersion = installedVersions.Max( s => s.ManifestVersion );
-
-            IEnumerable<Version> sortedList =
-                availableVersions.OrderBy( s => s.ManifestVersion ).Where( s => s.ManifestVersion > highestInstalledVersion );
-
-            if ( sortedList.Count() > 0 )
+            try
             {
+                // Move the current executables out of the way so they can be updated
+                RenameExecutingExecutables();
+
+                // Check what's available on the server
+                string manifestContent = manifestProvider.ManifestContent;
+                XDocument newDoc = XDocument.Parse( manifestContent );
+                ParseXmlToList( availableVersions, newDoc );
+
+                // Apply the updates in order
+                IEnumerable<Version> sortedList =
+                    availableVersions.OrderBy( s => s.ManifestVersion ).Where(
+                        s => s.ManifestVersion > installedVersions.Max( r => r.ManifestVersion ) );
+
                 foreach ( Version version in sortedList )
                 {
                     // Let the exception go if the path is malformed
@@ -62,15 +133,23 @@ namespace Gallatin.Service.Update
                     }
 
                     installFile.Delete();
+
+                    wereFilesUpdated = true;
                 }
 
                 // Save the manifest for the next version check
                 File.WriteAllText( FileName, manifestContent );
-
-                return true;
+            }
+            finally
+            {
+                // Always revert if no updates; otherwise, the service will not restart
+                if ( RevertExecutableNamesIfNotUpdated() )
+                {
+                    wereFilesUpdated = true;
+                }
             }
 
-            return false;
+            return wereFilesUpdated;
         }
 
         private static void ParseXmlToList( List<Version> availableVersions, XDocument manifest )
