@@ -12,6 +12,7 @@ To extend Gallatin, inherit from the provided interfaces in the [Gallatin Contra
 and then place your binaries in "addins" subdirectory. Gallatin will pick up your add-in the next time it is restarted or automatic updates are applied.
 
 Gallatin currently allows developers to extend and filter in three different ways:
+
 * [White list evaluator](https://github.com/williamoneill/Gallatin/blob/master/Gallatin.Contracts/IWhitelistEvaluator.cs) - Allows third-party extensions to white-list a client connnection, circumventing all filtering for the specific connection.
 * [Connection filter](https://github.com/williamoneill/Gallatin/blob/master/Gallatin.Contracts/IConnectionFilter.cs) - Provides a hook to filter and block the pending HTTP connection and return an HTML message to the client.
 * [Response filter](https://github.com/williamoneill/Gallatin/blob/master/Gallatin.Contracts/IResponseFilter.cs) - Another hook used to interpret the HTTP response and modify or block the response, returning a modifie HTML response to the client.
