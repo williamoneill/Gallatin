@@ -68,6 +68,7 @@
     <Compile Include="Web\HttpStreamParserTests.cs" />
     <Compile Include="Web\ReadChunkedBodyStateTests.cs" />
     <Compile Include="Web\ReadHeaderStateTests.cs" />
+    <Compile Include="Web\ReadHttp10BodyStateTests.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

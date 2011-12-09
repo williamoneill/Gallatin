@@ -98,7 +98,9 @@
     <Compile Include="FilterSpeedType.cs" />
     <Compile Include="IConnectionFilter.cs" />
     <Compile Include="IHttpHeaders.cs" />
+    <Compile Include="IHttpMessage.cs" />
     <Compile Include="IHttpRequest.cs" />
+    <Compile Include="IHttpResponse.cs" />
     <Compile Include="ILogger.cs" />
     <Compile Include="IResponseFilter.cs" />
     <Compile Include="IWhitelistEvaluator.cs" />

@@ -143,7 +143,6 @@ namespace Gallatin.Core.Tests.Service
             ManualResetEvent waitForClientSends = new ManualResetEvent(false);
 
             // If this test ever hangs, change the client.BeginSend mock to use It.IsAny and debug from there
-            int clientSendCounter = 0;
             byte[] request = Encoding.UTF8.GetBytes( "GET / HTTP/1.1\r\nHost: www.yahoo.com\r\n\r\n" );
             byte[] response = Encoding.UTF8.GetBytes( "HTTP/1.1 200 OK\r\nConnection: keep-alive\r\nContent-Length: 2\r\n\r\nhi" );
             byte[] responseHeader = Encoding.UTF8.GetBytes("HTTP/1.1 200 OK\r\nConnection: keep-alive\r\nContent-Length: 2\r\n\r\n");
@@ -400,7 +399,7 @@ namespace Gallatin.Core.Tests.Service
             session.Start(client.Object);
 
             // Wait until all data has been sent to the client
-            Assert.That(waitForClientSends.WaitOne(500000));
+            Assert.That(waitForClientSends.WaitOne(3000));
 
             client.Verify(m => m.BeginClose(It.IsAny<Action<bool, INetworkFacade>>()), Times.Once());
             mockFactory.Verify(m => m.BeginConnect(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<Action<bool, INetworkFacade>>()),

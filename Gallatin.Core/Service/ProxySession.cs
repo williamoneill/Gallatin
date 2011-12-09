@@ -448,7 +448,7 @@ namespace Gallatin.Core.Service
 
                         WireServerEvents();
 
-                        _serverConnection.BeginReceive( HandleDataFromServer );
+                        _serverConnection.BeginReceive( HandleServerReceive );
 
                         SendRequestHeaderToServer();
                     }
@@ -470,16 +470,12 @@ namespace Gallatin.Core.Service
             EndSession();
         }
 
-        private void HandleDataFromServer( bool success, byte[] data, INetworkFacade server )
+        private void HandleServerReceive( bool success, byte[] data, INetworkFacade server )
         {
             try
             {
                 ServiceLog.Logger.Verbose( "{0} Processing data from server", Id );
 
-                // Bug fix: This method could get invoked if the session became inactive
-                // while the server was still sending data. In this case, _serverParser
-                // is null and we get a null reference exception. We should just ignore the
-                // data from the server.
                 if ( success && _isSessionActive )
                 {
                     _serverParser.AppendData( data );
@@ -657,7 +653,7 @@ namespace Gallatin.Core.Service
         private void HandleServerParserAdditionalDataRequested( object sender, EventArgs e )
         {
             ServiceLog.Logger.Verbose( "{0} Additional data needed from server to complete request", Id );
-            _serverConnection.BeginReceive( HandleDataFromServer );
+            _serverConnection.BeginReceive( HandleServerReceive );
         }
 
         private void HandleClientParserAdditionalDataRequested( object sender, EventArgs e )
@@ -693,13 +689,12 @@ namespace Gallatin.Core.Service
             {
                 ServiceLog.Logger.Verbose( "{0} Receiving client data", Id );
 
-                if ( success )
+                if (success && _isSessionActive)
                 {
-                    _clientParser.AppendData( data );
+                    _clientParser.AppendData(data);
                 }
                 else
                 {
-                    ServiceLog.Logger.Info( "{0} Client closed connection.", Id );
                     EndSession();
                 }
             }

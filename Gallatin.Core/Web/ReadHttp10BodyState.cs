@@ -20,8 +20,12 @@ namespace Gallatin.Core.Web
 
         public void AcceptData( byte[] data )
         {
-            _context.AppendBodyData( data );
-            _context.OnPartialDataAvailable( data );
+            if (data.Length > 0)
+            {
+                _context.AppendBodyData(data);
+                _context.OnPartialDataAvailable(data);
+            }
+
             _context.OnAdditionalDataRequested();
         }
 

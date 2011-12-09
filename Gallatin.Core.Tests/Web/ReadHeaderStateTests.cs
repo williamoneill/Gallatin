@@ -90,5 +90,68 @@ namespace Gallatin.Core.Tests.Web
 
             Assert.IsTrue(isInvoked);
         }
+
+        /// <summary>
+        /// This was news to me, but even HTTP 1.1 treats the content-length as optional if 
+        /// the connection header value is close
+        /// </summary>
+        [Test]
+        public void VerifyContentLengthIsOptionalWhenConnectionHasValueClose()
+        {
+            string header = "HTTP/1.1 200 OK\r\nConnection: close\r\n\r\nblah";
+            byte[] headerData = Encoding.UTF8.GetBytes(header);
+            byte[] body = Encoding.UTF8.GetBytes( "blah" );
+
+            Mock<IHttpStreamParserState> mockState = new Mock<IHttpStreamParserState>();
+
+            Mock<IHttpStreamParserContext> mockContext = new Mock<IHttpStreamParserContext>();
+            mockContext.SetupAllProperties();
+
+            // Always return our mock state so we can verify interactions
+            mockContext.SetupGet( m => m.State ).Returns( mockState.Object );
+
+            ReadHeaderState headerState = new ReadHeaderState(mockContext.Object);
+
+            headerState.AcceptData(headerData);
+
+            mockContext.VerifySet(m => m.State = It.IsAny<ReadHttp10BodyState>(), Times.Once());
+            mockState.Verify(m => m.AcceptData(body), Times.Once());
+        }
+
+        /// <summary>
+        /// If HTTP 1.1 then the connection type is assumed keep-alive. If content length is not
+        /// specified and connection type is not specified then assume no body. With HTTP 1.0
+        /// connection is optional as it always assumes non-persistent connections.
+        /// </summary>
+        [Test]
+        public void VerifyNoDataIsAssumedIfConnectionTypeNotSpecified([Values("1.0", "1.1")] string httpVersion)
+        {
+            string header = string.Format( "HTTP/{0} 200 OK\r\n\r\nblah", httpVersion );
+            byte[] headerData = Encoding.UTF8.GetBytes(header);
+            byte[] body = Encoding.UTF8.GetBytes("blah");
+
+            Mock<IHttpStreamParserState> mockState = new Mock<IHttpStreamParserState>();
+
+            Mock<IHttpStreamParserContext> mockContext = new Mock<IHttpStreamParserContext>();
+            mockContext.SetupAllProperties();
+            mockContext.SetupGet(m => m.State).Returns(mockState.Object);
+
+            ReadHeaderState headerState = new ReadHeaderState(mockContext.Object);
+
+            headerState.AcceptData(headerData);
+
+            if (httpVersion == "1.0")
+            {
+                mockContext.VerifySet(m => m.State = It.IsAny<ReadHttp10BodyState>(), Times.Once());
+                mockState.Verify(m => m.AcceptData(body), Times.Once());
+            }
+            else
+            {
+                mockContext.VerifySet(m => m.State = It.IsAny<ReadHeaderState>(), Times.Once());
+                mockContext.Verify(m=>m.OnMessageReadComplete(), Times.Once());
+                mockContext.Verify(m => m.OnAdditionalDataRequested(), Times.Once());
+                
+            }
+        }
     }
 }

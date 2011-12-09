@@ -1,17 +1,17 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 
 namespace Gallatin.Contracts
 {
-
-
     /// <summary>
     /// Filter for HTTP responses
     /// </summary>
     public interface IResponseFilter
     {
+        /// <summary>
+        /// Gets the filter speed type. 
+        /// </summary>
+        FilterSpeedType FilterSpeedType { get; }
+
         /// <summary>
         /// Evaluates the HTTP response content
         /// </summary>
@@ -29,12 +29,8 @@ namespace Gallatin.Contracts
         /// <param name="connectionId">Client connection ID</param>
         /// <param name="bodyAvailableCallback">Delegate to be invoked when the HTTP body is available. Requestion the body has a negative impact on performance</param>
         /// <returns><c>null</c> if no filter is applied or valid HTML describing the filter condition</returns>
-        string EvaluateFilter( IHttpResponse response, string connectionId, out Func<IHttpResponse, string, byte[], byte[]> bodyAvailableCallback );
-
-        /// <summary>
-        /// Gets the filter speed type. 
-        /// </summary>
-        FilterSpeedType FilterSpeedType { get; }
-
+        string EvaluateFilter( IHttpResponse response,
+                               string connectionId,
+                               out Func<IHttpResponse, string, byte[], byte[]> bodyAvailableCallback );
     }
 }

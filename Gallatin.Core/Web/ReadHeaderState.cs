@@ -96,6 +96,8 @@ namespace Gallatin.Core.Web
 
         private void InterpretHttpHeaders( HttpHeaders headers, string httpVersion )
         {
+            Contract.Requires(!string.IsNullOrEmpty(httpVersion));
+
             int length = 0;
             string contentLength = headers["content-length"];
             if ( contentLength != null )
@@ -131,9 +133,12 @@ namespace Gallatin.Core.Web
                     _context.OnAdditionalDataRequested();
                 }
             }
-            else if ( !string.IsNullOrEmpty(httpVersion) && httpVersion == "1.0")
+                // HTTP 1.0 assumes non-persistent connection (connection=close unnecessary)
+                // HTTP 1.1 assumes persistent connection. Unless the connection is explictly closed, assume no body 
+                // if content-length is not specified.
+            else if ( contentLength == null && (httpVersion == "1.0" || headers["connection"] == "close" ))
             {
-                _context.State = new ReadHttp10BodyState( _context );
+                _context.State = new ReadHttp10BodyState(_context);
                 _context.State.AcceptData(_bodyData.ToArray());
             }
             else
