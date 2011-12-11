@@ -8,7 +8,7 @@ namespace Gallatin.Core.Web
     /// Interface for classes that parse raw HTTP streams
     /// </summary>
     [ContractClass( typeof (IHttpStreamParserContract) )]
-    internal interface IHttpStreamParser
+    public interface IHttpStreamParser
     {
         /// <summary>
         /// Raised when the HTTP request header is read.

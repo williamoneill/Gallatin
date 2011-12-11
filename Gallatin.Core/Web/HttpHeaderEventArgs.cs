@@ -6,8 +6,16 @@ using Gallatin.Contracts;
 
 namespace Gallatin.Core.Web
 {
-    internal abstract class HttpHeaderEventArgs : EventArgs
+    /// <summary>
+    /// HTTP header event arguments base class
+    /// </summary>
+    public abstract class HttpHeaderEventArgs : EventArgs
     {
+        /// <summary>
+        /// Creates a new instance of the class
+        /// </summary>
+        /// <param name="version">HTTP version</param>
+        /// <param name="headers">HTTP headers</param>
         protected HttpHeaderEventArgs( string version, IHttpHeaders headers )
         {
             Contract.Requires( !string.IsNullOrEmpty( version ) );
@@ -17,13 +25,18 @@ namespace Gallatin.Core.Web
             Headers = headers;
         }
 
+        /// <summary>
+        /// Gets a flag indicating if the message has a HTTP body
+        /// </summary>
         public bool HasBody
         {
             get
             {
                 // HTTP 1.0 always has the potential for a body even if the content-length is not specified.
-                if (Version == "1.0")
+                if ( Version == "1.0" )
+                {
                     return true;
+                }
 
                 string contentLength = Headers["content-length"];
                 string chunkedData = Headers["transfer-encoding"];
@@ -33,11 +46,26 @@ namespace Gallatin.Core.Web
             }
         }
 
+        /// <summary>
+        /// Gets the HTTP version
+        /// </summary>
         public string Version { get; protected set; }
+
+        /// <summary>
+        /// Gets a reference to the HTTP headers
+        /// </summary>
         public IHttpHeaders Headers { get; protected set; }
 
+        /// <summary>
+        /// Creates the first line in the HTTP message
+        /// </summary>
+        /// <returns>Formatted line for the HTTP message</returns>
         protected abstract string CreateFirstLine();
 
+        /// <summary>
+        /// Gets the raw representation used to send the message on the network
+        /// </summary>
+        /// <returns>Raw representation of the instance</returns>
         public byte[] GetBuffer()
         {
             StringBuilder builder = new StringBuilder();

@@ -9,7 +9,7 @@ using Gallatin.Core.Web;
 namespace Gallatin.Core.Service
 {
     [PartCreationPolicy( CreationPolicy.NonShared )]
-    [Export( typeof (IProxySession) )]
+    //[Export( typeof (IProxySession) )]
     internal class ProxySession : IProxySession
     {
         private readonly ManualResetEvent _connectingToServerEvent;

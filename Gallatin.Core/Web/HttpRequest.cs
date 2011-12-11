@@ -74,5 +74,11 @@ namespace Gallatin.Core.Web
             Contract.Requires( args != null );
             return new HttpRequest( args );
         }
+
+
+        public byte[] GetBuffer()
+        {
+            return _args.GetBuffer();
+        }
     }
 }

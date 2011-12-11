@@ -14,5 +14,12 @@ namespace Gallatin.Contracts
         /// HTTP status text from the server
         /// </summary>
         string StatusText { get; }
+
+        /// <summary>
+        /// Gets a flag indicating if the HTTP connection is persistent
+        /// </summary>
+        bool IsPersistent { get; }
+
+
     }
 }

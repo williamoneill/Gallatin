@@ -105,6 +105,8 @@
     <Compile Include="Service\IProxySession.cs" />
     <Compile Include="Service\ProxyService.cs" />
     <Compile Include="Service\ProxySession.cs" />
+    <Compile Include="Service\SessionState\ISessionState.cs" />
+    <Compile Include="Service\SessionState\SessionContext.cs" />
     <Compile Include="Util\CoreFactory.cs" />
     <Compile Include="Util\FilterLogger.cs" />
     <Compile Include="Util\IPooledObject.cs" />

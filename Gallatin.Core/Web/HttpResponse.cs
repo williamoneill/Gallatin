@@ -53,6 +53,18 @@ namespace Gallatin.Core.Web
             }
         }
 
+        public bool IsPersistent
+        {
+            get
+            {
+                return _args.IsPersistent;
+            }
+        }
+
+        public byte[] GetBuffer()
+        {
+            return _args.GetBuffer();
+        }
         public static HttpResponse CreateResponse( HttpResponseHeaderEventArgs args )
         {
             Contract.Requires(args != null);
