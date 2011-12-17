@@ -6,6 +6,7 @@ using System.Diagnostics.Contracts;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Threading;
 
 namespace Gallatin.Core.Util
 {
@@ -49,8 +50,19 @@ namespace Gallatin.Core.Util
         {
             Contract.Requires(creationDelegate!=null);
 
-            _mockContainer.ComposeExportedValue( creationDelegate() );
+            try
+            {
+                _creationMutex.WaitOne();
+                _mockContainer.ComposeExportedValue(creationDelegate());
+            }
+            finally 
+            {
+                _creationMutex.ReleaseMutex();
+            }
+
         }
+
+        private static Mutex _creationMutex = new Mutex();
 
         /// <summary>
         /// Creates an instance of the specified type or interface
@@ -59,7 +71,15 @@ namespace Gallatin.Core.Util
         /// <returns>Instance of specified type</returns>
         public static T Compose<T>()
         {
-            return _container.GetExportedValue<T>();
+            try
+            {
+                _creationMutex.WaitOne();
+                return _container.GetExportedValue<T>();
+            }
+            finally 
+            {
+                _creationMutex.ReleaseMutex();
+            }
         }
     }
 }

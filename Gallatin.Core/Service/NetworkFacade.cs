@@ -82,7 +82,7 @@ namespace Gallatin.Core.Service
         public void BeginClose( Action<bool, INetworkFacade> callback )
         {
             // After further reseach, this is not needed despite MSDN documentation.
-            //_socket.Shutdown(SocketShutdown.Both);
+            //Socket.Shutdown(SocketShutdown.Both);
 
             Socket.BeginDisconnect( false, HandleDisconnect, callback );
         }
