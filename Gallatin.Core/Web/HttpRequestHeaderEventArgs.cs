@@ -64,14 +64,14 @@ namespace Gallatin.Core.Web
         /// <returns>Formatted line for the HTTP request</returns>
         protected override string CreateFirstLine()
         {
-            if ( Path.StartsWith( "http" ) )
-            {
-                Uri hostUri = new Uri( Path );
+            //if (Path.StartsWith("http"))
+            //{
+            //    Uri hostUri = new Uri(Path);
 
-                // Sites like YouTube get cranky if we send the complete path in the first line.
-                // Only send the relative path and query.
-                return string.Format( "{0} {1} HTTP/{2}", Method, hostUri.PathAndQuery, Version );
-            }
+            //    // Sites like YouTube get cranky if we send the complete path in the first line.
+            //    // Only send the relative path and query.
+            //    return string.Format("{0} {1} HTTP/{2}", Method, hostUri.PathAndQuery, Version);
+            //}
 
             return string.Format( "{0} {1} HTTP/{2}", Method, Path, Version );
         }

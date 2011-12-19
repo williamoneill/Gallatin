@@ -40,6 +40,11 @@ namespace Gallatin.Core.Service
         void BeginClose( Action<bool, INetworkFacade> callback );
 
         /// <summary>
+        /// Cancels a pending receive on the socket
+        /// </summary>
+        void CancelPendingReceive();
+
+        /// <summary>
         /// Raised when the connection is closed
         /// </summary>
         event EventHandler ConnectionClosed;
@@ -70,6 +75,8 @@ namespace Gallatin.Core.Service
         {
             Contract.Requires( callback != null );
         }
+
+        public abstract void CancelPendingReceive();
 
         public abstract event EventHandler ConnectionClosed;
 

@@ -52,6 +52,14 @@ namespace Gallatin.Core.Service.SessionState
         IHttpStreamParser ServerParser { get; }
 
         /// <summary>
+        /// Connects to the server and invokes the callback delegate upon completion
+        /// </summary>
+        /// <param name="host">Remote host address</param>
+        /// <param name="port">Remote host port</param>
+        /// <param name="callback">Callback to invoke to report connection results.</param>
+        void ConnectToServer( string host, int port, Action<bool> callback );
+
+        /// <summary>
         /// Gets a reference to the active session state
         /// </summary>
         ISessionState State { get; }
@@ -69,6 +77,11 @@ namespace Gallatin.Core.Service.SessionState
         /// </summary>
         /// <param name="clientConnection">Server connection</param>
         void SetupClientConnection( INetworkFacade clientConnection );
+
+        /// <summary>
+        /// Removes the client parser events from the network facade without closing the connection
+        /// </summary>
+        void UnwireClientParserEvents();
 
         /// <summary>
         /// Sends data to the connected server 
@@ -157,6 +170,8 @@ namespace Gallatin.Core.Service.SessionState
         public void SetupClientConnection( INetworkFacade clientConnection )
         {
         }
+
+        public abstract void UnwireClientParserEvents();
 
         public void SendServerData( byte[] data )
         {

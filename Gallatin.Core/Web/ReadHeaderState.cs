@@ -157,7 +157,7 @@ namespace Gallatin.Core.Web
 
             string header = Encoding.UTF8.GetString( _headerData.ToArray() );
 
-            WebLog.Logger.Verbose( "HTTP header = " + header );
+            WebLog.Logger.Verbose( "Original HTTP header\r\n " + header );
 
             string[] headerLines = header.Split( new[]
                                                  {
@@ -215,6 +215,8 @@ namespace Gallatin.Core.Web
             }
             else
             {
+                WebLog.Logger.Info("HTTP requestion header line 1: {0}", headerLines[0]);
+
                 // Typcial line will look like "GET / HTTP/1.1"
                 string[] tokens = headerLines[0].Split( ' ' );
                 const int TokensInValidHttpRequestLine = 3;

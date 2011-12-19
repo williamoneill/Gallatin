@@ -10,12 +10,12 @@ namespace Gallatin.Core.Service.SessionState
         {
         }
 
-        public virtual bool ShouldSendPartialClientData( byte[] data, ISessionContext context )
+        public virtual bool ShouldSendPartialDataToClient( byte[] data, ISessionContext context )
         {
             return true;
         }
 
-        public virtual bool ShouldSendPartialServerData( byte[] data, ISessionContext context )
+        public virtual bool ShouldSendPartialDataToServer( byte[] data, ISessionContext context )
         {
             return true;
         }

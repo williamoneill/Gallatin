@@ -52,8 +52,8 @@ namespace Gallatin.Core.Service.SessionState
         {
             ServiceLog.Logger.Info( "{0} Starting new client session", InternalId );
 
-            ChangeState( SessionStateType.ClientConnecting );
-            SetupClientConnection( connection );
+            SetupClientConnection(connection);
+            ChangeState(SessionStateType.ClientConnecting);
         }
 
         public void Reset()
@@ -73,18 +73,10 @@ namespace Gallatin.Core.Service.SessionState
                 {
                     ServiceLog.Logger.Info("{0} SessionContext::SetupClientConnection", InternalId);
 
-                    if (ClientParser != null)
-                    {
-                        ServiceLog.Logger.Info("{0} SessionContext --- Releasing client resources", InternalId);
-                        ClientParser.AdditionalDataRequested -= HandleClientParserAdditionalDataRequested;
-                        ClientParser.PartialDataAvailable -= HandleClientParserPartialDataAvailable;
-                        ClientParser.ReadRequestHeaderComplete -= HandleClientParserReadRequestHeaderComplete;
-                        ClientParser = null;
-                    }
+                    UnwireClientParserEvents();
 
                     if (ClientConnection != null)
                     {
-                        ClientConnection.ConnectionClosed -= HandleClientConnectionClosed;
                         ClientConnection.BeginClose((s, f) => ServiceLog.Logger.Info("{0} Client connection closed", InternalId));
                     }
 
@@ -97,15 +89,37 @@ namespace Gallatin.Core.Service.SessionState
                         ClientParser.PartialDataAvailable += HandleClientParserPartialDataAvailable;
                         ClientParser.ReadRequestHeaderComplete += HandleClientParserReadRequestHeaderComplete;
                         ClientConnection.ConnectionClosed += HandleClientConnectionClosed;
+
                         ClientConnection.BeginReceive(HandleClientReceive);
                     }
                 }
                 catch (Exception ex)
                 {
                     ServiceLog.Logger.Exception(string.Format("{0} Unhandled exception setting up client connection", InternalId), ex);
-                    Reset();
+                    ChangeState(SessionStateType.Error);
                 }
             }
+        }
+
+        public void UnwireClientParserEvents()
+        {
+            lock (_mutex)
+            {
+                if (ClientParser != null)
+                {
+                    ClientParser.AdditionalDataRequested -= HandleClientParserAdditionalDataRequested;
+                    ClientParser.PartialDataAvailable -= HandleClientParserPartialDataAvailable;
+                    ClientParser.ReadRequestHeaderComplete -= HandleClientParserReadRequestHeaderComplete;
+                    ClientParser = null;
+                }
+
+                if (ClientConnection != null)
+                {
+                    ClientConnection.ConnectionClosed -= HandleClientConnectionClosed;
+                }
+
+            }
+
         }
 
         public IHttpRequest RecentRequestHeader { get; private set; }
@@ -183,7 +197,7 @@ namespace Gallatin.Core.Service.SessionState
                 catch (Exception ex)
                 {
                     ServiceLog.Logger.Exception(string.Format("{0} Unhandled exception setting up server connection", InternalId), ex);
-                    Reset();
+                    ChangeState(SessionStateType.Error);
                 }
             }
 
@@ -214,7 +228,7 @@ namespace Gallatin.Core.Service.SessionState
                 catch (Exception ex)
                 {
                     ServiceLog.Logger.Exception(string.Format("{0} Unhandled exception when raising Session Ended event", InternalId), ex);
-                    Reset();
+                    ChangeState(SessionStateType.Error);
                 }
             }
         }
@@ -245,7 +259,7 @@ namespace Gallatin.Core.Service.SessionState
                 catch (Exception ex)
                 {
                     ServiceLog.Logger.Exception(string.Format("{0} Unhandled exception when changing session state", InternalId), ex);
-                    Reset();
+                    ChangeState(SessionStateType.Error);
                 }
             }
         }
@@ -277,7 +291,7 @@ namespace Gallatin.Core.Service.SessionState
                 catch (Exception ex)
                 {
                     ServiceLog.Logger.Exception(string.Format("{0} Unhandled exception when evaluating response body", InternalId), ex);
-                    Reset();
+                    ChangeState(SessionStateType.Error);
                 }
             }
         }
@@ -294,15 +308,21 @@ namespace Gallatin.Core.Service.SessionState
                 {
                     if (success && ClientParser != null)
                     {
-                        ServiceLog.Logger.Verbose("{0} HandleClientReceive -- {1} -- {2}", InternalId, data.Length, success);
-
-                        ClientParser.AppendData(data);
+                        if (data == null)
+                        {
+                            ServiceLog.Logger.Info("{0} Client is still active but has stopped sending data.", InternalId);
+                            UnwireClientParserEvents();
+                        }
+                        else
+                        {
+                            ClientParser.AppendData(data);
+                        }
                     }
                 }
                 catch (Exception ex)
                 {
                     ServiceLog.Logger.Exception(string.Format("{0} Unhandled exception receiving data from client", InternalId), ex);
-                    Reset();
+                    ChangeState(SessionStateType.Error);
                 }
             }
         }
@@ -319,15 +339,21 @@ namespace Gallatin.Core.Service.SessionState
                 {
                     if (success && ServerParser != null)
                     {
-                        ServiceLog.Logger.Verbose("{0} HandleServerReceive -- {1} -- {2}", InternalId, data.Length, success);
-
-                        ServerParser.AppendData(data);
+                        if (data == null)
+                        {
+                            ServiceLog.Logger.Info("{0} Server has shutdown the socket and will not be sending more data.");
+                            Reset();
+                        }
+                        else
+                        {
+                            ServerParser.AppendData(data);
+                        }
                     }
                 }
                 catch (Exception ex)
                 {
                     ServiceLog.Logger.Exception(string.Format("{0} Unhandled exception receiving data from server", InternalId), ex);
-                    Reset();
+                    ChangeState(SessionStateType.Error);
                 }
             }
         }
@@ -348,7 +374,7 @@ namespace Gallatin.Core.Service.SessionState
                 catch (Exception ex)
                 {
                     ServiceLog.Logger.Exception(string.Format("{0} Unhandled exception when handling request header", InternalId), ex);
-                    Reset();
+                    ChangeState(SessionStateType.Error);
                 }
             }
         }
@@ -359,7 +385,7 @@ namespace Gallatin.Core.Service.SessionState
 
             ServiceLog.Logger.Verbose( "{0} SessionContext::HandleClientConnectionClosed", InternalId );
 
-            ChangeState( SessionStateType.Unconnected );
+            Reset();
         }
 
         [ContractInvariantMethod]
@@ -378,7 +404,7 @@ namespace Gallatin.Core.Service.SessionState
             {
                 try
                 {
-                    if (State.ShouldSendPartialServerData(e.Data, this) && ServerConnection != null)
+                    if (State.ShouldSendPartialDataToServer(e.Data, this) && ServerConnection != null)
                     {
                         SendServerData(e.Data);
                     }
@@ -387,7 +413,7 @@ namespace Gallatin.Core.Service.SessionState
                 {
                     ServiceLog.Logger.Exception(
                         string.Format("{0} Unhandled exception when processing partial data from client", InternalId), ex);
-                    Reset();
+                    ChangeState(SessionStateType.Error);
                 }
             }
         }
@@ -430,9 +456,7 @@ namespace Gallatin.Core.Service.SessionState
 
             ServiceLog.Logger.Verbose( "{0} SessionContext::HandleServerConnectionConnectionClosed", InternalId );
 
-            ChangeState( SessionStateType.Unconnected );
-
-            SetupServerConnection(null);
+            Reset();
         }
 
         private void HandleServerParserPartialDataAvailable( object sender, HttpDataEventArgs e )
@@ -445,7 +469,7 @@ namespace Gallatin.Core.Service.SessionState
             {
                 try
                 {
-                    if (State.ShouldSendPartialClientData(e.Data, this)
+                    if (State.ShouldSendPartialDataToClient(e.Data, this)
                          && ClientConnection != null)
                     {
                         SendClientData(e.Data);
@@ -455,7 +479,7 @@ namespace Gallatin.Core.Service.SessionState
                 {
                     ServiceLog.Logger.Exception(
                         string.Format("{0} Unhandled exception when processing partial data from server", InternalId), ex);
-                    Reset();
+                    ChangeState(SessionStateType.Error);
                 }
             }
         }

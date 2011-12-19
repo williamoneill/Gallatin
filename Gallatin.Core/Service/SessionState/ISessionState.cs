@@ -23,7 +23,7 @@ namespace Gallatin.Core.Service.SessionState
         /// <param name="data">Proposed data to send</param>
         /// <param name="context">State context</param>
         /// <returns><c>true</c> if the data should be sent</returns>
-        bool ShouldSendPartialClientData( byte[] data, ISessionContext context );
+        bool ShouldSendPartialDataToClient( byte[] data, ISessionContext context );
 
         /// <summary>
         /// Invoked when the context is determining if it should send data to the server
@@ -31,7 +31,7 @@ namespace Gallatin.Core.Service.SessionState
         /// <param name="data">Proposed data to send</param>
         /// <param name="context">State context</param>
         /// <returns><c>true</c> if the data should be sent</returns>
-        bool ShouldSendPartialServerData( byte[] data, ISessionContext context );
+        bool ShouldSendPartialDataToServer( byte[] data, ISessionContext context );
 
         /// <summary>
         /// Invoked when a complete message has been sent to the client, useful in identifying persistent connections
@@ -69,7 +69,7 @@ namespace Gallatin.Core.Service.SessionState
             Contract.Requires(context!=null);
         }
 
-        public bool ShouldSendPartialClientData( byte[] data, ISessionContext context )
+        public bool ShouldSendPartialDataToClient( byte[] data, ISessionContext context )
         {
             Contract.Requires(data != null);
             Contract.Requires(context != null);
@@ -77,7 +77,7 @@ namespace Gallatin.Core.Service.SessionState
             return false;
         }
 
-        public bool ShouldSendPartialServerData( byte[] data, ISessionContext context )
+        public bool ShouldSendPartialDataToServer( byte[] data, ISessionContext context )
         {
             Contract.Requires(data != null);
             Contract.Requires(context != null);

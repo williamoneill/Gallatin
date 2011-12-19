@@ -41,7 +41,7 @@ namespace Gallatin.Core.Service.SessionState
             }
         }
 
-        public override bool ShouldSendPartialClientData(byte[] data, ISessionContext context)
+        public override bool ShouldSendPartialDataToClient(byte[] data, ISessionContext context)
         {
             // Don't sent partial data. We'll send the complete body when it's available
             return false;

@@ -53,7 +53,7 @@ namespace Gallatin.Core.Tests.Service.SessionState
         {
             ClientConnectingState state = new ClientConnectingState(_mockFilter.Object, _mockFactory.Object);
 
-            Assert.Throws<InvalidOperationException>( () => state.ShouldSendPartialClientData( new byte[1], _mockContext.Object ) );
+            Assert.Throws<InvalidOperationException>( () => state.ShouldSendPartialDataToClient( new byte[1], _mockContext.Object ) );
         }
 
         [Test]
@@ -61,7 +61,7 @@ namespace Gallatin.Core.Tests.Service.SessionState
         {
             ClientConnectingState state = new ClientConnectingState(_mockFilter.Object, _mockFactory.Object);
 
-            Assert.Throws<InvalidOperationException>( () => state.ShouldSendPartialServerData( new byte[1], _mockContext.Object ) );
+            Assert.Throws<InvalidOperationException>( () => state.ShouldSendPartialDataToServer( new byte[1], _mockContext.Object ) );
         }
 
         [Test]

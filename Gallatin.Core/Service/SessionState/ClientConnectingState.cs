@@ -27,13 +27,16 @@ namespace Gallatin.Core.Service.SessionState
             _facadeFactory = factory;
         }
 
-        public override bool ShouldSendPartialClientData(byte[] data, ISessionContext context)
+        public override bool ShouldSendPartialDataToClient(byte[] data, ISessionContext context)
         {
             throw new InvalidOperationException("An attempt was made to send partial data to server while unconnected");
         }
 
-        public override bool ShouldSendPartialServerData(byte[] data, ISessionContext context)
+        public override bool ShouldSendPartialDataToServer(byte[] data, ISessionContext context)
         {
+            Contract.Ensures(context.ServerConnection != null);
+
+            // Wait for the server connect before sending any data to the server
             WaitForConnection(context);
             return true;
         }
@@ -63,14 +66,28 @@ namespace Gallatin.Core.Service.SessionState
                 }
             }
 
+            // TODO: use timeout value
             if (connectionEvent != null)
             {
-                connectionEvent.WaitOne();
+                ServiceLog.Logger.Verbose("{0} Waiting to send data to remote host. Connection pending.");
+
+                if (!connectionEvent.WaitOne())
+                {
+                    throw new TimeoutException(string.Format("{0} Timed out waiting for connection", context.Id));
+                }
+
+                ServiceLog.Logger.Verbose("{0} Connection established. Sending initial data.");
+            }
+            else
+            {
+                throw new InvalidOperationException("Could not locate connection reset event for context");
             }
         }
 
         private void BlockSession(ISessionContext context)
         {
+            ServiceLog.Logger.Info("{0} Blocking session while connecting to remote host");
+
             lock (_connectionBlocks)
             {
                 if (_connectionBlocks.ContainsKey(context))
@@ -84,6 +101,8 @@ namespace Gallatin.Core.Service.SessionState
 
         private void UnblockSession(ISessionContext context)
         {
+            ServiceLog.Logger.Info("{0} Connected to remote host. Unblocking session.");
+
             lock (_connectionBlocks)
             {
                 ManualResetEvent connectionEvent;
@@ -91,7 +110,11 @@ namespace Gallatin.Core.Service.SessionState
                 {
                     connectionEvent.Set();
                     _connectionBlocks.Remove( context );
-                }                
+                }
+                else
+                {
+                    throw new InvalidOperationException("Could not locate connection reset event for context");
+                }
             }
         }
 
@@ -113,67 +136,56 @@ namespace Gallatin.Core.Service.SessionState
             }
             else
             {
-                ConnectToServer(request, context);
+                if (request.IsSsl)
+                {
+                    context.ChangeState(SessionStateType.Https);
+                    context.State.RequestHeaderAvailable( request, context );
+                }
+                else
+                {
+                    ConnectToServer(request, context);
+                }
+
             }
         }
 
         private void ConnectToServer( IHttpRequest request, ISessionContext context )
         {
-            // With SSL (HTTPS) the path is the host name and port
-            if ( request.IsSsl )
-            {
-                string[] pathTokens = request.Path.Split( ':' );
+            string host;
+            int port;
 
-                if ( pathTokens.Length == 2 )
-                {
-                    context.Port = Int32.Parse( pathTokens[1] );
-                    context.Host = pathTokens[0];
-                }
-                else
-                {
-                    throw new InvalidDataException("Unable to determine SSL host address");
-                }
+            if ( SessionStateUtils.TryParseAddress( request, out host, out port ) )
+            {
+                context.Host = host;
+                context.Port = port;
             }
             else
             {
-                string host;
-                int port;
-
-                if ( SessionStateUtils.TryParseAddress( request, out host, out port ) )
-                {
-                    context.Host = host;
-                    context.Port = port;
-                }
-                else
-                {
-                    throw new InvalidDataException("Unable to parse host address from HTTP request");
-                }
+                throw new InvalidDataException("Unable to parse host address from HTTP request");
             }
+
+            ServiceLog.Logger.Info("{0} Attempting to connect to remote host: {1} {2}", context.Id, context.Host, context.Port);
 
             _facadeFactory.BeginConnect(context.Host,
                                         context.Port,
                                         (success, connection) =>
                                         {
-                                            UnblockSession(context);
-
                                             if (success)
                                             {
-                                                context.SetupServerConnection(connection);
+                                                ServiceLog.Logger.Info("{0} Connected to remote host: {1} {2}", context.Id, context.Host, context.Port);
 
-                                                if (request.IsSsl)
-                                                {
-                                                    context.ChangeState(SessionStateType.Https);
-                                                }
-                                                else
-                                                {
-                                                    context.ChangeState(SessionStateType.Connected);
-                                                }
+                                                context.SetupServerConnection(connection);
+                                                context.ChangeState(SessionStateType.Connected);
+
                                             }
                                             else
                                             {
-                                                ServiceLog.Logger.Warning("{0} Unable to connect to server {1} {2}", context.Id, context.Host, context.Port);
-                                                context.ChangeState(SessionStateType.Unconnected);
+                                                ServiceLog.Logger.Warning("{0} Unable to connect to remote host: {1} {2}", context.Id, context.Host, context.Port);
+                                                context.ChangeState(SessionStateType.Error);
                                             }
+
+                                            UnblockSession(context);
+
                                         }
                 );
 

@@ -14,12 +14,12 @@ namespace Gallatin.Core.Service.SessionState
             }
         }
 
-        public override bool ShouldSendPartialClientData( byte[] data, ISessionContext context )
+        public override bool ShouldSendPartialDataToClient( byte[] data, ISessionContext context )
         {
             return false;
         }
 
-        public override bool ShouldSendPartialServerData( byte[] data, ISessionContext context )
+        public override bool ShouldSendPartialDataToServer( byte[] data, ISessionContext context )
         {
             return false;
         }

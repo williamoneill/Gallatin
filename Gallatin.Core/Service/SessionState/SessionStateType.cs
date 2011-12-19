@@ -31,6 +31,11 @@ namespace Gallatin.Core.Service.SessionState
         ResponseBodyFilter,
 
         /// <summary>
+        /// Error state
+        /// </summary>
+        Error,
+
+        /// <summary>
         /// Client is using HTTPS
         /// </summary>
         Https

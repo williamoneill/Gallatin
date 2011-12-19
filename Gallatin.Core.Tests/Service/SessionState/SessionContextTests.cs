@@ -254,7 +254,7 @@ namespace Gallatin.Core.Tests.Service.SessionState
             Assert.That(classUnderTest.ServerConnection, Is.Null);
 
             _mockConnectedState.Verify(m => m.ResponseHeaderAvailable(It.IsAny<IHttpResponse>(), It.IsAny<ISessionContext>()), Times.Never());
-            _mockConnectedState.Verify(m => m.ShouldSendPartialServerData(It.IsAny<byte[]>(), It.IsAny<ISessionContext>()), Times.Never());
+            _mockConnectedState.Verify(m => m.ShouldSendPartialDataToServer(It.IsAny<byte[]>(), It.IsAny<ISessionContext>()), Times.Never());
 
             Assert.Throws<InvalidOperationException>( () => classUnderTest.SendServerData( data ) );
         }
@@ -280,7 +280,7 @@ namespace Gallatin.Core.Tests.Service.SessionState
             Assert.That(classUnderTest.ClientConnection, Is.Null);
 
             _mockConnectedState.Verify(m=>m.RequestHeaderAvailable(It.IsAny<IHttpRequest>(), It.IsAny<ISessionContext>()), Times.Never());
-            _mockConnectedState.Verify(m=>m.ShouldSendPartialClientData(It.IsAny<byte[]>(), It.IsAny<ISessionContext>()), Times.Never());
+            _mockConnectedState.Verify(m=>m.ShouldSendPartialDataToClient(It.IsAny<byte[]>(), It.IsAny<ISessionContext>()), Times.Never());
 
             Assert.Throws<InvalidOperationException>(() => classUnderTest.SendClientData(data));
         }
@@ -328,8 +328,8 @@ namespace Gallatin.Core.Tests.Service.SessionState
         {
             SessionContext classUnderTest = new SessionContext(_mockRegistry.Object);
 
-            _mockConnectedState.Setup(m => m.ShouldSendPartialClientData(It.IsAny<byte[]>(), It.IsAny<ISessionContext>())).Returns(true);
-            _mockConnectedState.Setup(m => m.ShouldSendPartialServerData(It.IsAny<byte[]>(), It.IsAny<ISessionContext>())).Returns(true);
+            _mockConnectedState.Setup(m => m.ShouldSendPartialDataToClient(It.IsAny<byte[]>(), It.IsAny<ISessionContext>())).Returns(true);
+            _mockConnectedState.Setup(m => m.ShouldSendPartialDataToServer(It.IsAny<byte[]>(), It.IsAny<ISessionContext>())).Returns(true);
             
             Queue<string> requests = new Queue<string>();
             requests.Enqueue("GET / HTTP/1.1\r\nHost: www.yahoo.com\r\n\r\n");
@@ -347,7 +347,7 @@ namespace Gallatin.Core.Tests.Service.SessionState
                 m => m.RequestHeaderAvailable(It.IsAny<IHttpRequest>(), It.IsAny<ISessionContext>()), Times.Exactly(3));
 
             _mockConnectedState.Verify(
-                m => m.ShouldSendPartialClientData(It.IsAny<byte[]>(), classUnderTest), Times.Never());
+                m => m.ShouldSendPartialDataToClient(It.IsAny<byte[]>(), classUnderTest), Times.Never());
 
             _mockConnectedState.Verify(
                 m => m.RequestHeaderAvailable(It.Is<IHttpRequest>(s => s.Path == "/"), classUnderTest), Times.Once());
@@ -365,11 +365,11 @@ namespace Gallatin.Core.Tests.Service.SessionState
                 m => m.SentFullServerResponseToClient(It.IsAny<IHttpResponse>(), classUnderTest), Times.Never());
 
             _mockConnectedState.Verify(
-                m => m.ShouldSendPartialServerData(It.IsAny<byte[]>(), classUnderTest), Times.Never(),
+                m => m.ShouldSendPartialDataToServer(It.IsAny<byte[]>(), classUnderTest), Times.Never(),
                 "No data should have been sent to the server");
 
             _mockConnectedState.Verify(
-                m => m.ShouldSendPartialClientData(It.IsAny<byte[]>(), classUnderTest), Times.Never(),
+                m => m.ShouldSendPartialDataToClient(It.IsAny<byte[]>(), classUnderTest), Times.Never(),
                 "No data should have been sent back to the client");
 
             _mockClient.Verify(m => m.BeginReceive(It.IsAny<Action<bool, byte[], INetworkFacade>>()), Times.Exactly(4),
@@ -383,8 +383,8 @@ namespace Gallatin.Core.Tests.Service.SessionState
         {
             SessionContext classUnderTest = new SessionContext(_mockRegistry.Object);
 
-            _mockConnectedState.Setup( m => m.ShouldSendPartialClientData( It.IsAny<byte[]>(), It.IsAny<ISessionContext>() ) ).Returns( true );
-            _mockConnectedState.Setup(m => m.ShouldSendPartialServerData(It.IsAny<byte[]>(), It.IsAny<ISessionContext>())).Returns(true);
+            _mockConnectedState.Setup( m => m.ShouldSendPartialDataToClient( It.IsAny<byte[]>(), It.IsAny<ISessionContext>() ) ).Returns( true );
+            _mockConnectedState.Setup(m => m.ShouldSendPartialDataToServer(It.IsAny<byte[]>(), It.IsAny<ISessionContext>())).Returns(true);
 
             // Once the server connection is established, the class under test will request messages from the server.
             Queue<string> responses = new Queue<string>();
@@ -406,7 +406,7 @@ namespace Gallatin.Core.Tests.Service.SessionState
                 m => m.RequestHeaderAvailable(It.IsAny<IHttpRequest>(), It.IsAny<ISessionContext>()), Times.Never());
 
             _mockConnectedState.Verify(
-                m => m.ShouldSendPartialClientData(It.IsAny<byte[]>(), classUnderTest), Times.Once());
+                m => m.ShouldSendPartialDataToClient(It.IsAny<byte[]>(), classUnderTest), Times.Once());
 
             _mockConnectedState.Verify(
                 m => m.ResponseHeaderAvailable(It.Is<IHttpResponse>( s => s.Status == 200 ), classUnderTest), Times.Once());
@@ -421,7 +421,7 @@ namespace Gallatin.Core.Tests.Service.SessionState
                 m => m.SentFullServerResponseToClient(It.IsAny<IHttpResponse>(), classUnderTest), Times.Exactly(3));
 
             _mockConnectedState.Verify(
-                m => m.ShouldSendPartialServerData(It.IsAny<byte[]>(), classUnderTest), Times.Never(),
+                m => m.ShouldSendPartialDataToServer(It.IsAny<byte[]>(), classUnderTest), Times.Never(),
                 "No data should have been sent back to the server");
 
             _mockServer.Verify(m => m.BeginReceive(It.IsAny<Action<bool, byte[], INetworkFacade>>()), Times.Exactly(4), 
@@ -463,7 +463,7 @@ namespace Gallatin.Core.Tests.Service.SessionState
                 m => m.RequestHeaderAvailable( It.IsAny<IHttpRequest>(), It.IsAny<ISessionContext>() ), Times.Never() );
 
             _mockConnectedState.Verify(
-                m => m.ShouldSendPartialClientData(It.IsAny<byte[]>(), classUnderTest), Times.Once());
+                m => m.ShouldSendPartialDataToClient(It.IsAny<byte[]>(), classUnderTest), Times.Once());
 
             _mockConnectedState.Verify(
                 m => m.ResponseHeaderAvailable(classUnderTest.RecentResponseHeader, classUnderTest), Times.Once());
@@ -472,7 +472,7 @@ namespace Gallatin.Core.Tests.Service.SessionState
                 m => m.SentFullServerResponseToClient( classUnderTest.RecentResponseHeader, classUnderTest ), Times.Once() );
             
             _mockConnectedState.Verify(
-                m => m.ShouldSendPartialServerData( bodyData, classUnderTest ), Times.Never());
+                m => m.ShouldSendPartialDataToServer( bodyData, classUnderTest ), Times.Never());
 
             _mockServer.Verify( m => m.BeginReceive( It.IsAny<Action<bool,byte[],INetworkFacade>>() ), Times.Exactly(2) );
         }
@@ -518,10 +518,10 @@ namespace Gallatin.Core.Tests.Service.SessionState
                 m => m.SentFullServerResponseToClient(It.IsAny<IHttpResponse>(), It.IsAny<ISessionContext>()), Times.Never());
 
             _mockClientConnectingState.Verify(
-                m => m.ShouldSendPartialClientData( It.IsAny<byte[]>(), It.IsAny<ISessionContext>() ), Times.Never());
+                m => m.ShouldSendPartialDataToClient( It.IsAny<byte[]>(), It.IsAny<ISessionContext>() ), Times.Never());
 
             _mockClientConnectingState.Verify(
-                m => m.ShouldSendPartialServerData(It.IsAny<byte[]>(), It.IsAny<ISessionContext>()), Times.Never());
+                m => m.ShouldSendPartialDataToServer(It.IsAny<byte[]>(), It.IsAny<ISessionContext>()), Times.Never());
 
             _mockClient.Verify(m => m.BeginReceive(It.IsAny<Action<bool, byte[], INetworkFacade>>()), Times.Exactly(2));
         }

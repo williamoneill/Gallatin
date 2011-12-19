@@ -1,6 +1,7 @@
 using System;
 using System.ComponentModel.Composition;
 using System.Diagnostics.Contracts;
+using System.IO;
 using Gallatin.Core.Util;
 
 namespace Gallatin.Core.Service.SessionState
@@ -9,14 +10,14 @@ namespace Gallatin.Core.Service.SessionState
     [PartCreationPolicy(CreationPolicy.NonShared)]
     internal class HttpsState : SessionStateBase
     {
-        public override bool ShouldSendPartialClientData(byte[] data, ISessionContext context)
-        {
-            return false;
-        }
+        private INetworkFacadeFactory _facadeFactory;
 
-        public override bool ShouldSendPartialServerData(byte[] data, ISessionContext context)
+        [ImportingConstructor]
+        public  HttpsState(INetworkFacadeFactory factory)
         {
-            return false;
+            Contract.Requires(factory!=null);
+
+            _facadeFactory = factory;
         }
 
         public override void ServerConnectionLost(ISessionContext context)
@@ -24,26 +25,68 @@ namespace Gallatin.Core.Service.SessionState
             context.Reset();
         }
 
+        public override bool ShouldSendPartialDataToClient(byte[] data, ISessionContext context)
+        {
+            return base.ShouldSendPartialDataToClient(data, context);
+        }
+
+        public override bool ShouldSendPartialDataToServer(byte[] data, ISessionContext context)
+        {
+            return base.ShouldSendPartialDataToServer(data, context);
+        }
+
         private ISessionContext _context;
         private ISslTunnel _tunnel;
+
+        public override void RequestHeaderAvailable(Contracts.IHttpRequest request, ISessionContext context)
+        {
+            string[] pathTokens = request.Path.Split(':');
+
+            if (pathTokens.Length == 2)
+            {
+                context.Port = Int32.Parse(pathTokens[1]);
+                context.Host = pathTokens[0];
+            }
+            else
+            {
+                throw new InvalidDataException("Unable to determine SSL host address");
+            }
+
+            _facadeFactory.BeginConnect( context.Host,
+                                         context.Port,
+                                         ( success, connection ) =>
+                                         {
+                                             if ( success )
+                                             {
+                                                 _tunnel = CoreFactory.Compose<ISslTunnel>();
+                                                 _tunnel.TunnelClosed += new EventHandler( HandleTunnelClosed );
+                                                 _tunnel.EstablishTunnel( context.ClientConnection,
+                                                                          connection,
+                                                                          context.RecentRequestHeader.Version );
+                                             }
+                                             else
+                                             {
+                                                 ServiceLog.Logger.Warning( "{0} Unable to connect to HTTPS server {1} {2}",
+                                                                            context.Id,
+                                                                            context.Host,
+                                                                            context.Port );
+                                                 context.Reset();
+                                             }
+                                         } );
+
+        }
 
         public override void TransitionToState(ISessionContext context)
         {
             Contract.Requires(context.ClientConnection!=null);
-            Contract.Requires(context.ServerConnection!=null);
+            Contract.Requires(context.ServerConnection==null);
 
-            var client = context.ClientConnection;
-            var server = context.ServerConnection;
-
-            context.SetupServerConnection(null);
-            context.SetupClientConnection(null);
+            context.ClientConnection.CancelPendingReceive();
+            context.UnwireClientParserEvents();
 
             ServiceLog.Logger.Info("{0} Establishing HTTPS tunnel", context.Id);
 
             _context = context;
-            _tunnel = CoreFactory.Compose<ISslTunnel>();
-            _tunnel.TunnelClosed += new EventHandler(HandleTunnelClosed);
-            _tunnel.EstablishTunnel(client, server, context.RecentRequestHeader.Version);
         }
 
         void HandleTunnelClosed(object sender, EventArgs e)

@@ -6,6 +6,19 @@ using Gallatin.Contracts;
 namespace Gallatin.Core.Service.SessionState
 {
 
+    [ExportSessionState(SessionStateType = SessionStateType.Error)]
+    internal class ErrorState : SessionStateBase
+    {
+        public override void TransitionToState(ISessionContext context)
+        {
+            if (context.ClientConnection != null)
+            {
+                context.UnwireClientParserEvents();
+                context.SendClientData(Encoding.UTF8.GetBytes("HTTP/1.1 200 OK\r\nContent-length: 11\r\n\r\nProxy error"));
+                context.Reset();
+            }
+        }
+    }
 
     [ExportSessionState( SessionStateType = SessionStateType.Connected )]
     internal class ConnectedState : SessionStateBase
@@ -19,12 +32,12 @@ namespace Gallatin.Core.Service.SessionState
             _filter = filter;
         }
 
-        public override bool ShouldSendPartialClientData(byte[] data, ISessionContext context)
+        public override bool ShouldSendPartialDataToClient(byte[] data, ISessionContext context)
         {
             return true;
         }
 
-        public override bool ShouldSendPartialServerData(byte[] data, ISessionContext context)
+        public override bool ShouldSendPartialDataToServer(byte[] data, ISessionContext context)
         {
             return true;
         }
@@ -70,6 +83,8 @@ namespace Gallatin.Core.Service.SessionState
         public override void ResponseHeaderAvailable(IHttpResponse response, ISessionContext context)
         {
             response.Headers.UpsertKeyValue("Content-Filter", "Gallatin Proxy");
+
+            ServiceLog.Logger.Verbose(() => string.Format("{0}\r\n===RESPONSE=============\r\n{1}\r\n========================\r\n", context.Id, Encoding.UTF8.GetString(response.GetBuffer())));
 
             context.SendClientData(response.GetBuffer());
 

@@ -59,6 +59,8 @@ namespace Gallatin.Core.Service
             }
         }
 
+        private IAsyncResult _receiveHandle;
+
         public void BeginReceive( Action<bool, byte[], INetworkFacade> callback )
         {
             const int BufferSize = 8192;
@@ -69,7 +71,7 @@ namespace Gallatin.Core.Service
 
                 _receiveBuffer = new byte[BufferSize];
 
-                Socket.BeginReceive(
+                _receiveHandle = Socket.BeginReceive(
                     _receiveBuffer,
                     0,
                     _receiveBuffer.Length,
@@ -85,6 +87,15 @@ namespace Gallatin.Core.Service
             //Socket.Shutdown(SocketShutdown.Both);
 
             Socket.BeginDisconnect( false, HandleDisconnect, callback );
+        }
+
+        public void CancelPendingReceive()
+        {
+            if (_receiveHandle != null)
+            {
+                Socket.EndReceive( _receiveHandle );
+                _receiveHandle = null;
+            }
         }
 
         private void OnConnectionClosed()
@@ -149,21 +160,25 @@ namespace Gallatin.Core.Service
 
             Action<bool, byte[], INetworkFacade> callback = ar.AsyncState as Action<bool, byte[], INetworkFacade>;
 
-            if ( _hasShutdown )
+            if ( _hasShutdown || _receiveHandle == null )
             {
                 return;
             }
 
             try
             {
+                _receiveHandle = null;
                 SocketError socketError;
                 int bytesReceived = Socket.EndReceive( ar, out socketError );
 
                 if ( bytesReceived == 0 )
                 {
-                    ServiceLog.Logger.Info( "{0} Lost connection while receiving data", Id );
-                    OnConnectionClosed();
-                    callback( false, null, this );
+                    ServiceLog.Logger.Info( "{0} Network endpoint is shutting down the socket.", Id );
+                    //OnConnectionClosed();
+                    //callback( false, null, this );
+
+                    _hasShutdown = true;
+                    callback(true, null, this);
                 }
                 else if ( socketError != SocketError.Success )
                 {

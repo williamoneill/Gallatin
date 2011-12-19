@@ -5,7 +5,7 @@ namespace Gallatin.Core.Service.SessionState
     [ExportSessionState( SessionStateType = SessionStateType.ResponseHeaderFilter )]
     internal class FilterResponseUsingHeaderState : SessionStateBase
     {
-        public override bool ShouldSendPartialServerData( byte[] data, ISessionContext context )
+        public override bool ShouldSendPartialDataToServer( byte[] data, ISessionContext context )
         {
             return false;
         }
