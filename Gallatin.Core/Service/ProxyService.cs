@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using System.Diagnostics.Contracts;
+using System.Threading;
 using Gallatin.Core.Util;
 
 namespace Gallatin.Core.Service
@@ -28,6 +29,28 @@ namespace Gallatin.Core.Service
 
         #region IProxyService Members
 
+        private Timer _timer;
+
+        private List<IProxySession> _activeSessions = new List<IProxySession>();
+
+        private void TimerCallback(object state)
+        {
+            ServiceLog.Logger.Verbose(() =>
+                                      {
+                                          lock (_activeSessions)
+                                          {
+                                              ServiceLog.Logger.Verbose("DUMPING ACTIVE SESSIONS");
+
+                                              foreach (var session in _activeSessions)
+                                              {
+                                                  ServiceLog.Logger.Verbose("{0} is still active", session.Id);
+                                              }
+                                          }
+
+                                          return "DUMP COMPLETE";
+                                      });
+        }
+
         public void Start()
         {
             ServiceLog.Logger.Info("Starting proxy service");
@@ -38,6 +61,8 @@ namespace Gallatin.Core.Service
                 {
                     throw new InvalidOperationException( "Service has already been started" );
                 }
+
+                _timer = new Timer(TimerCallback, null, 10000, 5000);
 
                 _sessionPool = new Pool<IProxySession>();
                 _sessionPool.Init(_settings.MaxNumberClients, CoreFactory.Compose<IProxySession>);
@@ -82,6 +107,11 @@ namespace Gallatin.Core.Service
 
                 IProxySession session = _sessionPool.Get();
 
+                lock (_activeSessions)
+                {
+                    _activeSessions.Add(session);
+                }
+
                 session.SessionEnded += HandleSessionEnded;
 
                 session.Start(clientConnection);
@@ -100,6 +130,11 @@ namespace Gallatin.Core.Service
 
             IProxySession proxySession = sender as IProxySession;
             proxySession.SessionEnded -= HandleSessionEnded;
+
+            lock (_activeSessions)
+            {
+                _activeSessions.Remove(proxySession);
+            }
 
            _sessionPool.Put( proxySession );
 

@@ -1,3 +1,4 @@
+using System;
 using Gallatin.Contracts;
 
 namespace Gallatin.Core.Service.SessionState
@@ -7,6 +8,10 @@ namespace Gallatin.Core.Service.SessionState
         #region ISessionState Members
 
         public virtual void TransitionToState( ISessionContext context )
+        {
+        }
+
+        public virtual void TransitionFromState( ISessionContext context )
         {
         }
 
@@ -22,19 +27,39 @@ namespace Gallatin.Core.Service.SessionState
 
         public virtual void SentFullServerResponseToClient( IHttpResponse response, ISessionContext context )
         {
+            throw new InvalidOperationException("Unable to send server response to client in current state");
         }
 
         public virtual void RequestHeaderAvailable( IHttpRequest request, ISessionContext context )
         {
+            throw new InvalidOperationException("Unable to accept HTTP request header in current state");
         }
 
         public virtual void ResponseHeaderAvailable( IHttpResponse response, ISessionContext context )
         {
+            throw new InvalidOperationException("Unable to accept HTTP response header in current state");
         }
 
         public virtual void ServerConnectionLost( ISessionContext context )
         {
-            context.ChangeState(SessionStateType.Unconnected);
+            context.Reset();
+        }
+
+        public virtual void ServerConnectionEstablished(ISessionContext context)
+        {
+            throw new InvalidOperationException("Unable to accept a new server connection in current state");
+        }
+
+        public virtual void AcknowledgeClientShutdown( ISessionContext context )
+        {
+            ServiceLog.Logger.Info("{0} SessionStateBase::AcknowledgeClientShutdown", context.Id);
+            context.Reset();
+        }
+
+        public virtual void AcknowledgeServerShutdown( ISessionContext context )
+        {
+            ServiceLog.Logger.Info("{0} SessionStateBase::AcknowledgeServerShutdown", context.Id);
+            context.Reset();
         }
 
         #endregion

@@ -12,20 +12,19 @@ namespace Gallatin.Core.Service.SessionState
             host = e.Headers["Host"];
             port = HttpPort;
 
-            if ( host == null )
-            {
-                return false;
-            }
-
             // Get the port from the host address if it set
             string[] tokens = host.Split( ':' );
             if ( tokens.Length == 2 )
             {
                 host = tokens[0];
-                port = Int32.Parse( tokens[1] );
+
+                if(!int.TryParse(tokens[1], out port))
+                {
+                    return false;
+                }
             }
 
-            return true;
+            return !string.IsNullOrEmpty(host) && port > 0;
         }
     }
 }

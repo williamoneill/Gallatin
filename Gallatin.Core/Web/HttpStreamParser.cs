@@ -49,7 +49,7 @@ namespace Gallatin.Core.Web
             WebLog.Logger.Verbose( "ReadRequestHeaderComplete event raised" );
 
             EventHandler<HttpRequestHeaderEventArgs> requestEvent = ReadRequestHeaderComplete;
-            lock ( _mutex )
+            //lock ( _mutex )
             {
                 if ( requestEvent != null )
                 {
@@ -63,7 +63,7 @@ namespace Gallatin.Core.Web
             WebLog.Logger.Verbose( "ReadResponseHeaderComplete event raised" );
 
             EventHandler<HttpResponseHeaderEventArgs> responseEvent = ReadResponseHeaderComplete;
-            lock ( _mutex )
+            //lock ( _mutex )
             {
                 if ( responseEvent != null )
                 {
@@ -79,7 +79,7 @@ namespace Gallatin.Core.Web
             // Only write to the memory stream if someone is subscribed to the event. The profiler
             // showed this was an expensive operation. Avoid this work if possible.
             EventHandler<HttpDataEventArgs> bodyAvailable = BodyAvailable;
-            lock ( _mutex )
+            //lock ( _mutex )
             {
                 if ( bodyAvailable != null )
                 {
@@ -93,7 +93,7 @@ namespace Gallatin.Core.Web
             WebLog.Logger.Verbose( "AdditionalDataRequested event raised" );
 
             EventHandler needMoreData = AdditionalDataRequested;
-            lock ( _mutex )
+            //lock ( _mutex )
             {
                 if ( needMoreData != null )
                 {
@@ -107,7 +107,7 @@ namespace Gallatin.Core.Web
             WebLog.Logger.Verbose( "PartialDataAvailable event raised" );
 
             EventHandler<HttpDataEventArgs> partialDataAvailable = PartialDataAvailable;
-            lock ( _mutex )
+            //lock ( _mutex )
             {
                 if ( partialDataAvailable != null )
                 {
@@ -122,7 +122,7 @@ namespace Gallatin.Core.Web
 
             EventHandler readComplete = MessageReadComplete;
 
-            lock ( _mutex )
+            //lock ( _mutex )
             {
                 if ( readComplete != null )
                 {
@@ -138,7 +138,7 @@ namespace Gallatin.Core.Web
             WebLog.Logger.Verbose( "BodyAvailable event raised" );
 
             EventHandler<HttpDataEventArgs> bodyAvailable = BodyAvailable;
-            lock ( _mutex )
+            //lock ( _mutex )
             {
                 if ( bodyAvailable != null )
                 {

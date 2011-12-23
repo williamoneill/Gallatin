@@ -51,7 +51,7 @@ namespace Gallatin.Core.Tests.Service.SessionState
         [Test]
         public void SendClientDataTest()
         {
-            ClientConnectingState state = new ClientConnectingState(_mockFilter.Object, _mockFactory.Object);
+            ClientConnectingState state = new ClientConnectingState(_mockFilter.Object);
 
             Assert.Throws<InvalidOperationException>( () => state.ShouldSendPartialDataToClient( new byte[1], _mockContext.Object ) );
         }
@@ -59,7 +59,7 @@ namespace Gallatin.Core.Tests.Service.SessionState
         [Test]
         public void SendServerDataTest()
         {
-            ClientConnectingState state = new ClientConnectingState(_mockFilter.Object, _mockFactory.Object);
+            ClientConnectingState state = new ClientConnectingState(_mockFilter.Object);
 
             Assert.Throws<InvalidOperationException>( () => state.ShouldSendPartialDataToServer( new byte[1], _mockContext.Object ) );
         }
@@ -67,7 +67,7 @@ namespace Gallatin.Core.Tests.Service.SessionState
         [Test]
         public void ConnectToServerTest()
         {
-            ClientConnectingState state = new ClientConnectingState(_mockFilter.Object, _mockFactory.Object);
+            ClientConnectingState state = new ClientConnectingState(_mockFilter.Object);
 
             _mockRequest.SetupGet( m => m.IsSsl ).Returns( false );
 
@@ -85,7 +85,7 @@ namespace Gallatin.Core.Tests.Service.SessionState
         [Test]
         public void ConnectFilterTest()
         {
-            ClientConnectingState state = new ClientConnectingState(_mockFilter.Object, _mockFactory.Object);
+            ClientConnectingState state = new ClientConnectingState(_mockFilter.Object);
 
             _mockFilter.Setup(m => m.EvaluateConnectionFilters(_mockRequest.Object, ConnectionId)).Returns("filter activated");
 
@@ -101,7 +101,7 @@ namespace Gallatin.Core.Tests.Service.SessionState
         [Test]
         public void ServerConnectionFailureTest()
         {
-            ClientConnectingState state = new ClientConnectingState(_mockFilter.Object, _mockFactory.Object);
+            ClientConnectingState state = new ClientConnectingState(_mockFilter.Object);
 
             _mockRequest.SetupGet(m => m.IsSsl).Returns(false);
 
@@ -119,7 +119,7 @@ namespace Gallatin.Core.Tests.Service.SessionState
         [Test]
         public void SslTest()
         {
-            ClientConnectingState state = new ClientConnectingState(_mockFilter.Object, _mockFactory.Object);
+            ClientConnectingState state = new ClientConnectingState(_mockFilter.Objec);
 
             _mockRequest.SetupGet( m => m.Path ).Returns( "www.gmail.com:443" );
 

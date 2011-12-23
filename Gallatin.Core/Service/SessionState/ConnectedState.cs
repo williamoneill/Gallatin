@@ -1,28 +1,19 @@
+using System;
+using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using System.Diagnostics.Contracts;
 using System.Text;
+using System.Threading;
 using Gallatin.Contracts;
 
 namespace Gallatin.Core.Service.SessionState
 {
 
-    [ExportSessionState(SessionStateType = SessionStateType.Error)]
-    internal class ErrorState : SessionStateBase
-    {
-        public override void TransitionToState(ISessionContext context)
-        {
-            if (context.ClientConnection != null)
-            {
-                context.UnwireClientParserEvents();
-                context.SendClientData(Encoding.UTF8.GetBytes("HTTP/1.1 200 OK\r\nContent-length: 11\r\n\r\nProxy error"));
-                context.Reset();
-            }
-        }
-    }
 
     [ExportSessionState( SessionStateType = SessionStateType.Connected )]
     internal class ConnectedState : SessionStateBase
     {
+
         private readonly IProxyFilter _filter;
 
         [ImportingConstructor]
@@ -32,21 +23,34 @@ namespace Gallatin.Core.Service.SessionState
             _filter = filter;
         }
 
-        public override bool ShouldSendPartialDataToClient(byte[] data, ISessionContext context)
+        public override void AcknowledgeClientShutdown(ISessionContext context)
         {
-            return true;
+            ServiceLog.Logger.Verbose("{0} ACK client shutdown.", context.Id);
+
+            // Shutdown the connection if there are no active transactions
+            if (context.HttpPipelineDepth == 0)
+            {
+                context.Reset();
+            }
         }
 
-        public override bool ShouldSendPartialDataToServer(byte[] data, ISessionContext context)
+        public override void AcknowledgeServerShutdown(ISessionContext context)
         {
-            return true;
+            ServiceLog.Logger.Verbose("{0} ACK server shutdown.", context.Id);
+
+            // Shutdown the connection if there are no active transactions
+            if (context.HttpPipelineDepth == 0)
+            {
+                context.Reset();
+            }
+            
         }
 
         public override void TransitionToState( ISessionContext context )
         {
             // Send the initial request to the server. This was the request that was evaluated in the last
             // state to determine if we should connect to the server.
-            context.SendServerData( context.RecentRequestHeader.GetBuffer() );
+            //context.SendServerData( context.RecentRequestHeader.GetBuffer() );
         }
 
         public override void RequestHeaderAvailable( IHttpRequest request, ISessionContext context )
@@ -54,7 +58,10 @@ namespace Gallatin.Core.Service.SessionState
             string host;
             int port;
 
-            ServiceLog.Logger.Verbose(() => string.Format("{0}\r\n=====existing conn======\r\n{1}\r\n========================\r\n", context.Id, Encoding.UTF8.GetString(request.GetBuffer())));
+            ServiceLog.Logger.Verbose(
+                () => string.Format(
+                    "{0}\r\n=====existing conn======\r\n{1}\r\n========================\r\n", 
+                    context.Id, Encoding.UTF8.GetString(request.GetBuffer())));
 
             if ( SessionStateUtils.TryParseAddress( request, out host, out port ) )
             {
@@ -63,9 +70,12 @@ namespace Gallatin.Core.Service.SessionState
                 {
                     ServiceLog.Logger.Info( "{0} Client changed host/port on existing connection", context.Id );
 
+                    // This will close the server connection and block new messages from the client
+                    context.CloseServerConnection();
+
                     context.ChangeState( SessionStateType.ClientConnecting );
 
-                    // Pass the header we used to determine the connection should be closed
+                    // Pass the request header to the new state so the connection filters can be evaluated
                     context.State.RequestHeaderAvailable( request, context );
                 }
                 else
@@ -121,15 +131,19 @@ namespace Gallatin.Core.Service.SessionState
             //}
         }
 
+        public override void ServerConnectionEstablished(ISessionContext context)
+        {
+            throw new InvalidOperationException("Unable to accept a new server connection when already connected");
+        }
 
         public override void SentFullServerResponseToClient( IHttpResponse response, ISessionContext context )
         {
             ServiceLog.Logger.Info("{0} Evaluating persistent connection...", context.Id);
 
-            if ( !response.IsPersistent )
+            if ( !response.IsPersistent || (context.HttpPipelineDepth == 0 && ( context.HasClientBegunShutdown || context.HasServerBegunShutdown ) ) )
             {
                 ServiceLog.Logger.Info("{0} Non-persistent connection. Closing session.", context.Id);
-                context.ChangeState( SessionStateType.Unconnected );
+                context.Reset();
             }
             else
             {

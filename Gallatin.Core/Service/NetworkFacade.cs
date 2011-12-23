@@ -9,7 +9,6 @@ namespace Gallatin.Core.Service
     internal class NetworkFacade : INetworkFacade
     {
         private byte[] _receiveBuffer;
-        private byte[] _sendBuffer;
         private bool _hasShutdown;
 
         public NetworkFacade( Socket socket )
@@ -19,6 +18,9 @@ namespace Gallatin.Core.Service
 
             Socket = socket;
         }
+
+        private Semaphore _receiveSemaphore = new Semaphore(1,1);
+        private Semaphore _sendSemaphore = new Semaphore(1, 1);
 
         internal Socket Socket { get; set; }
 
@@ -48,11 +50,12 @@ namespace Gallatin.Core.Service
             {
                 ServiceLog.Logger.Verbose("{0} Sending data, len: {1}", Id, buffer.Length);
 
-                _sendBuffer = buffer;
+                _sendSemaphore.WaitOne();
+
                 Socket.BeginSend(
-                    _sendBuffer,
+                    buffer,
                     0,
-                    _sendBuffer.Length,
+                    buffer.Length,
                     SocketFlags.None,
                     HandleSend,
                     callback);
@@ -63,6 +66,8 @@ namespace Gallatin.Core.Service
 
         public void BeginReceive( Action<bool, byte[], INetworkFacade> callback )
         {
+            _receiveSemaphore.WaitOne();
+
             const int BufferSize = 8192;
 
             if (!_hasShutdown)
@@ -89,12 +94,14 @@ namespace Gallatin.Core.Service
             Socket.BeginDisconnect( false, HandleDisconnect, callback );
         }
 
+        // TODO: this may not be needed
         public void CancelPendingReceive()
         {
             if (_receiveHandle != null)
             {
                 Socket.EndReceive( _receiveHandle );
                 _receiveHandle = null;
+                _receiveSemaphore.Release();
             }
         }
 
@@ -120,6 +127,7 @@ namespace Gallatin.Core.Service
 
             if ( _hasShutdown )
             {
+                _sendSemaphore.Release();
                 return;
             }
 
@@ -127,6 +135,8 @@ namespace Gallatin.Core.Service
             {
                 SocketError socketError;
                 int bytesSent = Socket.EndSend( ar, out socketError );
+
+                _sendSemaphore.Release();
 
                 if ( bytesSent == 0 )
                 {
@@ -162,6 +172,7 @@ namespace Gallatin.Core.Service
 
             if ( _hasShutdown || _receiveHandle == null )
             {
+                _receiveSemaphore.Release();
                 return;
             }
 
@@ -173,16 +184,17 @@ namespace Gallatin.Core.Service
 
                 if ( bytesReceived == 0 )
                 {
-                    ServiceLog.Logger.Info( "{0} Network endpoint is shutting down the socket.", Id );
-                    //OnConnectionClosed();
-                    //callback( false, null, this );
+                    _receiveSemaphore.Release();
 
+                    ServiceLog.Logger.Info("{0} Network endpoint is shutting down the socket.", Id);
                     _hasShutdown = true;
                     callback(true, null, this);
                 }
                 else if ( socketError != SocketError.Success )
                 {
-                    ServiceLog.Logger.Info( "{0} Network error encountered while receiving data: {1}", Id, socketError );
+                    _receiveSemaphore.Release();
+
+                    ServiceLog.Logger.Info("{0} Network error encountered while receiving data: {1}", Id, socketError);
                     OnConnectionClosed();
                     callback( false, null, this );
                 }
@@ -190,6 +202,10 @@ namespace Gallatin.Core.Service
                 {
                     byte[] buffer = new byte[bytesReceived];
                     Array.Copy( _receiveBuffer, buffer, bytesReceived );
+                    
+                    // Release after we made a copy of the shared memory buffer
+                    _receiveSemaphore.Release();
+                    
                     callback( true, buffer, this );
                 }
             }

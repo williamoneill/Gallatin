@@ -12,10 +12,16 @@ namespace Gallatin.Core.Service.SessionState
     public interface ISessionState
     {
         /// <summary>
-        /// Invoked whent the context is transitioned to that state
+        /// Invoked when the context is transitioned to that state
         /// </summary>
         /// <param name="context">State context</param>
         void TransitionToState( ISessionContext context );
+
+        /// <summary>
+        /// Invoked when the context is transitioned from the state
+        /// </summary>
+        /// <param name="context"></param>
+        void TransitionFromState( ISessionContext context );
 
         /// <summary>
         /// Invoked when the context is determining if it should send data to the client
@@ -59,12 +65,35 @@ namespace Gallatin.Core.Service.SessionState
         /// </summary>
         /// <param name="context">State context</param>
         void ServerConnectionLost( ISessionContext context );
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="context"></param>
+        void ServerConnectionEstablished(ISessionContext context);
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="context"></param>
+        void AcknowledgeClientShutdown( ISessionContext context );
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="context"></param>
+        void AcknowledgeServerShutdown( ISessionContext context );
     }
 
     [ContractClassFor(typeof(ISessionState))]
     internal abstract class SessionStateContract : ISessionState
     {
         public void TransitionToState( ISessionContext context )
+        {
+            Contract.Requires(context!=null);
+        }
+
+        public void TransitionFromState( ISessionContext context )
         {
             Contract.Requires(context!=null);
         }
@@ -106,6 +135,21 @@ namespace Gallatin.Core.Service.SessionState
         public void ServerConnectionLost( ISessionContext context )
         {
             Contract.Requires(context!= null);
+        }
+
+        public void ServerConnectionEstablished(ISessionContext context)
+        {
+            Contract.Requires(context != null);
+        }
+
+        public void AcknowledgeClientShutdown(ISessionContext context)
+        {
+            Contract.Requires(context != null);
+        }
+
+        public void AcknowledgeServerShutdown(ISessionContext context)
+        {
+            Contract.Requires(context != null);
         }
     }
 }

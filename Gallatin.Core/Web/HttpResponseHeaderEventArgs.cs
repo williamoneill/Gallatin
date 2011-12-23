@@ -49,6 +49,13 @@ namespace Gallatin.Core.Web
                         return false;
                     }
 
+                    // I noticed that some web servers will return an empty response with status code 200 indicating no more data will be sent.
+                    string contentLength = Headers["content-length"];
+                    if( contentLength != null && contentLength.Equals("0") && StatusCode == 200 )
+                    {
+                        return false;
+                    }
+
                     return true;
                 }
                 return false;

@@ -6,6 +6,11 @@ namespace Gallatin.Core.Service.SessionState
     public enum SessionStateType
     {
         /// <summary>
+        /// Client session has never been used
+        /// </summary>
+        Uninitialized,
+
+        /// <summary>
         /// Unconnected state
         /// </summary>
         Unconnected,
@@ -29,6 +34,7 @@ namespace Gallatin.Core.Service.SessionState
         /// Response filter applied using HTTP response body
         /// </summary>
         ResponseBodyFilter,
+
 
         /// <summary>
         /// Error state

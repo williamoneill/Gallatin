@@ -107,6 +107,7 @@
     <Compile Include="Service\ProxySession.cs" />
     <Compile Include="Service\SessionState\ClientConnectingState.cs" />
     <Compile Include="Service\SessionState\ConnectedState.cs" />
+    <Compile Include="Service\SessionState\ErrorState.cs" />
     <Compile Include="Service\SessionState\ExportSessionStateAttribute.cs" />
     <Compile Include="Service\SessionState\FilterResponseUsingBodyState.cs" />
     <Compile Include="Service\SessionState\FilterResponseUsingHeaderState.cs" />

@@ -14,12 +14,27 @@ namespace Gallatin.Core.Service.SessionState
         /// <summary>
         /// Server port, 0 if unconnected
         /// </summary>
-        int Port { get; set; }
+        int Port { get; }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        bool HasClientBegunShutdown { get; }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        bool HasServerBegunShutdown { get; }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        int HttpPipelineDepth { get; }
 
         /// <summary>
         /// Remote host name, <c>null</c> if unconnected
         /// </summary>
-        string Host { get; set; }
+        string Host { get; }
 
         /// <summary>
         /// Gets the most recent HTTP request header
@@ -42,46 +57,36 @@ namespace Gallatin.Core.Service.SessionState
         INetworkFacade ServerConnection { get; }
 
         /// <summary>
-        /// Gets a reference to the active client parser
-        /// </summary>
-        IHttpStreamParser ClientParser { get; }
-
-        /// <summary>
-        /// Gets a reference to the active server parser
-        /// </summary>
-        IHttpStreamParser ServerParser { get; }
-
-        /// <summary>
-        /// Connects to the server and invokes the callback delegate upon completion
-        /// </summary>
-        /// <param name="host">Remote host address</param>
-        /// <param name="port">Remote host port</param>
-        /// <param name="callback">Callback to invoke to report connection results.</param>
-        void ConnectToServer( string host, int port, Action<bool> callback );
-
-        /// <summary>
         /// Gets a reference to the active session state
         /// </summary>
         ISessionState State { get; }
 
         /// <summary>
-        /// Initializes the context for the new server connection, or releases
-        /// the server resources if the connection is <c>null</c>
+        /// Connects to the remote host
         /// </summary>
-        /// <param name="serverConnection">Server connection</param>
-        void SetupServerConnection( INetworkFacade serverConnection );
+        /// <param name="host"></param>
+        /// <param name="port"></param>
+        void BeginConnectToRemoteHost(string host, int port);
 
         /// <summary>
-        /// Initializes the context for the new client connection, or releases
-        /// the client resources if the connection is <c>null</c>
+        /// 
         /// </summary>
-        /// <param name="clientConnection">Server connection</param>
-        void SetupClientConnection( INetworkFacade clientConnection );
+        void CloseServerConnection();
+
+        /// <summary>
+        /// 
+        /// </summary>
+        void CloseClientConnection();
 
         /// <summary>
         /// Removes the client parser events from the network facade without closing the connection
         /// </summary>
         void UnwireClientParserEvents();
+
+        /// <summary>
+        /// Removes the server parser events from the network facade without closing the connection
+        /// </summary>
+        void UnwireServerParserEvents();
 
         /// <summary>
         /// Sends data to the connected server 
@@ -116,6 +121,7 @@ namespace Gallatin.Core.Service.SessionState
         /// </summary>
         /// <param name="newState">New state</param>
         void ChangeState( SessionStateType newState );
+
     }
 
     [ContractClassFor( typeof (ISessionContext) )]
@@ -133,6 +139,14 @@ namespace Gallatin.Core.Service.SessionState
             {
                 Contract.Requires( value > 0 );
             }
+        }
+
+        public abstract bool HasClientBegunShutdown { get; }
+        public abstract bool HasServerBegunShutdown { get; }
+
+        public abstract int HttpPipelineDepth
+        {
+            get;
         }
 
         public string Host
@@ -160,6 +174,15 @@ namespace Gallatin.Core.Service.SessionState
         public abstract IHttpStreamParser ServerParser { get; }
 
         public abstract ISessionState State { get; }
+        public void BeginConnectToRemoteHost(string host, int port)
+        {
+            Contract.Requires(!string.IsNullOrEmpty(host));
+            Contract.Requires(port>0);
+        }
+
+        public abstract void CloseServerConnection();
+
+        public abstract void CloseClientConnection();
 
         public abstract string Id { get; }
 
@@ -173,6 +196,8 @@ namespace Gallatin.Core.Service.SessionState
 
         public abstract void UnwireClientParserEvents();
 
+        public abstract void UnwireServerParserEvents();
+
         public void SendServerData( byte[] data )
         {
             Contract.Requires( data != null );
@@ -185,7 +210,12 @@ namespace Gallatin.Core.Service.SessionState
 
         public abstract event EventHandler SessionEnded;
 
-        public abstract void Start( INetworkFacade connection );
+        public void Start( INetworkFacade connection )
+        {
+            Contract.Requires(connection != null);
+            Contract.Requires(ClientConnection == null);
+            Contract.Requires(ServerConnection == null);
+        }
 
         public abstract void Reset();
 
@@ -193,12 +223,10 @@ namespace Gallatin.Core.Service.SessionState
 
         public void HttpResponseBodyRequested( Action<byte[], ISessionContext> bodyAvailableCallback )
         {
-            Contract.Requires( bodyAvailableCallback != null );
-            Contract.Requires( ServerParser != null );
-            Contract.Requires( ServerConnection != null );
         }
 
         public abstract void ChangeState( SessionStateType newState );
+
 
         #endregion
     }
