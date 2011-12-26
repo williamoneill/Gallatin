@@ -24,7 +24,17 @@ namespace Gallatin.Core.Service.SessionState
 
         public override void AcknowledgeClientShutdown(ISessionContext context)
         {
-            
+            ServiceLog.Logger.Warning("{0} Client will no longer be sending data.", context.Id);
+
+            // TODO: this is a strange case that needs more research. I guess this could happen
+            // when connecting to a new server on a persistent connection.
+            //ServiceLog.Logger.Warning("{0} Client shutting down socket while connecting to server.", context.Id);
+            context.Reset();
+        }
+
+        public override void AcknowledgeServerShutdown(ISessionContext context)
+        {
+            throw new InvalidOperationException("Server shutdown is unexpected in this state");
         }
 
         public override void RequestHeaderAvailable( IHttpRequest request, ISessionContext context )

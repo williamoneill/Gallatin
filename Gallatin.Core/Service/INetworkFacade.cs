@@ -39,10 +39,6 @@ namespace Gallatin.Core.Service
         /// <param name="callback">Delegate to invoke when the connection has been closed</param>
         void BeginClose( Action<bool, INetworkFacade> callback );
 
-        /// <summary>
-        /// Cancels a pending receive on the socket
-        /// </summary>
-        void CancelPendingReceive();
 
         /// <summary>
         /// Raised when the connection is closed

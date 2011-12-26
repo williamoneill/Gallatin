@@ -46,7 +46,7 @@ namespace Gallatin.Core.Util
         {
             if(_source.Switch.ShouldTrace(TraceEventType.Error))
             {
-                _source.TraceEvent(TraceEventType.Error, 1, message);
+                _source.TraceEvent(TraceEventType.Error, 1, string.Format("{0} {1}", DateTime.Now, message));
             }
         }
 
@@ -59,7 +59,7 @@ namespace Gallatin.Core.Util
         {
             if (_source.Switch.ShouldTrace(TraceEventType.Warning))
             {
-                _source.TraceEvent(TraceEventType.Warning, 1, message);
+                _source.TraceEvent(TraceEventType.Warning, 1, string.Format("{0} {1}", DateTime.Now, message));
             }
         }
 
@@ -80,7 +80,7 @@ namespace Gallatin.Core.Util
         {
             if (_source.Switch.ShouldTrace(TraceEventType.Information))
             {
-                _source.TraceEvent(TraceEventType.Information, 1, message);
+                _source.TraceEvent(TraceEventType.Information, 1, string.Format("{0} {1}", DateTime.Now, message));
             }
         }
 
@@ -101,7 +101,7 @@ namespace Gallatin.Core.Util
         {
             if (_source.Switch.ShouldTrace(TraceEventType.Verbose))
             {
-                _source.TraceEvent(TraceEventType.Verbose, 1, message);
+                _source.TraceEvent(TraceEventType.Verbose, 1, string.Format("{0} {1}", DateTime.Now, message));
             }
         }
 

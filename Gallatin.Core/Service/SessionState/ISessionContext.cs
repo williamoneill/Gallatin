@@ -122,6 +122,10 @@ namespace Gallatin.Core.Service.SessionState
         /// <param name="newState">New state</param>
         void ChangeState( SessionStateType newState );
 
+        /// <summary>
+        /// Gets the last time there was any network activity on the context
+        /// </summary>
+        DateTime LastNetworkActivity { get; }
     }
 
     [ContractClassFor( typeof (ISessionContext) )]
@@ -226,7 +230,7 @@ namespace Gallatin.Core.Service.SessionState
         }
 
         public abstract void ChangeState( SessionStateType newState );
-
+        public abstract DateTime LastNetworkActivity { get; }
 
         #endregion
     }

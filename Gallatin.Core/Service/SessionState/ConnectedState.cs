@@ -13,6 +13,8 @@ namespace Gallatin.Core.Service.SessionState
     [ExportSessionState( SessionStateType = SessionStateType.Connected )]
     internal class ConnectedState : SessionStateBase
     {
+        private List<ISessionContext>  _clientsPendingShutdown = new List<ISessionContext>();
+
 
         private readonly IProxyFilter _filter;
 
@@ -32,25 +34,13 @@ namespace Gallatin.Core.Service.SessionState
             {
                 context.Reset();
             }
-        }
-
-        public override void AcknowledgeServerShutdown(ISessionContext context)
-        {
-            ServiceLog.Logger.Verbose("{0} ACK server shutdown.", context.Id);
-
-            // Shutdown the connection if there are no active transactions
-            if (context.HttpPipelineDepth == 0)
+            else
             {
-                context.Reset();
+                lock (_clientsPendingShutdown)
+                {
+                    _clientsPendingShutdown.Add(context);
+                }
             }
-            
-        }
-
-        public override void TransitionToState( ISessionContext context )
-        {
-            // Send the initial request to the server. This was the request that was evaluated in the last
-            // state to determine if we should connect to the server.
-            //context.SendServerData( context.RecentRequestHeader.GetBuffer() );
         }
 
         public override void RequestHeaderAvailable( IHttpRequest request, ISessionContext context )
@@ -92,8 +82,6 @@ namespace Gallatin.Core.Service.SessionState
 
         public override void ResponseHeaderAvailable(IHttpResponse response, ISessionContext context)
         {
-            response.Headers.UpsertKeyValue("Content-Filter", "Gallatin Proxy");
-
             ServiceLog.Logger.Verbose(() => string.Format("{0}\r\n===RESPONSE=============\r\n{1}\r\n========================\r\n", context.Id, Encoding.UTF8.GetString(response.GetBuffer())));
 
             context.SendClientData(response.GetBuffer());
@@ -138,10 +126,15 @@ namespace Gallatin.Core.Service.SessionState
 
         public override void SentFullServerResponseToClient( IHttpResponse response, ISessionContext context )
         {
-            ServiceLog.Logger.Info("{0} Evaluating persistent connection...", context.Id);
+            ServiceLog.Logger.Verbose("{0} Evaluating persistent connection. Pipeline: {1}  Client shutdown: {2}  ServerShutdown: {3}", context.Id, context.HttpPipelineDepth, context.HasClientBegunShutdown, context.HasServerBegunShutdown);
 
             if ( !response.IsPersistent || (context.HttpPipelineDepth == 0 && ( context.HasClientBegunShutdown || context.HasServerBegunShutdown ) ) )
             {
+                lock (_clientsPendingShutdown)
+                {
+                    _clientsPendingShutdown.Remove( context );
+                }
+
                 ServiceLog.Logger.Info("{0} Non-persistent connection. Closing session.", context.Id);
                 context.Reset();
             }

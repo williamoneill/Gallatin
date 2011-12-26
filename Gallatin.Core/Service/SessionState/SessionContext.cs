@@ -1,6 +1,7 @@
 using System;
 using System.ComponentModel.Composition;
 using System.Diagnostics.Contracts;
+using System.IO;
 using System.Threading;
 using Gallatin.Contracts;
 using Gallatin.Core.Web;
@@ -11,11 +12,14 @@ namespace Gallatin.Core.Service.SessionState
     [Export( typeof (IProxySession) )]
     internal class SessionContext : ISessionContext
     {
+        private readonly object _changeClientConnectionMutex = new object();
+        private readonly object _changeServerConnectionMutex = new object();
         private readonly INetworkFacadeFactory _facadeFactory;
-        //private readonly object _mutex = new object();
+        private readonly AutoResetEvent _pipelineUpdateEvent = new AutoResetEvent( false );
         private readonly ISessionStateRegistry _registry;
         private readonly ManualResetEvent _serverConnectingEvent = new ManualResetEvent( false );
         private readonly ReaderWriterLockSlim _stateUpdateLock = new ReaderWriterLockSlim( LockRecursionPolicy.SupportsRecursion );
+
         private Action<byte[], ISessionContext> _bodyAvailableCallback;
         private ISessionState _state;
 
@@ -31,7 +35,7 @@ namespace Gallatin.Core.Service.SessionState
 
             ChangeState( SessionStateType.Uninitialized );
             Id = Guid.NewGuid().ToString();
-
+            LastNetworkActivity = DateTime.Now;
             HttpPipelineDepth = 0;
 
             ServiceLog.Logger.Verbose( "Creating session context {0}", Id );
@@ -62,10 +66,10 @@ namespace Gallatin.Core.Service.SessionState
         {
             ServiceLog.Logger.Info( "{0} Starting new client session", InternalId );
 
+            ChangeState( SessionStateType.ClientConnecting );
+
             // Wire up events for the client
             SetupClientConnection( connection );
-            
-            ChangeState( SessionStateType.ClientConnecting );
         }
 
         public void Reset()
@@ -76,20 +80,11 @@ namespace Gallatin.Core.Service.SessionState
 
         public int Port { get; private set; }
 
-        public bool HasClientBegunShutdown
-        {
-            get; private set;
-        }
+        public bool HasClientBegunShutdown { get; private set; }
 
-        public bool HasServerBegunShutdown
-        {
-            get; private set;
-        }
+        public bool HasServerBegunShutdown { get; private set; }
 
-        public int HttpPipelineDepth
-        {
-            get; private set;
-        }
+        public int HttpPipelineDepth { get; private set; }
 
         public string Host { get; private set; }
 
@@ -100,40 +95,34 @@ namespace Gallatin.Core.Service.SessionState
 
         public void UnwireClientParserEvents()
         {
-            //lock (_mutex)
+            if ( ClientParser != null )
             {
-                if ( ClientParser != null )
-                {
-                    ClientParser.AdditionalDataRequested -= HandleClientParserAdditionalDataRequested;
-                    ClientParser.PartialDataAvailable -= HandleClientParserPartialDataAvailable;
-                    ClientParser.ReadRequestHeaderComplete -= HandleClientParserReadRequestHeaderComplete;
-                    ClientParser = null;
-                }
+                ClientParser.AdditionalDataRequested -= HandleClientParserAdditionalDataRequested;
+                ClientParser.PartialDataAvailable -= HandleClientParserPartialDataAvailable;
+                ClientParser.ReadRequestHeaderComplete -= HandleClientParserReadRequestHeaderComplete;
+                ClientParser = null;
+            }
 
-                if ( ClientConnection != null )
-                {
-                    ClientConnection.ConnectionClosed -= HandleClientConnectionClosed;
-                }
+            if ( ClientConnection != null )
+            {
+                ClientConnection.ConnectionClosed -= HandleClientConnectionClosed;
             }
         }
 
         public void UnwireServerParserEvents()
         {
-            //lock (_mutex)
+            if ( ServerParser != null )
             {
-                if ( ServerParser != null )
-                {
-                    ServerParser.AdditionalDataRequested -= HandleServerParserAdditionalDataRequested;
-                    ServerParser.PartialDataAvailable -= HandleServerParserPartialDataAvailable;
-                    ServerParser.ReadResponseHeaderComplete -= HandleServerParserReadResponseHeaderComplete;
-                    ServerParser.MessageReadComplete -= HandleServerParserMessageReadComplete;
-                    ServerParser = null;
-                }
+                ServerParser.AdditionalDataRequested -= HandleServerParserAdditionalDataRequested;
+                ServerParser.PartialDataAvailable -= HandleServerParserPartialDataAvailable;
+                ServerParser.ReadResponseHeaderComplete -= HandleServerParserReadResponseHeaderComplete;
+                ServerParser.MessageReadComplete -= HandleServerParserMessageReadComplete;
+                ServerParser = null;
+            }
 
-                if ( ServerConnection != null )
-                {
-                    ServerConnection.ConnectionClosed -= HandleServerConnectionConnectionClosed;
-                }
+            if ( ServerConnection != null )
+            {
+                ServerConnection.ConnectionClosed -= HandleServerConnectionConnectionClosed;
             }
         }
 
@@ -154,24 +143,34 @@ namespace Gallatin.Core.Service.SessionState
             // Wait for the server connection
             //_serverConnectingEvent.WaitOne();
 
-            if (ServerConnection == null)
+            lock ( _changeServerConnectionMutex )
             {
-                throw new InvalidOperationException( "Cannot send data to server when server connection is closed" );
-            }
+                if ( ServerConnection == null )
+                {
+                    throw new InvalidOperationException( "Cannot send data to server when server connection is closed" );
+                }
 
-            ServerConnection.BeginSend( data, DataSent );
+                ServerConnection.BeginSend( data, DataSent );
+
+                LastNetworkActivity = DateTime.Now;
+            }
         }
 
         public void SendClientData( byte[] data )
         {
             ServiceLog.Logger.Verbose( "{0} SessionContext::SendClientData", InternalId );
 
-            if ( ClientConnection == null )
+            lock ( _changeClientConnectionMutex )
             {
-                throw new InvalidOperationException( "Cannot send data to client when client connection is closed" );
-            }
+                if ( ClientConnection == null )
+                {
+                    throw new InvalidOperationException( "Cannot send data to client when client connection is closed" );
+                }
 
-            ClientConnection.BeginSend( data, DataSent );
+                ClientConnection.BeginSend( data, DataSent );
+
+                LastNetworkActivity = DateTime.Now;
+            }
         }
 
         public INetworkFacade ServerConnection { get; private set; }
@@ -280,6 +279,11 @@ namespace Gallatin.Core.Service.SessionState
             }
         }
 
+        public DateTime LastNetworkActivity
+        {
+            get; private set;
+        }
+
         #endregion
 
         private void SetupClientConnection( INetworkFacade clientConnection )
@@ -288,7 +292,7 @@ namespace Gallatin.Core.Service.SessionState
 
             try
             {
-                //lock(_mutex)
+                lock ( _changeClientConnectionMutex )
                 {
                     UnwireClientParserEvents();
 
@@ -328,7 +332,7 @@ namespace Gallatin.Core.Service.SessionState
 
             try
             {
-                //lock(_mutex)
+                lock ( _changeServerConnectionMutex )
                 {
                     UnwireServerParserEvents();
 
@@ -371,9 +375,9 @@ namespace Gallatin.Core.Service.SessionState
             {
                 SetupServerConnection( server );
 
-                State.ServerConnectionEstablished(this);
+                State.ServerConnectionEstablished( this );
 
-                // Free the parsers to send data
+                // Free the HTTP parsers to send HTTP body data
                 _serverConnectingEvent.Set();
             }
             else
@@ -388,7 +392,10 @@ namespace Gallatin.Core.Service.SessionState
             ServiceLog.Logger.Verbose( "{0} SessionContext::HandleServerParserMessageReadComplete", InternalId );
 
             HttpPipelineDepth--;
+
             State.SentFullServerResponseToClient( RecentResponseHeader, this );
+
+            _pipelineUpdateEvent.Set();
         }
 
         private void HandleServerParserBodyAvailable( object sender, HttpDataEventArgs e )
@@ -435,6 +442,7 @@ namespace Gallatin.Core.Service.SessionState
                     }
                     else
                     {
+                        LastNetworkActivity = DateTime.Now;
                         ClientParser.AppendData( data );
                     }
                 }
@@ -466,6 +474,7 @@ namespace Gallatin.Core.Service.SessionState
                     }
                     else
                     {
+                        LastNetworkActivity = DateTime.Now;
                         ServerParser.AppendData( data );
                     }
                 }
@@ -478,6 +487,36 @@ namespace Gallatin.Core.Service.SessionState
             }
         }
 
+        private bool HasHostChanged( HttpRequestHeaderEventArgs newRequest )
+        {
+            if ( RecentRequestHeader == null )
+            {
+                return false;
+            }
+
+            HttpRequest request = HttpRequest.CreateRequest( newRequest );
+
+            int port;
+            string host;
+
+            if ( SessionStateUtils.TryParseAddress( request, out host, out port ) )
+            {
+                return ( RecentRequestHeader.IsSsl != request.IsSsl ||
+                         Host != host || Port != port );
+            }
+
+            throw new InvalidDataException( "Malformed HTTP request" );
+        }
+
+        private void WaitForEmptyPipeline()
+        {
+            while ( HttpPipelineDepth > 0 )
+            {
+                ServiceLog.Logger.Verbose( "{0} Waiting for pipeline to clear. Pipeline depth: {1}", InternalId, HttpPipelineDepth );
+                _pipelineUpdateEvent.WaitOne();
+            }
+        }
+
         private void HandleClientParserReadRequestHeaderComplete( object sender, HttpRequestHeaderEventArgs e )
         {
             Contract.Requires( e != null );
@@ -486,9 +525,27 @@ namespace Gallatin.Core.Service.SessionState
 
             try
             {
+                // Race condition: it's possible that the existing connection is being evaluated for persistence
+                // when a new, concurrent, pipelined request is coming from the client. This new request could
+                // have a different host/port but we cannot change the active server connection until the existing
+                // pipeline is empty.
+
+                if ( HasHostChanged( e ) )
+                {
+                    ServiceLog.Logger.Info( "{0} Client has changed hosts. Waiting for pipeline to clear before reconnecting...", InternalId );
+                    WaitForEmptyPipeline();
+                    ServiceLog.Logger.Info( "{0} Pipeline cleared. Continuing with request.", InternalId );
+                }
+
                 HttpPipelineDepth++;
                 RecentRequestHeader = HttpRequest.CreateRequest( e );
-                State.RequestHeaderAvailable( RecentRequestHeader, this );
+
+                lock ( _changeClientConnectionMutex )
+                {
+                    if(ClientConnection!= null)
+                        State.RequestHeaderAvailable(RecentRequestHeader, this);
+                }
+
             }
             catch ( Exception ex )
             {
@@ -523,14 +580,19 @@ namespace Gallatin.Core.Service.SessionState
             {
                 _serverConnectingEvent.WaitOne();
 
-                if ( State.ShouldSendPartialDataToServer( e.Data, this )
-                     && ServerConnection != null )
+                lock ( _changeServerConnectionMutex )
                 {
-                    SendServerData( e.Data );
-                }
-                else
-                {
-                    ServiceLog.Logger.Info( "{0} Skipping sending server data. SERVER NULL: {1}", InternalId, ( ServerConnection == null ) );
+                    if ( State.ShouldSendPartialDataToServer( e.Data, this )
+                         && ServerConnection != null )
+                    {
+                        SendServerData( e.Data );
+                    }
+                    else
+                    {
+                        ServiceLog.Logger.Info( "{0} Skipping sending server data. SERVER NULL: {1}",
+                                                InternalId,
+                                                ( ServerConnection == null ) );
+                    }
                 }
             }
             catch ( Exception ex )
@@ -545,11 +607,16 @@ namespace Gallatin.Core.Service.SessionState
         private void HandleClientParserAdditionalDataRequested( object sender, EventArgs e )
         {
             Contract.Requires( e != null );
-            Contract.Requires( ClientConnection != null );
 
             ServiceLog.Logger.Verbose( "{0} SessionContext::HandleClientParserAdditionalDataRequested", InternalId );
 
-            ClientConnection.BeginReceive( HandleClientReceive );
+            lock ( _changeClientConnectionMutex )
+            {
+                if ( ClientConnection != null )
+                {
+                    ClientConnection.BeginReceive( HandleClientReceive );
+                }
+            }
         }
 
         private void HandleServerParserReadResponseHeaderComplete( object sender, HttpResponseHeaderEventArgs e )
@@ -573,9 +640,6 @@ namespace Gallatin.Core.Service.SessionState
 
         private void HandleServerConnectionConnectionClosed( object sender, EventArgs e )
         {
-            Contract.Requires( e != null );
-            Contract.Ensures( ServerConnection == null );
-
             ServiceLog.Logger.Verbose( "{0} SessionContext::HandleServerConnectionConnectionClosed", InternalId );
 
             Reset();
@@ -589,14 +653,19 @@ namespace Gallatin.Core.Service.SessionState
 
             try
             {
-                if ( State.ShouldSendPartialDataToClient( e.Data, this )
-                     && ClientConnection != null )
+                lock ( _changeClientConnectionMutex )
                 {
-                    SendClientData( e.Data );
-                }
-                else
-                {
-                    ServiceLog.Logger.Info( "{0} Skipping sending client data. CLIENT NULL: {1}", InternalId, ( ClientConnection == null ) );
+                    if ( State.ShouldSendPartialDataToClient( e.Data, this )
+                         && ClientConnection != null )
+                    {
+                        SendClientData( e.Data );
+                    }
+                    else
+                    {
+                        ServiceLog.Logger.Info( "{0} Skipping sending client data. CLIENT NULL: {1}",
+                                                InternalId,
+                                                ( ClientConnection == null ) );
+                    }
                 }
             }
             catch ( Exception ex )
@@ -624,11 +693,16 @@ namespace Gallatin.Core.Service.SessionState
         private void HandleServerParserAdditionalDataRequested( object sender, EventArgs e )
         {
             Contract.Requires( e != null );
-            Contract.Requires( ServerConnection != null );
 
             ServiceLog.Logger.Verbose( "{0} SessionContext::HandleServerParserAdditionalDataRequested", InternalId );
 
-            ServerConnection.BeginReceive( HandleServerReceive );
+            lock ( _changeServerConnectionMutex )
+            {
+                if ( ServerConnection != null )
+                {
+                    ServerConnection.BeginReceive( HandleServerReceive );
+                }
+            }
         }
     }
 }
