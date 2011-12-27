@@ -32,11 +32,6 @@ namespace Gallatin.Core.Service.SessionState
             context.Reset();
         }
 
-        public override void AcknowledgeServerShutdown(ISessionContext context)
-        {
-            throw new InvalidOperationException("Server shutdown is unexpected in this state");
-        }
-
         public override void RequestHeaderAvailable( IHttpRequest request, ISessionContext context )
         {
             Contract.Requires(context.ClientConnection != null);
@@ -78,12 +73,6 @@ namespace Gallatin.Core.Service.SessionState
                 }
 
             }
-        }
-
-        public override void ServerConnectionLost(ISessionContext context)
-        {
-            // Ignore this and remain in the current state. This should only occur when we are switching hosts
-            // on a persistent connection. We know the connection was lost and don't care.
         }
 
         public override void ServerConnectionEstablished(ISessionContext context)

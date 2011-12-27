@@ -15,7 +15,6 @@ namespace Gallatin.Core.Service.SessionState
         private readonly object _changeClientConnectionMutex = new object();
         private readonly object _changeServerConnectionMutex = new object();
         private readonly INetworkFacadeFactory _facadeFactory;
-        private readonly AutoResetEvent _pipelineUpdateEvent = new AutoResetEvent( false );
         private readonly ISessionStateRegistry _registry;
         private readonly ManualResetEvent _serverConnectingEvent = new ManualResetEvent( false );
         private readonly ReaderWriterLockSlim _stateUpdateLock = new ReaderWriterLockSlim( LockRecursionPolicy.SupportsRecursion );
@@ -395,7 +394,6 @@ namespace Gallatin.Core.Service.SessionState
 
             State.SentFullServerResponseToClient( RecentResponseHeader, this );
 
-            _pipelineUpdateEvent.Set();
         }
 
         private void HandleServerParserBodyAvailable( object sender, HttpDataEventArgs e )
@@ -487,35 +485,35 @@ namespace Gallatin.Core.Service.SessionState
             }
         }
 
-        private bool HasHostChanged( HttpRequestHeaderEventArgs newRequest )
-        {
-            if ( RecentRequestHeader == null )
-            {
-                return false;
-            }
+        //private bool HasHostChanged( HttpRequestHeaderEventArgs newRequest )
+        //{
+        //    if ( RecentRequestHeader == null )
+        //    {
+        //        return false;
+        //    }
 
-            HttpRequest request = HttpRequest.CreateRequest( newRequest );
+        //    HttpRequest request = HttpRequest.CreateRequest( newRequest );
 
-            int port;
-            string host;
+        //    int port;
+        //    string host;
 
-            if ( SessionStateUtils.TryParseAddress( request, out host, out port ) )
-            {
-                return ( RecentRequestHeader.IsSsl != request.IsSsl ||
-                         Host != host || Port != port );
-            }
+        //    if ( SessionStateUtils.TryParseAddress( request, out host, out port ) )
+        //    {
+        //        return ( RecentRequestHeader.IsSsl != request.IsSsl ||
+        //                 Host != host || Port != port );
+        //    }
 
-            throw new InvalidDataException( "Malformed HTTP request" );
-        }
+        //    throw new InvalidDataException( "Malformed HTTP request" );
+        //}
 
-        private void WaitForEmptyPipeline()
-        {
-            while ( HttpPipelineDepth > 0 )
-            {
-                ServiceLog.Logger.Verbose( "{0} Waiting for pipeline to clear. Pipeline depth: {1}", InternalId, HttpPipelineDepth );
-                _pipelineUpdateEvent.WaitOne();
-            }
-        }
+        //private void WaitForEmptyPipeline()
+        //{
+        //    while ( HttpPipelineDepth > 0 )
+        //    {
+        //        ServiceLog.Logger.Verbose( "{0} Waiting for pipeline to clear. Pipeline depth: {1}", InternalId, HttpPipelineDepth );
+        //        _pipelineUpdateEvent.WaitOne();
+        //    }
+        //}
 
         private void HandleClientParserReadRequestHeaderComplete( object sender, HttpRequestHeaderEventArgs e )
         {
@@ -530,22 +528,33 @@ namespace Gallatin.Core.Service.SessionState
                 // have a different host/port but we cannot change the active server connection until the existing
                 // pipeline is empty.
 
-                if ( HasHostChanged( e ) )
-                {
-                    ServiceLog.Logger.Info( "{0} Client has changed hosts. Waiting for pipeline to clear before reconnecting...", InternalId );
-                    WaitForEmptyPipeline();
-                    ServiceLog.Logger.Info( "{0} Pipeline cleared. Continuing with request.", InternalId );
-                }
+                //if ( HasHostChanged( e ) )
+                //{
+                //    ServiceLog.Logger.Info( "{0} Client has changed hosts. Waiting for pipeline to clear before reconnecting...", InternalId );
+                //    WaitForEmptyPipeline();
+                //    ServiceLog.Logger.Info( "{0} Pipeline cleared. Continuing with request.", InternalId );
+                //}
 
-                HttpPipelineDepth++;
-                RecentRequestHeader = HttpRequest.CreateRequest( e );
+                IHttpRequest request = HttpRequest.CreateRequest( e );
 
                 lock ( _changeClientConnectionMutex )
                 {
-                    if(ClientConnection!= null)
-                        State.RequestHeaderAvailable(RecentRequestHeader, this);
+                    if (ClientConnection != null)
+                    {
+                        if (State is ConnectedState)
+                        {
+                            ChangeState(SessionStateType.EvaluateChangingHosts);
+                        }
+
+                        State.RequestHeaderAvailable(request, this);
+                    }
                 }
 
+                HttpPipelineDepth++;
+
+                // Update the recent request header AFTER sending the request header to the state so the state
+                // can compare host changes
+                RecentRequestHeader = request;
             }
             catch ( Exception ex )
             {

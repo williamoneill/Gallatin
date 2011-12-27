@@ -5,17 +5,86 @@ using System.Diagnostics.Contracts;
 using System.Text;
 using System.Threading;
 using Gallatin.Contracts;
+using System.IO;
 
 namespace Gallatin.Core.Service.SessionState
 {
+    [ExportSessionState(SessionStateType = SessionStateType.EvaluateChangingHosts)]
+    internal class EvaluateChangingHostsState : SessionStateBase
+    {
+        Dictionary<string,IHttpRequest> _reconnectingRequests = new Dictionary<string, IHttpRequest>();
 
+        public override void RequestHeaderAvailable(IHttpRequest request, ISessionContext context)
+        {
+            if (context.RecentRequestHeader == null)
+            {
+                throw new InvalidOperationException("Unable to evaluate changing hosts when previous HTTP header is unavailable");
+            }
+
+            int port;
+            string host;
+
+            if ( SessionStateUtils.TryParseAddress( request, out host, out port ) )
+            {
+                if (context.RecentRequestHeader.IsSsl != request.IsSsl ||
+                            context.Host != host || context.Port != port)
+                {
+                    ServiceLog.Logger.Info("{0} Client is changing hosts. Connection will be re-established.", context.Id);
+
+                    if (_reconnectingRequests.ContainsKey(context.Id))
+                    {
+                        throw new InvalidOperationException("Client is attempting to change remote hosts twice without establishing connection to the first host.");
+                    }
+
+                    _reconnectingRequests.Add(context.Id,request);
+                }
+                else
+                {
+                    ServiceLog.Logger.Verbose("{0} Client is not changing hosts.", context.Id);
+
+                    context.ChangeState(SessionStateType.Connected);
+                }
+            }
+            else
+            {
+                throw new InvalidDataException("Malformed HTTP request");
+            }
+        }
+
+        public override void SentFullServerResponseToClient(IHttpResponse response, ISessionContext context)
+        {
+            // Change hosts when the pipeline is empty
+            if (context.HttpPipelineDepth == 0)
+            {
+                context.ChangeState(SessionStateType.ClientConnecting);
+
+                IHttpRequest request;
+                if( _reconnectingRequests.TryGetValue( context.Id, out request) )
+                {
+                    _reconnectingRequests.Remove( context.Id );
+                    context.State.RequestHeaderAvailable(request, context);
+                }
+                else
+                {
+                    throw new InvalidOperationException("Unable to locate pending request in dictionary");
+                }
+
+            }
+        }
+
+        // TODO: continue to filter responses
+
+        public override void ServerConnectionLost(ISessionContext context)
+        {
+            // Ignore this and remain in the current state. This should only occur when we are switching hosts
+            // on a persistent connection. We know the connection was lost and don't care.
+        }
+
+    }
 
     [ExportSessionState( SessionStateType = SessionStateType.Connected )]
     internal class ConnectedState : SessionStateBase
     {
-        private List<ISessionContext>  _clientsPendingShutdown = new List<ISessionContext>();
-
-
         private readonly IProxyFilter _filter;
 
         [ImportingConstructor]
@@ -34,50 +103,22 @@ namespace Gallatin.Core.Service.SessionState
             {
                 context.Reset();
             }
-            else
-            {
-                lock (_clientsPendingShutdown)
-                {
-                    _clientsPendingShutdown.Add(context);
-                }
-            }
+
+        }
+
+        public override void AcknowledgeServerShutdown(ISessionContext context)
+        {
+            // Ignore for now. This will be re-evaluated when connection persistence is evaluated.
         }
 
         public override void RequestHeaderAvailable( IHttpRequest request, ISessionContext context )
         {
-            string host;
-            int port;
-
             ServiceLog.Logger.Verbose(
                 () => string.Format(
                     "{0}\r\n=====existing conn======\r\n{1}\r\n========================\r\n", 
                     context.Id, Encoding.UTF8.GetString(request.GetBuffer())));
 
-            if ( SessionStateUtils.TryParseAddress( request, out host, out port ) )
-            {
-                if ( host != context.Host
-                     || port != context.Port )
-                {
-                    ServiceLog.Logger.Info( "{0} Client changed host/port on existing connection", context.Id );
-
-                    // This will close the server connection and block new messages from the client
-                    context.CloseServerConnection();
-
-                    context.ChangeState( SessionStateType.ClientConnecting );
-
-                    // Pass the request header to the new state so the connection filters can be evaluated
-                    context.State.RequestHeaderAvailable( request, context );
-                }
-                else
-                {
-                    context.SendServerData( request.GetBuffer() );
-                }
-            }
-            else
-            {
-                ServiceLog.Logger.Error("{0} Unable to parse host address: {1}", context.Id, Encoding.UTF8.GetString(request.GetBuffer()));
-                context.Reset();
-            }
+            context.SendServerData(request.GetBuffer());
         }
 
         public override void ResponseHeaderAvailable(IHttpResponse response, ISessionContext context)
@@ -130,11 +171,6 @@ namespace Gallatin.Core.Service.SessionState
 
             if ( !response.IsPersistent || (context.HttpPipelineDepth == 0 && ( context.HasClientBegunShutdown || context.HasServerBegunShutdown ) ) )
             {
-                lock (_clientsPendingShutdown)
-                {
-                    _clientsPendingShutdown.Remove( context );
-                }
-
                 ServiceLog.Logger.Info("{0} Non-persistent connection. Closing session.", context.Id);
                 context.Reset();
             }

@@ -21,6 +21,11 @@ namespace Gallatin.Core.Service.SessionState
         ClientConnecting,
 
         /// <summary>
+        /// State used to 
+        /// </summary>
+        EvaluateChangingHosts,
+
+        /// <summary>
         /// Client connected to server state
         /// </summary>
         Connected,
