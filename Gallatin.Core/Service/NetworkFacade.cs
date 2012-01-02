@@ -9,7 +9,8 @@ namespace Gallatin.Core.Service
     internal class NetworkFacade : INetworkFacade
     {
         private byte[] _receiveBuffer;
-        private bool _hasShutdown;
+        private bool _hasShutdownReceive;
+        private bool _hasShutdownSend;
 
         public NetworkFacade( Socket socket )
         {
@@ -17,10 +18,12 @@ namespace Gallatin.Core.Service
             Contract.Requires( socket.Connected );
 
             Socket = socket;
+
+            _hasShutdownReceive = false;
+            _hasShutdownSend = false;
         }
 
         private Semaphore _receiveSemaphore = new Semaphore(1,1);
-        private Semaphore _sendSemaphore = new Semaphore(1, 1);
 
         internal Socket Socket { get; set; }
 
@@ -46,12 +49,14 @@ namespace Gallatin.Core.Service
 
         public void BeginSend( byte[] buffer, Action<bool, INetworkFacade> callback )
         {
-            if (!_hasShutdown)
+            ServiceLog.Logger.Verbose("{0} Sending data, len: {1}", Id, buffer.Length);
+
+            if (_hasShutdownReceive)
             {
-                ServiceLog.Logger.Verbose("{0} Sending data, len: {1}", Id, buffer.Length);
-
-                _sendSemaphore.WaitOne();
-
+                ServiceLog.Logger.Warning("{0} Socket has stopped receiving data. Send request ignored.");
+            }
+            else
+            {
                 Socket.BeginSend(
                     buffer,
                     0,
@@ -64,15 +69,20 @@ namespace Gallatin.Core.Service
 
         public void BeginReceive( Action<bool, byte[], INetworkFacade> callback )
         {
-            _receiveSemaphore.WaitOne();
+            ServiceLog.Logger.Verbose("{0} Begin receive data", Id);
 
+            // TODO: this should use the appliction settings
             const int BufferSize = 8192;
 
-            if (!_hasShutdown)
-            {
-                ServiceLog.Logger.Verbose("{0} Begin receive data", Id);
+            _receiveBuffer = new byte[BufferSize];
 
-                _receiveBuffer = new byte[BufferSize];
+            if (_hasShutdownSend)
+            {
+                ServiceLog.Logger.Warning("{0} Socket has stopped sending data. Receive request ignored.");
+            }
+            else
+            {
+                _receiveSemaphore.WaitOne();
 
                 Socket.BeginReceive(
                     _receiveBuffer,
@@ -82,14 +92,24 @@ namespace Gallatin.Core.Service
                     HandleReceive,
                     callback);
             }
+
         }
 
         public void BeginClose( Action<bool, INetworkFacade> callback )
         {
-            // TODO: After further reseach, this may not be needed despite MSDN documentation.
-            Socket.Shutdown(SocketShutdown.Both);
+            if (!_hasShutdownReceive && !_hasShutdownSend)
+            {
+                _hasShutdownReceive = true;
+                _hasShutdownSend = true;
 
-            Socket.BeginDisconnect( false, HandleDisconnect, callback );
+                Socket.BeginDisconnect(false, HandleDisconnect, callback);
+            }
+            else
+            {
+                // Avoid object disposed exception
+                callback( true, this );
+            }
+
         }
 
         private void OnConnectionClosed()
@@ -112,25 +132,16 @@ namespace Gallatin.Core.Service
 
             Action<bool, INetworkFacade> callback = ar.AsyncState as Action<bool, INetworkFacade>;
 
-            if ( _hasShutdown )
-            {
-                _sendSemaphore.Release();
-                ServiceLog.Logger.Warning("{0} Socket has shutdown.", Id); 
-                return;
-            }
-
             try
             {
                 SocketError socketError;
                 int bytesSent = Socket.EndSend( ar, out socketError );
 
-                _sendSemaphore.Release();
-
                 if ( bytesSent == 0 )
                 {
-                    ServiceLog.Logger.Info( "{0} Socket disconnected", Id );
-                    OnConnectionClosed();
-                    callback( false, this );
+                    ServiceLog.Logger.Info("{0} Network endpoint stopped receiving data", Id);
+                    _hasShutdownReceive = true;
+                    callback( true, this );
                 }
                 else if ( socketError != SocketError.Success )
                 {
@@ -160,11 +171,11 @@ namespace Gallatin.Core.Service
 
             Action<bool, byte[], INetworkFacade> callback = ar.AsyncState as Action<bool, byte[], INetworkFacade>;
 
-            if ( _hasShutdown )
+            if (_hasShutdownSend)
             {
                 _receiveSemaphore.Release();
-                ServiceLog.Logger.Warning("{0} Socket has shutdown.", Id);
-                return;
+                ServiceLog.Logger.Info("{0} Network endpoint stopped sending data. Ignoring receive results.", Id);
+                callback(false,null,this);
             }
 
             try
@@ -174,9 +185,10 @@ namespace Gallatin.Core.Service
 
                 if ( bytesReceived == 0 )
                 {
+                    _hasShutdownSend = true;
                     _receiveSemaphore.Release();
 
-                    ServiceLog.Logger.Info("{0} Network endpoint is shutting down the socket.", Id);
+                    ServiceLog.Logger.Info("{0} Network endpoint stopped sending data", Id);
                     callback(true, null, this);
                 }
                 else if ( socketError != SocketError.Success )
@@ -210,13 +222,6 @@ namespace Gallatin.Core.Service
         {
             Contract.Requires(ar != null);
             Contract.Requires( ar.AsyncState is Action<bool, INetworkFacade> );
-
-            if (_hasShutdown)
-            {
-                return;
-            }
-
-            _hasShutdown = true;
 
             Action<bool, INetworkFacade> callback = ar.AsyncState as Action<bool, INetworkFacade>;
 

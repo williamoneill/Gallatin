@@ -19,9 +19,7 @@ namespace Gallatin.Core.Service.SessionState
     {
         public override void TransitionToState( ISessionContext context )
         {
-            context.CloseClientConnection();
-            context.CloseServerConnection();
-            context.OnSessionEnded();
+            context.Reset();
         }
 
         public override bool ShouldSendPartialDataToClient( byte[] data, ISessionContext context )

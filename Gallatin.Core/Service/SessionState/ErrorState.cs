@@ -7,7 +7,7 @@ namespace Gallatin.Core.Service.SessionState
     {
         public override void TransitionToState(ISessionContext context)
         {
-            context.UnwireClientParserEvents();
+            //context.UnwireClientParserEvents();
 
             if (context.ClientConnection != null)
             {

@@ -10,7 +10,7 @@ namespace Gallatin.Core.Service.SessionState
 
         public override void TransitionToState(ISessionContext context)
         {
-            context.HttpResponseBodyRequested(ServerParserBodyAvailable);
+            //context.HttpResponseBodyRequested(ServerParserBodyAvailable);
         }
 
         void ServerParserBodyAvailable(byte[] data, ISessionContext context)

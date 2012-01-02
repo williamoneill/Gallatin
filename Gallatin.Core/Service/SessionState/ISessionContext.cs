@@ -24,7 +24,7 @@ namespace Gallatin.Core.Service.SessionState
         /// <summary>
         /// 
         /// </summary>
-        bool HasServerBegunShutdown { get; }
+        //bool HasServerBegunShutdown { get; }
 
         /// <summary>
         /// 
@@ -54,7 +54,7 @@ namespace Gallatin.Core.Service.SessionState
         /// <summary>
         /// Gets the server connection
         /// </summary>
-        INetworkFacade ServerConnection { get; }
+        //INetworkFacade ServerConnection { get; }
 
         /// <summary>
         /// Gets a reference to the active session state
@@ -71,22 +71,22 @@ namespace Gallatin.Core.Service.SessionState
         /// <summary>
         /// 
         /// </summary>
-        void CloseServerConnection();
+        //void CloseServerConnection();
 
         /// <summary>
         /// 
         /// </summary>
-        void CloseClientConnection();
+        //void CloseClientConnection();
 
         /// <summary>
         /// Removes the client parser events from the network facade without closing the connection
         /// </summary>
-        void UnwireClientParserEvents();
+        //void UnwireClientParserEvents();
 
         /// <summary>
         /// Removes the server parser events from the network facade without closing the connection
         /// </summary>
-        void UnwireServerParserEvents();
+        //void UnwireServerParserEvents();
 
         /// <summary>
         /// Sends data to the connected server 
@@ -103,7 +103,7 @@ namespace Gallatin.Core.Service.SessionState
         /// <summary>
         /// Raises the Session Ended event 
         /// </summary>
-        void OnSessionEnded();
+        //void OnSessionEnded();
 
         /// <summary>
         /// Provides a callback method to be invoked when the HTTP response body is available.
@@ -114,7 +114,7 @@ namespace Gallatin.Core.Service.SessionState
         /// <param name="bodyAvailableCallback">
         /// Callback to invoke when the HTTP body is available
         /// </param>
-        void HttpResponseBodyRequested( Action<byte[], ISessionContext> bodyAvailableCallback );
+        //void HttpResponseBodyRequested( Action<byte[], ISessionContext> bodyAvailableCallback );
 
         /// <summary>
         /// Changes the internal state of the session context
