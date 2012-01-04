@@ -13,6 +13,8 @@ namespace Gallatin.Core.Service.ClientSession
 
         bool HasClosed { get; }
 
+        void Close();
+
         INetworkFacade Connection { get; }
 
         IHttpResponse LastResponseHeader { get; }
@@ -55,6 +57,23 @@ namespace Gallatin.Core.Service.ClientSession
         public bool HasStoppedSendingData { get; set; }
 
         public bool HasClosed { get; private set; }
+
+        public void Close()
+        {
+            ServiceLog.Logger.Verbose("{0} ServerSession -- closing connection (explicit)", Connection.Id);
+
+            Connection.BeginClose(HandleClose);
+        }
+
+        private void HandleClose(bool success, INetworkFacade server)
+        {
+            if (!success)
+            {
+                ServiceLog.Logger.Warning("{0} ServerSession -- received error when closing", Connection.Id);   
+            }
+
+            HasClosed = true;
+        }
 
         public INetworkFacade Connection { get; private set; }
 

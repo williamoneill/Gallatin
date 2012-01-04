@@ -13,10 +13,10 @@ namespace Gallatin.Core.Service.ClientSession
 {
     internal interface IServerDispatcher : IPooledObject
     {
-        int OpenSessionCount { get; }
         void BeginConnect( IHttpRequest requestHeader, Action<bool, IHttpRequest> serverConnectedCallback );
         void SendServerData( byte[] data, Action<bool> sendDataCallback );
         string SessionId { set; }
+        int PipeLineDepth { get; }
 
         event EventHandler<HttpResponseHeaderEventArgs> ReadResponseHeaderComplete;
         event EventHandler<HttpDataEventArgs> PartialDataAvailable;
@@ -51,6 +51,8 @@ namespace Gallatin.Core.Service.ClientSession
         private Action<bool, IHttpRequest> _serverConnectedDelegate;
         private IHttpRequest _requestHeader;
 
+        private int _pipeLineDepth;
+
         public void BeginConnect( IHttpRequest requestHeader, Action<bool, IHttpRequest> serverConnectedDelegate )
         {
             ServiceLog.Logger.Verbose( "{0} ServerDispatcher -- connecting to remote host", SessionId );
@@ -62,40 +64,44 @@ namespace Gallatin.Core.Service.ClientSession
 
                 if ( TryParseAddress( requestHeader, out host, out port ) )
                 {
-                    lock ( _activeSessions )
-                    {
-                        bool shouldConnect = true;
+                    ServiceLog.Logger.Info("{0} Evaluating connection to {1}:{2}", SessionId, host, port);
 
+                    Interlocked.Increment( ref _pipeLineDepth );
+
+                    bool shouldConnect = true;
+
+                    lock (_activeSessions)
+                    {
                         IServerSession session;
                         if ( _activeSessions.TryGetValue( CreateKey( host, port ), out session ) )
                         {
-                            if ( session.HasStoppedSendingData )
+                            if ( session.HasStoppedSendingData || session.HasClosed )
                             {
-                                ServiceLog.Logger.Info( "{0} A connection has already been established with this host but it has shut down. This old session will be removed and a new server connection will be established.", SessionId );
+                                ServiceLog.Logger.Info( "{0} A connection has already been established to {1}:{2} host but it has shut down. This old session will be removed and a new server connection will be established.", SessionId, host, port );
                                 _activeSessions.Remove( CreateKey( host, port ) );
-                                serverConnectedDelegate( false, requestHeader );
                             }
                             else
                             {
-                                ServiceLog.Logger.Info( "{0} Reusing existing server connection", SessionId );
+                                ServiceLog.Logger.Info( "{0} Reusing existing server connection to {1}:{2}", SessionId, host, port );
                                 shouldConnect = false;
                                 ActiveServer = session;
                                 serverConnectedDelegate( true, requestHeader );
                             }
                         }
                         
-                        if(shouldConnect)
-                        {
-                            _connectingEvent.Reset();
+                    }
 
-                            _host = host;
-                            _port = port;
-                            _serverConnectedDelegate = serverConnectedDelegate;
-                            _requestHeader = requestHeader;
+                    if (shouldConnect)
+                    {
+                        _connectingEvent.Reset();
 
-                            ServiceLog.Logger.Info("{0} Connecting to remote host {1}:{2}", SessionId, host, port);
-                            _factory.BeginConnect( host, port, HandleConnect );
-                        }
+                        _host = host;
+                        _port = port;
+                        _serverConnectedDelegate = serverConnectedDelegate;
+                        _requestHeader = requestHeader;
+
+                        ServiceLog.Logger.Info("{0} Connecting to remote host {1}:{2}", SessionId, host, port);
+                        _factory.BeginConnect(host, port, HandleConnect);
                     }
                 }
                 else
@@ -173,13 +179,14 @@ namespace Gallatin.Core.Service.ClientSession
             set;
         }
 
-        public int OpenSessionCount
+        public int PipeLineDepth
         {
             get
             {
-                return FindActiveServers().Count();
+                return _pipeLineDepth;
             }
         }
+
 
         public event EventHandler<HttpResponseHeaderEventArgs> ReadResponseHeaderComplete;
         public event EventHandler<HttpDataEventArgs> PartialDataAvailable;
@@ -250,6 +257,18 @@ namespace Gallatin.Core.Service.ClientSession
                         s => !s.HasClosed && !s.HasStoppedSendingData && s.LastResponseHeader != null && s.LastResponseHeader.IsPersistent );
             }
 
+            ServiceLog.Logger.Verbose( () =>
+                                       {
+                                           string message = string.Format("{0} ACTIVE SERVERS: ", SessionId);
+
+                                           foreach (var activeSession in activeSessions)
+                                           {
+                                               message += " " + activeSession.Connection.Id + " ";
+                                           }
+
+                                           return message;
+                                       });
+
             return activeSessions;
         }
 
@@ -290,8 +309,17 @@ namespace Gallatin.Core.Service.ClientSession
 
             try
             {
+                Interlocked.Decrement( ref _pipeLineDepth );
+
+                // If this is not the active server then shut it down
+                //var serverSession = sender as IServerSession;
+                //if (serverSession != null && serverSession != ActiveServer)
+                //{
+                //    ServiceLog.Logger.Info("{0} Shutting down non-active server");
+                //}
+
                 // Notifiy the client when all servers have closed their connections, stopped sending data, are are non-persistent
-                if ( OpenSessionCount == 0 )
+                if ( !FindActiveServers().Any() )
                 {
                     ServiceLog.Logger.Verbose( "{0} No active servers remain", SessionId );
                     OnAllServersInactive();

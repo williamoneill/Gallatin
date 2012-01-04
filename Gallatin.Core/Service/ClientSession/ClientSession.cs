@@ -121,7 +121,7 @@ namespace Gallatin.Core.Service.ClientSession
 
         private void _dispatcher_ReadResponseHeaderComplete( object sender, HttpResponseHeaderEventArgs e )
         {
-            ServiceLog.Logger.Verbose( "{0} ClientSession -- read response header complete", Id );
+            ServiceLog.Logger.Verbose( () => string.Format( "{0} ClientSession -- read HTTP response header complete\r\n{1}", Id, Encoding.UTF8.GetString( HttpResponse.CreateResponse(e).GetBuffer() )  ));
 
             if(_clientConnection!=null)
                 _clientConnection.BeginSend( e.GetBuffer(), HandleSendToClient );
@@ -285,7 +285,8 @@ namespace Gallatin.Core.Service.ClientSession
                     {
                         ServiceLog.Logger.Info( "{0} Client socket has stopped sending data.", Id );
                         _hasClientStoppedSendingData = true;
-                        if ( _dispatcher.OpenSessionCount == 0 )
+
+                        if ( _dispatcher.PipeLineDepth == 0 )
                         {
                             ServiceLog.Logger.Info( "{0} No active servers remain and client shutdown socket. Resetting.", Id );
                             Reset();
