@@ -22,6 +22,7 @@ namespace Gallatin.Core.Service.ClientSession
         event EventHandler<HttpDataEventArgs> PartialDataAvailable;
         event EventHandler FatalErrorOccurred;
         event EventHandler AllServersInactive;
+        event EventHandler EmptyPipeline;
     }
 
     [PartCreationPolicy( CreationPolicy.NonShared )]
@@ -38,6 +39,7 @@ namespace Gallatin.Core.Service.ClientSession
 
             ServiceLog.Logger.Verbose( "{0} ServerDispatcher -- constructor", SessionId );
 
+            _pipeLineDepth = 0;
             _factory = factory;
         }
 
@@ -192,6 +194,7 @@ namespace Gallatin.Core.Service.ClientSession
         public event EventHandler<HttpDataEventArgs> PartialDataAvailable;
         public event EventHandler FatalErrorOccurred;
         public event EventHandler AllServersInactive;
+        public event EventHandler EmptyPipeline;
 
         public void Reset()
         {
@@ -210,6 +213,8 @@ namespace Gallatin.Core.Service.ClientSession
                 }
 
                 _activeSessions.Clear();
+
+                _pipeLineDepth = 0;
 
                 ActiveServer = null;
             }
@@ -259,7 +264,7 @@ namespace Gallatin.Core.Service.ClientSession
 
             ServiceLog.Logger.Verbose( () =>
                                        {
-                                           string message = string.Format("{0} ACTIVE SERVERS: ", SessionId);
+                                           string message = string.Format("{0} PIPELINE DEPTH: {1} -- ACTIVE SERVERS: ", SessionId, _pipeLineDepth);
 
                                            foreach (var activeSession in activeSessions)
                                            {
@@ -318,11 +323,22 @@ namespace Gallatin.Core.Service.ClientSession
                 //    ServiceLog.Logger.Info("{0} Shutting down non-active server");
                 //}
 
-                // Notifiy the client when all servers have closed their connections, stopped sending data, are are non-persistent
+                // Notifiy the client when all servers have closed their connections, stopped sending data, and are non-persistent
                 if ( !FindActiveServers().Any() )
                 {
                     ServiceLog.Logger.Verbose( "{0} No active servers remain", SessionId );
                     OnAllServersInactive();
+                }
+
+                if (_pipeLineDepth == 0)
+                {
+                    ServiceLog.Logger.Verbose("{0} Raising pipeline empty event", SessionId);
+
+                    var pipelineEmptyEvent = EmptyPipeline;
+                    if (pipelineEmptyEvent != null)
+                    {
+                        pipelineEmptyEvent(this, new EventArgs());
+                    }
                 }
             }
             catch ( Exception ex )

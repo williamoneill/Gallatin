@@ -39,6 +39,10 @@ namespace Gallatin.Core.Service
         /// <param name="callback">Delegate to invoke when the connection has been closed</param>
         void BeginClose( Action<bool, INetworkFacade> callback );
 
+        /// <summary>
+        /// Returns a flag indicating if the socket is still connected
+        /// </summary>
+        bool IsConnected { get; }
 
         /// <summary>
         /// Raised when the connection is closed
@@ -71,6 +75,9 @@ namespace Gallatin.Core.Service
         {
             Contract.Requires( callback != null );
         }
+
+        public abstract bool IsConnected { get; }
+
 
         public abstract void CancelPendingReceive();
 

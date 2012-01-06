@@ -112,6 +112,15 @@ namespace Gallatin.Core.Service
 
         }
 
+        public bool IsConnected
+        {
+            get
+            {
+                // Do not hit the Socket first or risk getting an object disposed exception
+                return !_hasShutdownReceive && !_hasShutdownSend && Socket.Connected;
+            }
+        }
+
         private void OnConnectionClosed()
         {
             EventHandler connectionClosed = ConnectionClosed;
@@ -134,25 +143,35 @@ namespace Gallatin.Core.Service
 
             try
             {
-                SocketError socketError;
-                int bytesSent = Socket.EndSend( ar, out socketError );
-
-                if ( bytesSent == 0 )
+                if (_hasShutdownReceive)
                 {
-                    ServiceLog.Logger.Info("{0} Network endpoint stopped receiving data", Id);
-                    _hasShutdownReceive = true;
-                    callback( true, this );
-                }
-                else if ( socketError != SocketError.Success )
-                {
-                    ServiceLog.Logger.Error( "{0} Socket error: {1}", Id, socketError );
-                    OnConnectionClosed();
+                    ServiceLog.Logger.Info("{0} Network endpoint stopped receiving data. Ignoring send results.", Id);
                     callback( false, this );
                 }
                 else
                 {
-                    callback( true, this );
+                    SocketError socketError;
+                    int bytesSent = Socket.EndSend(ar, out socketError);
+
+                    if (bytesSent == 0)
+                    {
+                        ServiceLog.Logger.Info("{0} Network endpoint stopped receiving data", Id);
+                        _hasShutdownReceive = true;
+                        callback(true, this);
+                    }
+                    else if (socketError != SocketError.Success)
+                    {
+                        ServiceLog.Logger.Error("{0} Socket error: {1}", Id, socketError);
+                        OnConnectionClosed();
+                        callback(false, this);
+                    }
+                    else
+                    {
+                        callback(true, this);
+                    }
+                    
                 }
+
             }
             catch ( Exception ex )
             {
@@ -171,44 +190,49 @@ namespace Gallatin.Core.Service
 
             Action<bool, byte[], INetworkFacade> callback = ar.AsyncState as Action<bool, byte[], INetworkFacade>;
 
-            if (_hasShutdownSend)
-            {
-                _receiveSemaphore.Release();
-                ServiceLog.Logger.Info("{0} Network endpoint stopped sending data. Ignoring receive results.", Id);
-                callback(false,null,this);
-            }
 
             try
             {
-                SocketError socketError;
-                int bytesReceived = Socket.EndReceive( ar, out socketError );
-
-                if ( bytesReceived == 0 )
-                {
-                    _hasShutdownSend = true;
-                    _receiveSemaphore.Release();
-
-                    ServiceLog.Logger.Info("{0} Network endpoint stopped sending data", Id);
-                    callback(true, null, this);
-                }
-                else if ( socketError != SocketError.Success )
+                if (_hasShutdownSend)
                 {
                     _receiveSemaphore.Release();
-
-                    ServiceLog.Logger.Info("{0} Network error encountered while receiving data: {1}", Id, socketError);
-                    OnConnectionClosed();
-                    callback( false, null, this );
+                    ServiceLog.Logger.Info("{0} Network endpoint stopped sending data. Ignoring receive results.", Id);
+                    callback(false, null, this);
                 }
                 else
                 {
-                    byte[] buffer = new byte[bytesReceived];
-                    Array.Copy( _receiveBuffer, buffer, bytesReceived );
+                    SocketError socketError;
+                    int bytesReceived = Socket.EndReceive(ar, out socketError);
+
+                    if (bytesReceived == 0)
+                    {
+                        _hasShutdownSend = true;
+                        _receiveSemaphore.Release();
+
+                        ServiceLog.Logger.Info("{0} Network endpoint stopped sending data", Id);
+                        callback(true, null, this);
+                    }
+                    else if (socketError != SocketError.Success)
+                    {
+                        _receiveSemaphore.Release();
+
+                        ServiceLog.Logger.Info("{0} Network error encountered while receiving data: {1}", Id, socketError);
+                        OnConnectionClosed();
+                        callback(false, null, this);
+                    }
+                    else
+                    {
+                        byte[] buffer = new byte[bytesReceived];
+                        Array.Copy(_receiveBuffer, buffer, bytesReceived);
+
+                        // Release after we made a copy of the shared memory buffer
+                        _receiveSemaphore.Release();
+
+                        callback(true, buffer, this);
+                    }
                     
-                    // Release after we made a copy of the shared memory buffer
-                    _receiveSemaphore.Release();
-                    
-                    callback( true, buffer, this );
                 }
+                
             }
             catch ( Exception ex )
             {

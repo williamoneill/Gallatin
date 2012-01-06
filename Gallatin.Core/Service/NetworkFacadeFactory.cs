@@ -153,9 +153,19 @@ namespace Gallatin.Core.Service
                     // Immediately listen for the next clientSession
                     _socket.BeginAccept( HandleNewClientConnect, null );
 
-                    ServiceLog.Logger.Info( "{0} New client connect", clientSocket.GetHashCode() );
+                    if (clientSocket == null)
+                    {
+                        ServiceLog.Logger.Warning("The client connection failed and the client session will be aborted.");
+                    }
+                    else
+                    {
+                        ServiceLog.Logger.Info("{0} New client connect", clientSocket.GetHashCode());
 
-                    _clientConnectCallback( new NetworkFacade( clientSocket ) );
+                        clientSocket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.Linger, false);
+                        clientSocket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, false);
+                        
+                        _clientConnectCallback(new NetworkFacade(clientSocket));
+                    }
                 }
             }
             catch ( Exception ex )

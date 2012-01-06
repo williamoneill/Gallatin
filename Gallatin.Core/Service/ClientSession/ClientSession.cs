@@ -34,6 +34,16 @@ namespace Gallatin.Core.Service.ClientSession
             _dispatcher.PartialDataAvailable += _dispatcher_PartialDataAvailable;
             _dispatcher.ReadResponseHeaderComplete += _dispatcher_ReadResponseHeaderComplete;
             _dispatcher.AllServersInactive += _dispatcher_AllServersInactive;
+            _dispatcher.EmptyPipeline += new EventHandler(_dispatcher_EmptyPipeline);
+        }
+
+        void _dispatcher_EmptyPipeline(object sender, EventArgs e)
+        {
+            if (!_clientConnection.IsConnected)
+            {
+                ServiceLog.Logger.Info("{0} The client has stopped sending data and the server pipeline is empty. Resetting connection.", Id);
+                Reset();
+            }
         }
 
         #region IProxySession Members
@@ -206,10 +216,18 @@ namespace Gallatin.Core.Service.ClientSession
             {
                 // TODO: apply filter here
 
+                var header = HttpRequest.CreateRequest( e );
+
+                if (header.IsSsl)
+                {
+                    ServiceLog.Logger.Error("{0} SSL NOT SUPPORTED YET", Id);
+                    _clientConnection.BeginSend(Encoding.UTF8.GetBytes("HTTP/1.1 200 OK\r\nContent-length: 8\r\n\r\nNO HTTPS"), (s,f) => Reset());
+                }
+
                 // Hold off sending data until the connection is established
                 _connectToServerEvent.Reset();
 
-                _dispatcher.BeginConnect( HttpRequest.CreateRequest( e ), HandleServerConnect );
+                _dispatcher.BeginConnect( header, HandleServerConnect );
             }
             catch ( Exception ex )
             {
@@ -285,6 +303,8 @@ namespace Gallatin.Core.Service.ClientSession
                     {
                         ServiceLog.Logger.Info( "{0} Client socket has stopped sending data.", Id );
                         _hasClientStoppedSendingData = true;
+
+                        ServiceLog.Logger.Verbose("{0} Pipeline depth = {1}", Id, _dispatcher.PipeLineDepth);
 
                         if ( _dispatcher.PipeLineDepth == 0 )
                         {
