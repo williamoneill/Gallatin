@@ -226,18 +226,35 @@ namespace Gallatin.Core.Service.ClientSession
         {
             const int HttpPort = 80;
 
-            host = e.Headers["Host"];
-            port = HttpPort;
+            host = null;
+            port = 0;
 
-            // Get the port from the host address if it set
-            string[] tokens = host.Split( ':' );
-            if ( tokens.Length == 2 )
+            // With SSL (HTTPS) the path is the host name and port
+            if (e.IsSsl)
             {
-                host = tokens[0];
+                string[] pathTokens = e.Path.Split(':');
 
-                if ( !int.TryParse( tokens[1], out port ) )
+                if (pathTokens.Length == 2)
                 {
-                    return false;
+                    port = Int32.Parse(pathTokens[1]);
+                    host = pathTokens[0];
+                }
+            }
+            else
+            {
+                host = e.Headers["Host"];
+                port = HttpPort;
+
+                // Get the port from the host address if it set
+                string[] tokens = host.Split(':');
+                if (tokens.Length == 2)
+                {
+                    host = tokens[0];
+
+                    if (!int.TryParse(tokens[1], out port))
+                    {
+                        return false;
+                    }
                 }
             }
 

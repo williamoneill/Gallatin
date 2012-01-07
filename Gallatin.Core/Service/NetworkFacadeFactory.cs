@@ -130,7 +130,17 @@ namespace Gallatin.Core.Service
             try
             {
                 state.Socket.EndConnect( ar );
-                state.Callback( true, new NetworkFacade( state.Socket ) );
+
+                if (state.Socket == null)
+                {
+                    ServiceLog.Logger.Error("Failed to connect to remote host. Server socket is null.");
+                    state.Callback(false, null);
+                }
+                else
+                {
+                    state.Callback(true, new NetworkFacade(state.Socket));
+                }
+
             }
             catch ( Exception ex )
             {

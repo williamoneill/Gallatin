@@ -53,6 +53,8 @@ namespace Gallatin.Core.Service
 
         private void HandleServerReceive( bool success, byte[] data, INetworkFacade server )
         {
+            ServiceLog.Logger.Verbose("SSL - received data from server - forwarding to client");
+
             try
             {
                 if (success)
@@ -73,6 +75,8 @@ namespace Gallatin.Core.Service
 
         private void HandleClientReceive( bool success, byte[] data, INetworkFacade client )
         {
+            ServiceLog.Logger.Verbose("SSL - received data from client - forwarding to server");
+
             try
             {
                 if (success)
@@ -93,6 +97,8 @@ namespace Gallatin.Core.Service
 
         private void HandleClientSend( bool succes, INetworkFacade client )
         {
+            ServiceLog.Logger.Verbose("SSL - sending data to client - accepting more data from server");
+
             try
             {
                 if (succes)
@@ -114,6 +120,8 @@ namespace Gallatin.Core.Service
 
         private void HandleServerSend( bool succes, INetworkFacade server )
         {
+            ServiceLog.Logger.Verbose("SSL - sending data to server - accepting more data from client");
+
             try
             {
                 if (succes)

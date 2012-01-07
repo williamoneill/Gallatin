@@ -19,14 +19,18 @@ namespace Gallatin.Core.Service.ClientSession
         private INetworkFacade _clientConnection;
         private bool _hasClientStoppedSendingData;
         private IHttpStreamParser _parser;
+        private INetworkFacadeFactory _facadeFactory;
         //private ManualResetEvent _sendingDataToClientLock;
 
         [ImportingConstructor]
-        public ClientSession( IServerDispatcher dispatcher )
+        public ClientSession( IServerDispatcher dispatcher, INetworkFacadeFactory facadeFactory )
         {
             Contract.Requires( dispatcher != null );
+            Contract.Requires(facadeFactory!= null);
 
             ServiceLog.Logger.Verbose( "{0} ClientSession -- constructor", Id );
+
+            _facadeFactory = facadeFactory;
 
             //_sendingDataToClientLock = new ManualResetEvent(true);
             _id = Guid.NewGuid().ToString();
@@ -83,6 +87,19 @@ namespace Gallatin.Core.Service.ClientSession
             _hasClientStoppedSendingData = false;
         }
 
+        private void ResetParser()
+        {
+            ServiceLog.Logger.Verbose("{0} Resetting HTTP stream parser", Id);
+
+            if (_parser != null)
+            {
+                _parser.AdditionalDataRequested -= HandleParserAdditionalDataRequested;
+                _parser.ReadRequestHeaderComplete -= HandleParserReadRequestHeaderComplete;
+                _parser.PartialDataAvailable -= HandleParserPartialDataAvailable;
+                _parser = null;
+            }
+        }
+
         public void Reset()
         {
             Contract.Ensures( _clientConnection == null );
@@ -93,17 +110,13 @@ namespace Gallatin.Core.Service.ClientSession
             {
                 lock ( _resetMutex )
                 {
-                    if ( _clientConnection != null )
+                    ResetParser();
+
+                    if (_clientConnection != null)
                     {
                         _clientConnection.ConnectionClosed -= HandleClientConnectionClosed;
                         _clientConnection.BeginClose(HandleClose);
 
-                        // Unwire client events
-                        _parser.AdditionalDataRequested -= HandleParserAdditionalDataRequested;
-                        _parser.ReadRequestHeaderComplete -= HandleParserReadRequestHeaderComplete;
-                        _parser.PartialDataAvailable -= HandleParserPartialDataAvailable;
-
-                        _parser = null;
                         _clientConnection = null;
 
                         _dispatcher.Reset();
@@ -220,6 +233,7 @@ namespace Gallatin.Core.Service.ClientSession
             }
         }
 
+        private IHttpRequest _lastRequest;
 
         private void HandleParserReadRequestHeaderComplete( object sender, HttpRequestHeaderEventArgs e )
         {
@@ -229,18 +243,37 @@ namespace Gallatin.Core.Service.ClientSession
             {
                 // TODO: apply filter here
 
-                var header = HttpRequest.CreateRequest( e );
+                _lastRequest = HttpRequest.CreateRequest( e );
 
-                if (header.IsSsl)
+                if (_lastRequest.IsSsl)
                 {
-                    ServiceLog.Logger.Error("{0} SSL NOT SUPPORTED YET", Id);
-                    _clientConnection.BeginSend(Encoding.UTF8.GetBytes("HTTP/1.1 200 OK\r\nContent-length: 8\r\n\r\nNO HTTPS"), (s,f) => Reset());
+                    ServiceLog.Logger.Info("{0} HTTPS connection", Id);
+
+                    ResetParser();
+
+                    string host;
+                    int port;
+
+                    if (ServerDispatcher.TryParseAddress(_lastRequest, out host, out port))
+                    {
+                        ServiceLog.Logger.Info("{0} HTTPS host: {1}:{2}", Id, host, port);
+                        _facadeFactory.BeginConnect(host, port, HttpsServerConnect);
+                    }
+                    else
+                    {
+                        ServiceLog.Logger.Warning("{0} Unrecognized HTTPS address. Resetting session.", Id);
+                        Reset();
+                    }
+                }
+                else
+                {
+                    // Hold off sending data until the connection is established
+                    _connectToServerEvent.Reset();
+
+                    _dispatcher.BeginConnect(_lastRequest, HandleServerConnect);
                 }
 
-                // Hold off sending data until the connection is established
-                _connectToServerEvent.Reset();
 
-                _dispatcher.BeginConnect( header, HandleServerConnect );
             }
             catch ( Exception ex )
             {
@@ -248,6 +281,41 @@ namespace Gallatin.Core.Service.ClientSession
                 Reset();
             }
         }
+
+        private SslTunnel _sslTunnel;
+
+        private void HttpsTunnelClosed(object sender, EventArgs args)
+        {
+            ServiceLog.Logger.Info("{0} HTTPS tunnel closed. Resetting session.", Id);
+            _sslTunnel.TunnelClosed -= HttpsTunnelClosed;
+            _sslTunnel = null;
+            Reset();
+                        
+        }
+
+        private void HttpsServerConnect(bool success, INetworkFacade server)
+        {
+            try
+            {
+                if (success)
+                {
+                    _sslTunnel = new SslTunnel();
+                    _sslTunnel.TunnelClosed += new EventHandler(HttpsTunnelClosed);
+                    _sslTunnel.EstablishTunnel(_clientConnection, server, _lastRequest.Version);
+                }
+                else
+                {
+                    ServiceLog.Logger.Warning("{0} Unable to connect to remote HTTPS host", Id);
+                }
+            }
+            catch ( Exception ex )
+            {
+                ServiceLog.Logger.Exception(string.Format("{0} Unhandled exception in HTTPS session.", Id), ex);
+                Reset();
+            }
+        }
+
+
 
         private void HandleServerConnect( bool success, IHttpRequest request )
         {
