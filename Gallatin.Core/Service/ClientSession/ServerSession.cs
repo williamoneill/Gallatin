@@ -125,6 +125,7 @@ namespace Gallatin.Core.Service.ClientSession
                     if ( data == null )
                     {
                         HasStoppedSendingData = true;
+                        Parser.Flush();    
                     }
                     else
                     {
@@ -160,6 +161,7 @@ namespace Gallatin.Core.Service.ClientSession
         {
             ServiceLog.Logger.Verbose( "{0} ServerSession -- socket connection closed event handler", Connection.Id );
             HasClosed = true;
+            //Parser.Flush();
         }
     }
 }

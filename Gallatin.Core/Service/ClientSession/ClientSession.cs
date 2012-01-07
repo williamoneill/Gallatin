@@ -19,6 +19,7 @@ namespace Gallatin.Core.Service.ClientSession
         private INetworkFacade _clientConnection;
         private bool _hasClientStoppedSendingData;
         private IHttpStreamParser _parser;
+        //private ManualResetEvent _sendingDataToClientLock;
 
         [ImportingConstructor]
         public ClientSession( IServerDispatcher dispatcher )
@@ -27,6 +28,7 @@ namespace Gallatin.Core.Service.ClientSession
 
             ServiceLog.Logger.Verbose( "{0} ClientSession -- constructor", Id );
 
+            //_sendingDataToClientLock = new ManualResetEvent(true);
             _id = Guid.NewGuid().ToString();
             _dispatcher = dispatcher;
             _dispatcher.SessionId = Id;
@@ -39,7 +41,10 @@ namespace Gallatin.Core.Service.ClientSession
 
         void _dispatcher_EmptyPipeline(object sender, EventArgs e)
         {
-            if (!_clientConnection.IsConnected)
+            ServiceLog.Logger.Verbose("{0} Dispatcher pipeline empty. Closing session.");
+            //_sendingDataToClientLock.WaitOne();
+
+            if (_clientConnection != null && !_clientConnection.IsConnected)
             {
                 ServiceLog.Logger.Info("{0} The client has stopped sending data and the server pipeline is empty. Resetting connection.", Id);
                 Reset();
@@ -125,6 +130,7 @@ namespace Gallatin.Core.Service.ClientSession
         private void _dispatcher_AllServersInactive( object sender, EventArgs e )
         {
             ServiceLog.Logger.Verbose( "{0} ClientSession -- All servers inactive event handled", Id );
+            //_sendingDataToClientLock.WaitOne();
 
             Reset();
         }
@@ -133,12 +139,16 @@ namespace Gallatin.Core.Service.ClientSession
         {
             ServiceLog.Logger.Verbose( () => string.Format( "{0} ClientSession -- read HTTP response header complete\r\n{1}", Id, Encoding.UTF8.GetString( HttpResponse.CreateResponse(e).GetBuffer() )  ));
 
-            if(_clientConnection!=null)
-                _clientConnection.BeginSend( e.GetBuffer(), HandleSendToClient );
+            if (_clientConnection != null)
+            {
+                //_sendingDataToClientLock.Reset();
+                _clientConnection.BeginSend(e.GetBuffer(), HandleSendToClient);
+            }
         }
 
         private void HandleSendToClient( bool success, INetworkFacade facade )
         {
+            //_sendingDataToClientLock.Set();
             ServiceLog.Logger.Verbose( "{0} ClientSession -- handle send data to client", Id );
 
             if ( !success )
@@ -152,8 +162,11 @@ namespace Gallatin.Core.Service.ClientSession
         {
             ServiceLog.Logger.Verbose( "{0} ClientSession -- partial data available from server -- send to client", Id );
 
-            if(_clientConnection!=null)
-            _clientConnection.BeginSend( e.Data, HandleSendToClient );
+            if (_clientConnection != null)
+            {
+                //_sendingDataToClientLock.Reset();
+                _clientConnection.BeginSend(e.Data, HandleSendToClient);
+            }
         }
 
 

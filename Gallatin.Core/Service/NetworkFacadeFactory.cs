@@ -161,8 +161,9 @@ namespace Gallatin.Core.Service
                     {
                         ServiceLog.Logger.Info("{0} New client connect", clientSocket.GetHashCode());
 
-                        clientSocket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.Linger, false);
-                        clientSocket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, false);
+                        // TODO: Unsure if this is really needed. Client sessions remain in memory longer if this is not set
+                        //clientSocket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.Linger, false);
+                        //clientSocket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, false);
                         
                         _clientConnectCallback(new NetworkFacade(clientSocket));
                     }
