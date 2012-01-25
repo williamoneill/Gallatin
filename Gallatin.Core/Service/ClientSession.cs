@@ -6,31 +6,36 @@ using System.Threading;
 using Gallatin.Contracts;
 using Gallatin.Core.Web;
 
-namespace Gallatin.Core.Service.ClientSession
+namespace Gallatin.Core.Service
 {
     [PartCreationPolicy( CreationPolicy.NonShared )]
-    [Export( typeof (IProxySession) )]
+    //[Export( typeof (IProxySession) )]
     internal class ClientSession : IProxySession
     {
+        private readonly IAccessLog _accessLog;
         private readonly ManualResetEvent _connectToServerEvent = new ManualResetEvent( false );
         private readonly IServerDispatcher _dispatcher;
+        private readonly INetworkFacadeFactory _facadeFactory;
         private readonly string _id;
         private readonly object _resetMutex = new object();
         private INetworkFacade _clientConnection;
         private bool _hasClientStoppedSendingData;
+        private IHttpRequest _lastRequest;
         private IHttpStreamParser _parser;
-        private INetworkFacadeFactory _facadeFactory;
+        private SslTunnel _sslTunnel;
         //private ManualResetEvent _sendingDataToClientLock;
 
         [ImportingConstructor]
-        public ClientSession( IServerDispatcher dispatcher, INetworkFacadeFactory facadeFactory )
+        public ClientSession( IServerDispatcher dispatcher, INetworkFacadeFactory facadeFactory, IAccessLog accessLog )
         {
             Contract.Requires( dispatcher != null );
-            Contract.Requires(facadeFactory!= null);
+            Contract.Requires( facadeFactory != null );
+            Contract.Requires( accessLog != null );
 
             ServiceLog.Logger.Verbose( "{0} ClientSession -- constructor", Id );
 
             _facadeFactory = facadeFactory;
+            _accessLog = accessLog;
 
             //_sendingDataToClientLock = new ManualResetEvent(true);
             _id = Guid.NewGuid().ToString();
@@ -40,19 +45,7 @@ namespace Gallatin.Core.Service.ClientSession
             _dispatcher.PartialDataAvailable += _dispatcher_PartialDataAvailable;
             _dispatcher.ReadResponseHeaderComplete += _dispatcher_ReadResponseHeaderComplete;
             _dispatcher.AllServersInactive += _dispatcher_AllServersInactive;
-            _dispatcher.EmptyPipeline += new EventHandler(_dispatcher_EmptyPipeline);
-        }
-
-        void _dispatcher_EmptyPipeline(object sender, EventArgs e)
-        {
-            ServiceLog.Logger.Verbose("{0} Dispatcher pipeline empty. Closing session.");
-            //_sendingDataToClientLock.WaitOne();
-
-            if (_clientConnection != null && !_clientConnection.IsConnected)
-            {
-                ServiceLog.Logger.Info("{0} The client has stopped sending data and the server pipeline is empty. Resetting connection.", Id);
-                Reset();
-            }
+            _dispatcher.EmptyPipeline += _dispatcher_EmptyPipeline;
         }
 
         #region IProxySession Members
@@ -87,19 +80,6 @@ namespace Gallatin.Core.Service.ClientSession
             _hasClientStoppedSendingData = false;
         }
 
-        private void ResetParser()
-        {
-            ServiceLog.Logger.Verbose("{0} Resetting HTTP stream parser", Id);
-
-            if (_parser != null)
-            {
-                _parser.AdditionalDataRequested -= HandleParserAdditionalDataRequested;
-                _parser.ReadRequestHeaderComplete -= HandleParserReadRequestHeaderComplete;
-                _parser.PartialDataAvailable -= HandleParserPartialDataAvailable;
-                _parser = null;
-            }
-        }
-
         public void Reset()
         {
             Contract.Ensures( _clientConnection == null );
@@ -112,10 +92,10 @@ namespace Gallatin.Core.Service.ClientSession
                 {
                     ResetParser();
 
-                    if (_clientConnection != null)
+                    if ( _clientConnection != null )
                     {
                         _clientConnection.ConnectionClosed -= HandleClientConnectionClosed;
-                        _clientConnection.BeginClose(HandleClose);
+                        _clientConnection.BeginClose( HandleClose );
 
                         _clientConnection = null;
 
@@ -140,6 +120,33 @@ namespace Gallatin.Core.Service.ClientSession
 
         #endregion
 
+        private void _dispatcher_EmptyPipeline( object sender, EventArgs e )
+        {
+            ServiceLog.Logger.Verbose( "{0} Dispatcher pipeline empty. Closing session." );
+            //_sendingDataToClientLock.WaitOne();
+
+            if ( _clientConnection != null
+                 && !_clientConnection.IsConnected )
+            {
+                ServiceLog.Logger.Info( "{0} The client has stopped sending data and the server pipeline is empty. Resetting connection.",
+                                        Id );
+                Reset();
+            }
+        }
+
+        private void ResetParser()
+        {
+            ServiceLog.Logger.Verbose( "{0} Resetting HTTP stream parser", Id );
+
+            if ( _parser != null )
+            {
+                _parser.AdditionalDataRequested -= HandleParserAdditionalDataRequested;
+                _parser.ReadRequestHeaderComplete -= HandleParserReadRequestHeaderComplete;
+                _parser.PartialDataAvailable -= HandleParserPartialDataAvailable;
+                _parser = null;
+            }
+        }
+
         private void _dispatcher_AllServersInactive( object sender, EventArgs e )
         {
             ServiceLog.Logger.Verbose( "{0} ClientSession -- All servers inactive event handled", Id );
@@ -150,12 +157,16 @@ namespace Gallatin.Core.Service.ClientSession
 
         private void _dispatcher_ReadResponseHeaderComplete( object sender, HttpResponseHeaderEventArgs e )
         {
-            ServiceLog.Logger.Verbose( () => string.Format( "{0} ClientSession -- read HTTP response header complete\r\n{1}", Id, Encoding.UTF8.GetString( HttpResponse.CreateResponse(e).GetBuffer() )  ));
+            ServiceLog.Logger.Verbose(
+                () =>
+                string.Format( "{0} ClientSession -- read HTTP response header complete\r\n{1}",
+                               Id,
+                               Encoding.UTF8.GetString( HttpResponse.CreateResponse( e ).GetBuffer() ) ) );
 
-            if (_clientConnection != null)
+            if ( _clientConnection != null )
             {
                 //_sendingDataToClientLock.Reset();
-                _clientConnection.BeginSend(e.GetBuffer(), HandleSendToClient);
+                _clientConnection.BeginSend( e.GetBuffer(), HandleSendToClient );
             }
         }
 
@@ -175,10 +186,10 @@ namespace Gallatin.Core.Service.ClientSession
         {
             ServiceLog.Logger.Verbose( "{0} ClientSession -- partial data available from server -- send to client", Id );
 
-            if (_clientConnection != null)
+            if ( _clientConnection != null )
             {
                 //_sendingDataToClientLock.Reset();
-                _clientConnection.BeginSend(e.Data, HandleSendToClient);
+                _clientConnection.BeginSend( e.Data, HandleSendToClient );
             }
         }
 
@@ -233,11 +244,11 @@ namespace Gallatin.Core.Service.ClientSession
             }
         }
 
-        private IHttpRequest _lastRequest;
-
         private void HandleParserReadRequestHeaderComplete( object sender, HttpRequestHeaderEventArgs e )
         {
-            ServiceLog.Logger.Verbose( "{0} ClientSession -- read HTTP request header from client\r\n{1}", Id, Encoding.UTF8.GetString(e.GetBuffer()) );
+            ServiceLog.Logger.Verbose( "{0} ClientSession -- read HTTP request header from client\r\n{1}",
+                                       Id,
+                                       Encoding.UTF8.GetString( e.GetBuffer() ) );
 
             try
             {
@@ -245,23 +256,25 @@ namespace Gallatin.Core.Service.ClientSession
 
                 _lastRequest = HttpRequest.CreateRequest( e );
 
-                if (_lastRequest.IsSsl)
+                _accessLog.Write( _clientConnection.ConnectionId, _lastRequest, "Connect OK" );
+
+                if ( _lastRequest.IsSsl )
                 {
-                    ServiceLog.Logger.Info("{0} HTTPS connection", Id);
+                    ServiceLog.Logger.Info( "{0} HTTPS connection", Id );
 
                     ResetParser();
 
                     string host;
                     int port;
 
-                    if (ServerDispatcher.TryParseAddress(_lastRequest, out host, out port))
+                    if ( ServerDispatcher.TryParseAddress( _lastRequest, out host, out port ) )
                     {
-                        ServiceLog.Logger.Info("{0} HTTPS host: {1}:{2}", Id, host, port);
-                        _facadeFactory.BeginConnect(host, port, HttpsServerConnect);
+                        ServiceLog.Logger.Info( "{0} HTTPS host: {1}:{2}", Id, host, port );
+                        _facadeFactory.BeginConnect( host, port, HttpsServerConnect );
                     }
                     else
                     {
-                        ServiceLog.Logger.Warning("{0} Unrecognized HTTPS address. Resetting session.", Id);
+                        ServiceLog.Logger.Warning( "{0} Unrecognized HTTPS address. Resetting session.", Id );
                         Reset();
                     }
                 }
@@ -270,10 +283,8 @@ namespace Gallatin.Core.Service.ClientSession
                     // Hold off sending data until the connection is established
                     _connectToServerEvent.Reset();
 
-                    _dispatcher.BeginConnect(_lastRequest, HandleServerConnect);
+                    _dispatcher.BeginConnect( _lastRequest, HandleServerConnect );
                 }
-
-
             }
             catch ( Exception ex )
             {
@@ -282,39 +293,35 @@ namespace Gallatin.Core.Service.ClientSession
             }
         }
 
-        private SslTunnel _sslTunnel;
-
-        private void HttpsTunnelClosed(object sender, EventArgs args)
+        private void HttpsTunnelClosed( object sender, EventArgs args )
         {
-            ServiceLog.Logger.Info("{0} HTTPS tunnel closed. Resetting session.", Id);
+            ServiceLog.Logger.Info( "{0} HTTPS tunnel closed. Resetting session.", Id );
             _sslTunnel.TunnelClosed -= HttpsTunnelClosed;
             _sslTunnel = null;
             Reset();
-                        
         }
 
-        private void HttpsServerConnect(bool success, INetworkFacade server)
+        private void HttpsServerConnect( bool success, INetworkFacade server )
         {
             try
             {
-                if (success)
+                if ( success )
                 {
                     _sslTunnel = new SslTunnel();
-                    _sslTunnel.TunnelClosed += new EventHandler(HttpsTunnelClosed);
-                    _sslTunnel.EstablishTunnel(_clientConnection, server, _lastRequest.Version);
+                    _sslTunnel.TunnelClosed += HttpsTunnelClosed;
+                    _sslTunnel.EstablishTunnel( _clientConnection, server, _lastRequest.Version );
                 }
                 else
                 {
-                    ServiceLog.Logger.Warning("{0} Unable to connect to remote HTTPS host", Id);
+                    ServiceLog.Logger.Warning( "{0} Unable to connect to remote HTTPS host", Id );
                 }
             }
             catch ( Exception ex )
             {
-                ServiceLog.Logger.Exception(string.Format("{0} Unhandled exception in HTTPS session.", Id), ex);
+                ServiceLog.Logger.Exception( string.Format( "{0} Unhandled exception in HTTPS session.", Id ), ex );
                 Reset();
             }
         }
-
 
 
         private void HandleServerConnect( bool success, IHttpRequest request )
@@ -385,7 +392,7 @@ namespace Gallatin.Core.Service.ClientSession
                         ServiceLog.Logger.Info( "{0} Client socket has stopped sending data.", Id );
                         _hasClientStoppedSendingData = true;
 
-                        ServiceLog.Logger.Verbose("{0} Pipeline depth = {1}", Id, _dispatcher.PipeLineDepth);
+                        ServiceLog.Logger.Verbose( "{0} Pipeline depth = {1}", Id, _dispatcher.PipeLineDepth );
 
                         if ( _dispatcher.PipeLineDepth == 0 )
                         {

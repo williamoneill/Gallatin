@@ -4,7 +4,9 @@ using System.Diagnostics.Contracts;
 
 namespace Gallatin.Core.Util
 {
-    internal class Logger
+
+
+    internal class Logger 
     {
         public Logger(string traceSource)
         {

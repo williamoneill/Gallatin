@@ -53,7 +53,7 @@ namespace Gallatin.Core.Service
 
             if (_hasShutdownReceive)
             {
-                ServiceLog.Logger.Warning("{0} Socket has stopped receiving data. Send request ignored.");
+                ServiceLog.Logger.Warning("{0} Socket has stopped receiving data. Send request ignored.", Id);
             }
             else
             {

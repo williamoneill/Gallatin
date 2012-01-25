@@ -1,58 +1,33 @@
 ﻿using System;
-using System.Diagnostics.Contracts;
 using Gallatin.Contracts;
 using Gallatin.Core.Web;
 
-namespace Gallatin.Core.Service.ClientSession
+namespace Gallatin.Core.Service
 {
-    internal interface IServerSession
-    {
-        void Start( INetworkFacade serverConnection );
-
-        bool HasStoppedSendingData { get; set; }
-
-        bool HasClosed { get; }
-
-        void Close();
-
-        INetworkFacade Connection { get; }
-
-        IHttpResponse LastResponseHeader { get; }
-
-        event EventHandler<HttpDataEventArgs> PartialDataAvailableForClient;
-
-        event EventHandler<HttpResponseHeaderEventArgs> HttpResponseHeaderAvailable;
-
-        event EventHandler FullResponseReadComplete;
-    }
-
     internal class ServerSession : IServerSession
     {
+        private IHttpStreamParser _parser;
+
+        #region IServerSession Members
 
         public void Start( INetworkFacade serverConnection )
         {
-            //Contract.Requires(serverConnection != null);
-
-            ServiceLog.Logger.Verbose("{0} ServerSession -- started", serverConnection.Id);
+            ServiceLog.Logger.Verbose( "{0} ServerSession -- started", serverConnection.Id );
 
             Connection = serverConnection;
-            Connection.ConnectionClosed += serverConnection_ConnectionClosed;
+            Connection.ConnectionClosed += ServerConnectionConnectionClosed;
 
-            Parser = new HttpStreamParser();
-            Parser.ReadResponseHeaderComplete += Parser_ReadResponseHeaderComplete;
-            Parser.AdditionalDataRequested += Parser_AdditionalDataRequested;
-            Parser.PartialDataAvailable += Parser_PartialDataAvailable;
-            Parser.MessageReadComplete += Parser_MessageReadComplete;
+            _parser = new HttpStreamParser();
+            _parser.ReadResponseHeaderComplete += ParserReadResponseHeaderComplete;
+            _parser.AdditionalDataRequested += ParserAdditionalDataRequested;
+            _parser.PartialDataAvailable += ParserPartialDataAvailable;
+            _parser.MessageReadComplete += ParserMessageReadComplete;
+
             HasStoppedSendingData = false;
             HasClosed = false;
 
-            Connection.BeginReceive(HandleReceive);
-            
+            Connection.BeginReceive( HandleReceive );
         }
-
-        private IHttpStreamParser Parser { get; set; }
-
-        #region IServerSession Members
 
         public bool HasStoppedSendingData { get; set; }
 
@@ -60,19 +35,9 @@ namespace Gallatin.Core.Service.ClientSession
 
         public void Close()
         {
-            ServiceLog.Logger.Verbose("{0} ServerSession -- closing connection (explicit)", Connection.Id);
+            ServiceLog.Logger.Verbose( "{0} ServerSession -- closing connection (explicit)", Connection.Id );
 
-            Connection.BeginClose(HandleClose);
-        }
-
-        private void HandleClose(bool success, INetworkFacade server)
-        {
-            if (!success)
-            {
-                ServiceLog.Logger.Warning("{0} ServerSession -- received error when closing", Connection.Id);   
-            }
-
-            HasClosed = true;
+            Connection.BeginClose( HandleClose );
         }
 
         public INetworkFacade Connection { get; private set; }
@@ -85,7 +50,17 @@ namespace Gallatin.Core.Service.ClientSession
 
         #endregion
 
-        private void Parser_MessageReadComplete( object sender, EventArgs e )
+        private void HandleClose( bool success, INetworkFacade server )
+        {
+            if ( !success )
+            {
+                ServiceLog.Logger.Warning( "{0} ServerSession -- received error when closing", Connection.Id );
+            }
+
+            HasClosed = true;
+        }
+
+        private void ParserMessageReadComplete( object sender, EventArgs e )
         {
             ServiceLog.Logger.Verbose( "{0} ServerSession -- message read complete event handler", Connection.Id );
 
@@ -96,7 +71,7 @@ namespace Gallatin.Core.Service.ClientSession
             }
         }
 
-        private void Parser_PartialDataAvailable( object sender, HttpDataEventArgs e )
+        private void ParserPartialDataAvailable( object sender, HttpDataEventArgs e )
         {
             ServiceLog.Logger.Verbose( "{0} ServerSession -- partial data available event handler", Connection.Id );
 
@@ -107,7 +82,7 @@ namespace Gallatin.Core.Service.ClientSession
             }
         }
 
-        private void Parser_AdditionalDataRequested( object sender, EventArgs e )
+        private void ParserAdditionalDataRequested( object sender, EventArgs e )
         {
             ServiceLog.Logger.Verbose( "{0} ServerSession -- additional data requested event handler", Connection.Id );
 
@@ -124,16 +99,18 @@ namespace Gallatin.Core.Service.ClientSession
                 {
                     if ( data == null )
                     {
+                        ServiceLog.Logger.Verbose( "{0} ServerSession -- server stopped sending data", Connection.Id );
                         HasStoppedSendingData = true;
-                        Parser.Flush();    
+                        _parser.Flush();
                     }
                     else
                     {
-                        Parser.AppendData( data );
+                        _parser.AppendData( data );
                     }
                 }
                 else
                 {
+                    ServiceLog.Logger.Info( "{0} ServerSession -- failed to receive data from server", Connection.Id );
                     Connection.BeginClose( ( s, f ) => ServiceLog.Logger.Info( "ServerSession force close" ) );
                 }
             }
@@ -144,7 +121,7 @@ namespace Gallatin.Core.Service.ClientSession
             }
         }
 
-        private void Parser_ReadResponseHeaderComplete( object sender, HttpResponseHeaderEventArgs e )
+        private void ParserReadResponseHeaderComplete( object sender, HttpResponseHeaderEventArgs e )
         {
             ServiceLog.Logger.Verbose( "{0} ServerSession -- read response header event handler", Connection.Id );
 
@@ -157,10 +134,12 @@ namespace Gallatin.Core.Service.ClientSession
             }
         }
 
-        private void serverConnection_ConnectionClosed( object sender, EventArgs e )
+        private void ServerConnectionConnectionClosed( object sender, EventArgs e )
         {
             ServiceLog.Logger.Verbose( "{0} ServerSession -- socket connection closed event handler", Connection.Id );
             HasClosed = true;
+
+            // This causes problems when called from here. Only flush when the server stops sending data.
             //Parser.Flush();
         }
     }
