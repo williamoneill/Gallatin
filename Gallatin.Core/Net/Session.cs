@@ -155,6 +155,10 @@ namespace Gallatin.Core.Net
             {
                 _serverConnectingEvent.WaitOne();
 
+                //TODO: remove later
+                if(e.IsSsl)
+                    Reset();
+
                 _lastRequest = HttpRequest.CreateRequest( e );
 
                 string host;
