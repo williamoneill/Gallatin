@@ -7,5 +7,5 @@
 [assembly: AssemblyCompany("Bill O'Neill")]
 [assembly: AssemblyProduct("Gallatin Proxy Server")]
 [assembly: AssemblyCopyright("Copyright © Bill O'Neill 2011")]
-[assembly: AssemblyVersion("0.1.0.4")]
-[assembly: AssemblyFileVersion("0.1.0.13")]
+[assembly: AssemblyVersion("0.1.0.5")]
+[assembly: AssemblyFileVersion("0.1.0.14")]

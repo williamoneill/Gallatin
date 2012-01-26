@@ -96,7 +96,6 @@ namespace Gallatin.Core.Tests.Net
         public void ListenTest()
         {
             ManualResetEvent resetEvent = new ManualResetEvent(false);
-            int connectCount = 0;
 
             _factory.Listen("127.0.0.1", 4545, connection =>
                                                {

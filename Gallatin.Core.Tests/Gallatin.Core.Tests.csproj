@@ -55,18 +55,12 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="CoreSettingsTests.cs" />
+    <Compile Include="Service\HttpsTunnelTests.cs" />
     <Compile Include="Net\NetworkConnectionFactoryTests.cs" />
     <Compile Include="Net\NetworkConnectionTests.cs" />
-    <Compile Include="Net\ServerDispatcherTests.cs" />
-    <Compile Include="Net\SessionTests.cs" />
-    <Compile Include="Service\NetworkFacadeFactoryTests.cs" />
-    <Compile Include="Service\NetworkFacadeTests.cs" />
-    <Compile Include="Service\ProxyFilterTests.cs" />
-    <Compile Include="Service\ProxyServiceTests.cs" />
-    <Compile Include="Service\ProxySessionTests.cs" />
     <Compile Include="Service\ServerDispatcherTests.cs" />
-    <Compile Include="Service\ServerSessionTests.cs" />
-    <Compile Include="Service\SslTunnelTests.cs" />
+    <Compile Include="Service\SessionTests.cs" />
+    <Compile Include="Service\ProxyFilterTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Web\HttpHeaderEventArgsTests.cs" />
     <Compile Include="Web\HttpHeadersTests.cs" />
@@ -111,7 +105,6 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <Folder Include="Service\SessionState\" />
     <Folder Include="Util\" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

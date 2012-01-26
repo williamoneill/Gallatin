@@ -37,6 +37,11 @@ namespace Gallatin.Core.Net
 
         public event EventHandler<DataAvailableEventArgs> DataAvailable;
 
+        public string Id
+        {
+            get { return _socket.RemoteEndPoint.ToString(); }
+        }
+
         public ISessionLogger Logger { private get; set; }
 
         public void SendData( byte[] data )

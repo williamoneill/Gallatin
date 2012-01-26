@@ -97,36 +97,28 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Net\DataAvailableEventArgs.cs" />
-    <Compile Include="Net\HttpServer.cs" />
-    <Compile Include="Net\IHttpServer.cs" />
+    <Compile Include="Service\HttpServer.cs" />
+    <Compile Include="Service\HttpsTunnel.cs" />
+    <Compile Include="Service\IHttpServer.cs" />
+    <Compile Include="Service\IHttpsTunnel.cs" />
     <Compile Include="Net\INetworkConnection.cs" />
     <Compile Include="Net\INetworkConnectionFactory.cs" />
-    <Compile Include="Net\IServerDispatcher.cs" />
-    <Compile Include="Net\ISessionLogger.cs" />
+    <Compile Include="Service\IProxyService.cs" />
+    <Compile Include="Service\IServerDispatcher.cs" />
+    <Compile Include="Service\ISessionLogger.cs" />
     <Compile Include="Net\NetworkConnection.cs" />
     <Compile Include="Net\NetworkConnectionFactory.cs" />
-    <Compile Include="Net\Service.cs" />
-    <Compile Include="Net\ServerDispatcher.cs" />
-    <Compile Include="Net\Session.cs" />
-    <Compile Include="Net\SessionLogger.cs" />
-    <Compile Include="Service\AccessLog.cs" />
-    <Compile Include="Service\ClientSession.cs" />
-    <Compile Include="Service\IServerDispatcher.cs" />
-    <Compile Include="Service\IServerSession.cs" />
-    <Compile Include="Service\NetworkFacade.cs">
-      <SubType>Code</SubType>
-    </Compile>
+    <Compile Include="Service\Service.cs" />
     <Compile Include="Service\ServerDispatcher.cs" />
-    <Compile Include="Service\ServerSession.cs" />
+    <Compile Include="Service\Session.cs" />
+    <Compile Include="Service\SessionLogger.cs" />
+    <Compile Include="Service\AccessLog.cs" />
     <Compile Include="Service\CrossDomainProxyService.cs" />
-    <Compile Include="Service\ISslTunnel.cs" />
     <Compile Include="Service\ProxyFilter.cs" />
     <Compile Include="Service\IProxyFilter.cs" />
     <Compile Include="CoreSettings.cs" />
     <Compile Include="ICoreSettings.cs" />
     <Compile Include="Service\IProxySession.cs" />
-    <Compile Include="Service\ProxyService.cs" />
-    <Compile Include="Service\ProxySession.cs" />
     <Compile Include="Util\CoreFactory.cs" />
     <Compile Include="Util\FilterLogger.cs" />
     <Compile Include="Util\IPooledObject.cs" />
@@ -141,10 +133,6 @@
     <Compile Include="Web\HttpResponseHeaderEventArgs.cs" />
     <Compile Include="Web\HttpStreamParser.cs" />
     <Compile Include="Web\IHttpStreamParser.cs" />
-    <Compile Include="Service\INetworkFacade.cs" />
-    <Compile Include="Service\INetworkFacadeFactory.cs" />
-    <Compile Include="Service\NetworkFacadeFactory.cs" />
-    <Compile Include="Service\SslTunnel.cs" />
     <Compile Include="SettingsMapper.cs" />
     <Compile Include="SharedAssemblyInfo.cs" />
     <Compile Include="Service\ServiceLog.cs" />

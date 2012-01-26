@@ -33,6 +33,11 @@ namespace Gallatin.Core.Net
         /// <summary>
         /// 
         /// </summary>
+        string Id { get; }
+
+        /// <summary>
+        /// 
+        /// </summary>
         ISessionLogger Logger { set; }
         
         /// <summary>

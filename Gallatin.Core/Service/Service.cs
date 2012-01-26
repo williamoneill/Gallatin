@@ -4,23 +4,25 @@ using System.ComponentModel.Composition;
 using System.Diagnostics.Contracts;
 using System.IO;
 using System.Threading;
+using Gallatin.Core.Net;
+using Gallatin.Core.Service;
 using Gallatin.Core.Util;
 
-namespace Gallatin.Core.Service
-{
-    //[Export( typeof (IProxyService) )]
-    internal class ProxyService : IProxyService
+namespace Gallatin.Core.Net
+{   
+    [Export( typeof (IProxyService) )]
+    internal class Service : IProxyService
     {
-        private readonly INetworkFacadeFactory _factory;
+        private readonly INetworkConnectionFactory _factory;
         private readonly object _mutex = new object();
 
         private bool _isRunning;
-        private Pool<IProxySession> _sessionPool;
+        private Pool<ISession> _sessionPool;
         private ICoreSettings _settings;
         private IAccessLog _accessLog;
 
         [ImportingConstructor]
-        internal ProxyService( INetworkFacadeFactory factory, ICoreSettings settings, IAccessLog accessLog )
+        internal Service(INetworkConnectionFactory factory, ICoreSettings settings, IAccessLog accessLog)
         {
             Contract.Requires( factory != null );
             Contract.Requires(settings!=null);
@@ -35,7 +37,7 @@ namespace Gallatin.Core.Service
 
         private Timer _timer;
 
-        private List<IProxySession> _activeSessions = new List<IProxySession>();
+        private List<ISession> _activeSessions = new List<ISession>();
 
         private void TimerCallback(object state)
         {
@@ -69,8 +71,8 @@ namespace Gallatin.Core.Service
                 _accessLog.Start(new DirectoryInfo(".\\Access Logs"));
                 _timer = new Timer(TimerCallback, null, 10000, 5000);
 
-                _sessionPool = new Pool<IProxySession>();
-                _sessionPool.Init(_settings.MaxNumberClients, CoreFactory.Compose<IProxySession>);
+                _sessionPool = new Pool<ISession>();
+                _sessionPool.Init(_settings.MaxNumberClients, CoreFactory.Compose<ISession>);
                 
                 _factory.Listen( _settings.ListenAddress, _settings.ServerPort, HandleClientConnected );
                 _isRunning = true;
@@ -105,13 +107,13 @@ namespace Gallatin.Core.Service
 
         #endregion
 
-        private void HandleClientConnected( INetworkFacade clientConnection )
+        private void HandleClientConnected( INetworkConnection clientConnection )
         {
             try
             {
                 //ServiceLog.Logger.Info("ProxyService notified of new client connect. Pool size: {0}", _sessionPool.AvailablePoolSize);
 
-                IProxySession session = _sessionPool.Get();
+                ISession session = _sessionPool.Get();
 
                 lock (_activeSessions)
                 {
@@ -132,9 +134,9 @@ namespace Gallatin.Core.Service
 
         private void HandleSessionEnded( object sender, EventArgs e )
         {
-            Contract.Requires( sender is IProxySession );
+            Contract.Requires( sender is ISession );
 
-            IProxySession proxySession = sender as IProxySession;
+            ISession proxySession = sender as ISession;
             proxySession.SessionEnded -= HandleSessionEnded;
 
             lock (_activeSessions)
