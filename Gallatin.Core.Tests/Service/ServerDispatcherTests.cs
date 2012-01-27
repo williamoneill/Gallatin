@@ -309,13 +309,19 @@ namespace Gallatin.Core.Tests.Net
         [Test]
         public void SendDataNoActiveServerTest()
         {
+            bool callbackInvoked = false;
+
             var buffer = new byte[] { 1, 2, 3 };
 
             WaitForIt();
 
+            _dispatcher.ActiveServerClosedConnection += ( sender, args ) => callbackInvoked = true;
+
             _connection.Raise(m => m.ConnectionClosed += null, new EventArgs());
 
             Assert.That(_dispatcher.TrySendDataToActiveServer(buffer), Is.False);
+            Assert.That(callbackInvoked);
         }
+
     }
 }

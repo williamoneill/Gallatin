@@ -96,6 +96,7 @@ namespace Gallatin.Core.Net
         public event EventHandler<DataAvailableEventArgs> ServerDataAvailable;
 
         public ISessionLogger Logger { private get; set; }
+        public event EventHandler ActiveServerClosedConnection;
 
         #endregion
 
@@ -178,6 +179,10 @@ namespace Gallatin.Core.Net
 
             if ( _activeServer == server )
             {
+                var ev = ActiveServerClosedConnection;
+                if(ev != null)
+                    ev(this, new EventArgs());
+
                 Logger.Verbose( "Active server closed connection. Clearing active server reference." );
                 _activeServer = null;
             }

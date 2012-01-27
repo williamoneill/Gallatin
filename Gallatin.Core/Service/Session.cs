@@ -37,10 +37,17 @@ namespace Gallatin.Core.Net
             _logger = new SessionLogger( Id );
 
             _serverDispatcher = dispatcher;
+            _serverDispatcher.ActiveServerClosedConnection += new EventHandler(_serverDispatcher_ActiveServerClosedConnection);
             _serverDispatcher.ServerDataAvailable += ServerDispatcherServerDataAvailable;
             _serverDispatcher.Logger = _logger;
 
             _logger.Verbose( "Creating session" );
+        }
+
+        void _serverDispatcher_ActiveServerClosedConnection(object sender, EventArgs e)
+        {
+            _logger.Info("Active server closed connection. Resetting session.");
+            Reset();
         }
 
         #region ISession Members

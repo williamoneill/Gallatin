@@ -32,5 +32,10 @@ namespace Gallatin.Core.Net
         /// 
         /// </summary>
         ISessionLogger Logger { set; }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        event EventHandler ActiveServerClosedConnection;
     }
 }

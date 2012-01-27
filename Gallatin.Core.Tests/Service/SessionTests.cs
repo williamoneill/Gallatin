@@ -135,5 +135,27 @@ namespace Gallatin.Core.Tests.Net
             _mockDispatcher.Verify(m =>m.ConnectToServer(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<Action<bool>>()), Times.Never());
             _mockDispatcher.Verify(m => m.TrySendDataToActiveServer(It.IsAny<byte[]>()), Times.Never());
         }
+
+        [Test]
+        public void ActiveServerClosedTest()
+        {
+            string header = "GET / HTTP/1.1\r\nHost: www.yahoo.com\r\n\r\n";
+            var rawHeader = Encoding.UTF8.GetBytes(header);
+
+            _mockDispatcher.Setup(m => m.ConnectToServer("www.yahoo.com", 80, It.IsAny<Action<bool>>()))
+                .Callback<string, int, Action<Boolean>>((a, b, c) => c(true));
+
+            Session session = new Session(_mockLog.Object, _mockDispatcher.Object);
+
+            session.Start(_mockClient.Object);
+
+            // Connect to server
+            _mockClient.Raise(m => m.DataAvailable += null, new DataAvailableEventArgs(rawHeader));
+
+            // Active server closes connection. Client should be reset.
+            _mockDispatcher.Raise( m => m.ActiveServerClosedConnection += null, new EventArgs() );
+
+            _mockClient.Verify(m=>m.Close(), Times.Once());
+        }
     }
 }

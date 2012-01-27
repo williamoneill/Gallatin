@@ -210,7 +210,7 @@ namespace Gallatin.Core.Net
 
             try
             {
-                if ( _hasShutdown )
+                if ( _hasShutdown || _hasClosed )
                 {
                     Logger.Info( "Send handler - socket stopped receiving data - ignoring invocation" );
                 }
