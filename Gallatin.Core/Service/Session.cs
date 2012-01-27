@@ -70,6 +70,8 @@ namespace Gallatin.Core.Net
                     {
                         sessionEndedEvent( this, new EventArgs() );
                     }
+
+                    _tunnel = null;
                 }
             }
         }
@@ -151,6 +153,8 @@ namespace Gallatin.Core.Net
             }
         }
 
+        private IHttpsTunnel _tunnel;
+
         private void EstablishSslConnection(string host, int port, string version )
         {
             _logger.Info("Starting SSL tunnel");
@@ -161,16 +165,16 @@ namespace Gallatin.Core.Net
             _connection.DataAvailable -= ConnectionDataAvailable;
 
             // TODO: consider making this a dependency and allowing it to reset (inherit from IPooledObject)
-            IHttpsTunnel tunnel = CoreFactory.Compose<IHttpsTunnel>();
+            _tunnel = CoreFactory.Compose<IHttpsTunnel>();
 
-            tunnel.TunnelClosed += (sender, args) =>
+            _tunnel.TunnelClosed += (sender, args) =>
                                        {
                                            _logger.Info("Releasing HTTPS tunnel");
                                            _serverConnectingEvent.Release();
                                            Reset();
                                        };
 
-            tunnel.EstablishTunnel(host, port, version, _connection );
+            _tunnel.EstablishTunnel(host, port, version, _connection );
         }
 
         private void ParserReadRequestHeaderComplete( object sender, HttpRequestHeaderEventArgs e )

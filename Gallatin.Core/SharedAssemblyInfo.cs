@@ -8,4 +8,4 @@
 [assembly: AssemblyProduct("Gallatin Proxy Server")]
 [assembly: AssemblyCopyright("Copyright © Bill O'Neill 2011")]
 [assembly: AssemblyVersion("0.1.0.5")]
-[assembly: AssemblyFileVersion("0.1.0.14")]
+[assembly: AssemblyFileVersion("0.1.0.16")]

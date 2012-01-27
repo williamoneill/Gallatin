@@ -51,6 +51,8 @@ namespace Gallatin.Core.Tests.Net
 
             _mockServer.Verify(m=>m.SendData(clientBytes), Times.Once());
 
+            _mockServer.Verify(m=>m.Start(), Times.Once());
+
             if(serverClosed)
                 _mockServer.Raise(m=>m.ConnectionClosed += null, new EventArgs());
 

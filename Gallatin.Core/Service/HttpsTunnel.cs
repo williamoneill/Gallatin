@@ -56,6 +56,7 @@ namespace Gallatin.Core.Net
                     _server.DataAvailable += new EventHandler<DataAvailableEventArgs>(_server_DataAvailable);
                     _server.ConnectionClosed += new EventHandler(_client_ConnectionClosed);
                     _server.Shutdown += new EventHandler(_client_ConnectionClosed);
+                    _server.Start();
 
                     _client.ConnectionClosed += new EventHandler(_client_ConnectionClosed);
                     _client.Shutdown += new EventHandler(_client_ConnectionClosed);
@@ -83,11 +84,15 @@ namespace Gallatin.Core.Net
 
         void _client_DataAvailable(object sender, DataAvailableEventArgs e)
         {
+            ServiceLog.Logger.Verbose("HTTPS - Data available from the client");
             _server.SendData(e.Data);
         }
 
         void _client_ConnectionClosed(object sender, EventArgs e)
         {
+            ServiceLog.Logger.Verbose("HTTPS - Connection closed");
+
+
             _server.DataAvailable -= new EventHandler<DataAvailableEventArgs>(_server_DataAvailable);
             _server.ConnectionClosed -= new EventHandler(_client_ConnectionClosed);
             _server.Shutdown -= new EventHandler(_client_ConnectionClosed);
@@ -103,6 +108,7 @@ namespace Gallatin.Core.Net
 
         void _server_DataAvailable(object sender, DataAvailableEventArgs e)
         {
+            ServiceLog.Logger.Verbose("HTTPS - Data available from the server");
             _client.SendData(e.Data);
         }
 
