@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Configuration.Install;
 using System.Linq;
+using System.ServiceProcess;
 
 
 namespace Gallatin.Service
@@ -14,6 +15,13 @@ namespace Gallatin.Service
         public ProjectInstaller()
         {
             InitializeComponent();
+        }
+
+        protected override void OnAfterInstall(IDictionary savedState)
+        {
+            base.OnAfterInstall(savedState);
+            using (var serviceController = new ServiceController(this.GallatinProxy.ServiceName, Environment.MachineName))
+                serviceController.Start();
         }
 
         public override void Install(IDictionary stateSaver)

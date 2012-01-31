@@ -47,7 +47,8 @@ namespace Gallatin.Core.Net
             //_waitingForHttpResponse.WaitOne();
 
             if ( host == _host
-                 && port == _port )
+                 && port == _port
+                && _activeServer != null)
             {
                 Logger.Info( "Reusing existing connection" );
                 callback( true );

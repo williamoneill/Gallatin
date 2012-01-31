@@ -10,6 +10,28 @@ using Gallatin.Contracts;
 
 namespace Gallatin.Core.Service
 {
+
+    /// <summary>
+    /// 
+    /// </summary>
+    public enum AccessLogType
+    {
+        /// <summary>
+        /// 
+        /// </summary>
+        AccessGranted,
+
+        /// <summary>
+        /// 
+        /// </summary>
+        AccessBlocked,
+
+        /// <summary>
+        /// 
+        /// </summary>
+        HttpsTunnel
+    }
+
     /// <summary>
     /// 
     /// </summary>
@@ -31,8 +53,8 @@ namespace Gallatin.Core.Service
         /// </summary>
         /// <param name="connectionId"></param>
         /// <param name="host"></param>
-        /// <param name="filterInfo"></param>
-        void Write(string connectionId, IHttpRequest host, string filterInfo );
+        /// <param name="logType"></param>
+        void Write(string connectionId, IHttpRequest host, AccessLogType logType );
     }
 
     [Export(typeof(IAccessLog))]
@@ -40,10 +62,9 @@ namespace Gallatin.Core.Service
     {
         private class LogEntry
         {
-            public DateTime LogDate;
             public string ConnecitonId;
             public IHttpRequest Request;
-            public string FilterInfo;
+            public AccessLogType LogType;
         }
 
         private List<LogEntry> _logEntries;
@@ -60,6 +81,8 @@ namespace Gallatin.Core.Service
 
             FileInfo logFile = new FileInfo(Path.Combine( _directoryInfo.FullName, string.Format("{0}-{1:00}-{2:00}.html", now.Year, now.Month, now.Day) ));
 
+            bool logFileCreated = !logFile.Exists;
+
             using (FileStream fileStream = new FileStream(logFile.FullName, FileMode.Append, FileAccess.Write, FileShare.Read))
             {
                 using (StreamWriter writer = new StreamWriter(fileStream))
@@ -72,24 +95,59 @@ namespace Gallatin.Core.Service
 
                     try
                     {
-                        if (!logFile.Exists)
+                        if (logFileCreated)
                         {
-                            writer.WriteLine("<h3>Gallatin Proxy Log File</h3>");
+                            writer.WriteLine("<head><style type='text/css'>td{{margin-bottom:6px; text-align:center; width:170px;}} td.ok{{background-color:lightgreen;}} td.https{{background-color:yellow;}} td.blocked{{background-color:red; foreground-color:white;}} td.url{{width:300px;text-align:left; }} p{{word-wrap: break-word;}} </style></head>" +
+                                "<h3>Gallatin Proxy Access Log - Created {0}</h3><table>", DateTime.Now);
                         }
 
                         foreach (var logEntry in entries)
                         {
-                            writer.WriteLine(string.Format("<br>[{0}] -- [{2}] -- [{3}] -- <a href='{1}'>{1}</a>", logEntry.ConnecitonId, logEntry.Request.Path, logEntry.FilterInfo, logEntry.LogDate));
+                            string filterInfo = string.Empty;
+                            switch ( logEntry.LogType )
+                            {
+                                case AccessLogType.AccessGranted:
+                                    filterInfo = "<td class='ok'>Access Granted</td>";
+                                    break;
+
+                                case AccessLogType.AccessBlocked:
+                                    filterInfo = "<td class='blocked'>Access Denied</td>";
+                                    break;
+
+                                case AccessLogType.HttpsTunnel:
+                                    filterInfo = "<td class='https'>HTTPS - Proxy Blind Tunnel</td>";
+                                    break;
+                            }
+
+                            writer.WriteLine(string.Format("<tr><td>{0}</td>{1}<td>{2}</td><td class='url'><a href='{3}'>{4}</a></td></tr>", 
+                                logEntry.ConnecitonId, filterInfo, now, logEntry.Request.Path, Break(logEntry.Request.Path)  ) );
                         }
 
                     }
-                    catch ( Exception ex)
+                    catch ( Exception )
                     {
-                        ServiceLog.Logger.Exception("Unhandled exception writing to access log",ex);
+                        ServiceLog.Logger.Warning("Unhandled exception writing to access log. Will retry.");
                     }
                 }
             }
+        }
 
+        private static string Break(string source )
+        {
+            const int MaxLen = 100;
+
+            int i = 0;
+
+            StringBuilder builder = new StringBuilder(source.Length);
+
+            while (i < source.Length)
+            {
+                builder.Append( source.Substring( i, Math.Min( MaxLen, source.Length - i )) );
+                builder.Append( "<br>" );
+                i += MaxLen;
+            }
+
+            return builder.ToString();
         }
 
         private DirectoryInfo _directoryInfo;
@@ -116,20 +174,19 @@ namespace Gallatin.Core.Service
             TimerCallback(null);
         }
 
-        public void Write(string connectionId, IHttpRequest request, string filterInfo )
+
+        public void Write(string connectionId, IHttpRequest request, AccessLogType logType )
         {
             Contract.Requires(!string.IsNullOrEmpty(connectionId));
             Contract.Requires(request!=null);
-            Contract.Requires(!string.IsNullOrEmpty(filterInfo));
 
             if (_timer != null)
             {
                 var entry = new LogEntry()
                 {
-                    LogDate = DateTime.Now,
                     ConnecitonId = connectionId,
                     Request = request,
-                    FilterInfo = filterInfo
+                    LogType = logType
                 };
 
                 lock (_mutex)

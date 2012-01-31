@@ -39,6 +39,7 @@
             // 
             // GallatinProxy
             // 
+            this.GallatinProxy.Description = "test string to replace code";
             this.GallatinProxy.ServiceName = "GallatinProxy";
             this.GallatinProxy.StartType = System.ServiceProcess.ServiceStartMode.Automatic;
             // 

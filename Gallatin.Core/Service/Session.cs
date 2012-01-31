@@ -22,12 +22,14 @@ namespace Gallatin.Core.Net
         private IHttpRequest _lastRequest;
         private IHttpStreamParser _parser;
         private IAccessLog _accessLog;
+        private IProxyFilter _filter;
 
         [ImportingConstructor]
-        public Session( IAccessLog accessLog, IServerDispatcher dispatcher )
+        public Session( IAccessLog accessLog, IServerDispatcher dispatcher, IProxyFilter filter )
         {
             Contract.Ensures( accessLog != null );
             Contract.Ensures( dispatcher != null );
+            Contract.Ensures(filter != null);
 
             _accessLog = accessLog;
 
@@ -40,6 +42,8 @@ namespace Gallatin.Core.Net
             _serverDispatcher.ActiveServerClosedConnection += new EventHandler(_serverDispatcher_ActiveServerClosedConnection);
             _serverDispatcher.ServerDataAvailable += ServerDispatcherServerDataAvailable;
             _serverDispatcher.Logger = _logger;
+
+            _filter = filter;
 
             _logger.Verbose( "Creating session" );
         }
@@ -199,18 +203,35 @@ namespace Gallatin.Core.Net
 
                 if ( TryParseAddress( _lastRequest, out host, out port ) )
                 {
-                    _logger.Info( string.Format( "Connecting to {0}:{1}", host, port ) );
+                    var filterResults = _filter.EvaluateConnectionFilters( _lastRequest, _connection.Id );
 
-                    if(_lastRequest.IsSsl)
+                    if (filterResults != null)
                     {
-                        _accessLog.Write(_connection.Id, _lastRequest, "SSL TUNNEL");
-                        EstablishSslConnection(host, port, _lastRequest.Version);
+                        _logger.Info("Connection filter rejected connection");
+                        _accessLog.Write( _connection.Id, _lastRequest, AccessLogType.AccessBlocked );
+
+                        var httpResponse = string.Format( "HTTP/1.1 200 OK\r\nContent-Length: {0}\r\n\r\n{1}", filterResults.Length, filterResults );
+
+                        _connection.SendData(Encoding.UTF8.GetBytes(httpResponse));
+                        Reset();
                     }
                     else
                     {
-                        _accessLog.Write(_connection.Id, _lastRequest, "ACCESS GRANTED");
-                        _serverDispatcher.ConnectToServer(host, port, ServerConnected);
+                        _logger.Info(string.Format("Connecting to {0}:{1}", host, port));
+
+                        if (_lastRequest.IsSsl)
+                        {
+                            _accessLog.Write(_connection.Id, _lastRequest, AccessLogType.HttpsTunnel);
+                            EstablishSslConnection(host, port, _lastRequest.Version);
+                        }
+                        else
+                        {
+                            _accessLog.Write(_connection.Id, _lastRequest, AccessLogType.AccessGranted);
+                            _serverDispatcher.ConnectToServer(host, port, ServerConnected);
+                        }
+                        
                     }
+
                 }
                 else
                 {

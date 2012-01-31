@@ -158,7 +158,7 @@ namespace Gallatin.Core.Net
 
             try
             {
-                if (_hasShutdown || _hasClosed)
+                if (_hasShutdown || _hasClosed || !_socket.Connected )
                 {
                     Logger.Info("Receive handler - socket stopped sending data - ignoring invocation");
                 }
@@ -210,7 +210,7 @@ namespace Gallatin.Core.Net
 
             try
             {
-                if ( _hasShutdown || _hasClosed )
+                if ( _hasShutdown || _hasClosed || !_socket.Connected )
                 {
                     Logger.Info( "Send handler - socket stopped receiving data - ignoring invocation" );
                 }

@@ -33,8 +33,8 @@ namespace Gallatin.Core.Net
                                                           ProtocolType.Tcp )
                                  };
 
-            state.Socket.SetSocketOption( SocketOptionLevel.Socket, SocketOptionName.Linger, false );
-            state.Socket.SetSocketOption( SocketOptionLevel.Socket, SocketOptionName.KeepAlive, false );
+            //state.Socket.SetSocketOption( SocketOptionLevel.Socket, SocketOptionName.Linger, false );
+            //state.Socket.SetSocketOption( SocketOptionLevel.Socket, SocketOptionName.KeepAlive, false );
             state.Socket.SetSocketOption( SocketOptionLevel.Socket, SocketOptionName.ReceiveBuffer, NetworkConnection.BufferLength );
             state.Socket.SetSocketOption( SocketOptionLevel.Socket, SocketOptionName.SendBuffer, NetworkConnection.BufferLength );
 
@@ -177,8 +177,8 @@ namespace Gallatin.Core.Net
                         ServiceLog.Logger.Info( "{0} New client connect", clientSocket.GetHashCode() );
 
                         // TODO: Unsure if this is really needed. Client sessions remain in memory longer if this is not set
-                        clientSocket.SetSocketOption( SocketOptionLevel.Socket, SocketOptionName.Linger, false );
-                        clientSocket.SetSocketOption( SocketOptionLevel.Socket, SocketOptionName.KeepAlive, false );
+                        //clientSocket.SetSocketOption( SocketOptionLevel.Socket, SocketOptionName.Linger, false );
+                        //clientSocket.SetSocketOption( SocketOptionLevel.Socket, SocketOptionName.KeepAlive, false );
 
                         NetworkConnection networkConnection = new NetworkConnection( clientSocket );
 
