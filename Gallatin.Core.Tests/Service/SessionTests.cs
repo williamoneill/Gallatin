@@ -89,10 +89,11 @@ namespace Gallatin.Core.Tests.Net
         [Test]
         public void SimpleConnectTest()
         {
-            string header = "GET / HTTP/1.1\r\nHost: www.yahoo.com\r\n\r\n";
-            var rawHeader = Encoding.UTF8.GetBytes( header );
+            var rawHeader = Encoding.UTF8.GetBytes( "GET / HTTP/1.1\r\nHost: www.yahoo.com\r\n\r\n" );
 
             byte[] dataFromServer = new byte[]{1,2,3};
+
+            _mockFilter.Setup(m => m.EvaluateConnectionFilters(It.IsAny<IHttpRequest>(), It.IsAny<string>())).Returns(null as byte[]);
 
             _mockDispatcher.Setup( m => m.ConnectToServer( "www.yahoo.com", 80, It.IsAny<Action<bool>>() ) )
                 .Callback<string, int, Action<Boolean>>( ( a, b, c ) => c( true ) );
@@ -116,6 +117,8 @@ namespace Gallatin.Core.Tests.Net
         public void HttpsTest()
         {
             byte[] testData = Encoding.UTF8.GetBytes("GET / HTTP/1.1\r\nHost: www.yahoo.com\r\n\r\n");
+
+            _mockFilter.Setup(m => m.EvaluateConnectionFilters(It.IsAny<IHttpRequest>(), It.IsAny<string>())).Returns(null as byte[]);
 
             Mock<IHttpsTunnel> mockTunnel = new Mock<IHttpsTunnel>();
 
@@ -174,7 +177,7 @@ namespace Gallatin.Core.Tests.Net
             string response = "HTTP/1.1 200 OK\r\nContent-Length: 3\r\n\r\nfoo";
             var responseBytes = Encoding.UTF8.GetBytes( response );
 
-            _mockFilter.Setup( m => m.EvaluateConnectionFilters( It.IsAny<IHttpRequest>(), It.IsAny<string>() ) ).Returns( "foo" );
+            _mockFilter.Setup( m => m.EvaluateConnectionFilters( It.IsAny<IHttpRequest>(), It.IsAny<string>() ) ).Returns( responseBytes );
 
             // Connect to server
             _mockClient.Raise(m => m.DataAvailable += null, new DataAvailableEventArgs(rawHeader));

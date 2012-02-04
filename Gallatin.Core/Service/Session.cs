@@ -210,9 +210,7 @@ namespace Gallatin.Core.Net
                         _logger.Info("Connection filter rejected connection");
                         _accessLog.Write( _connection.Id, _lastRequest, AccessLogType.AccessBlocked );
 
-                        var httpResponse = string.Format( "HTTP/1.1 200 OK\r\nContent-Length: {0}\r\n\r\n{1}", filterResults.Length, filterResults );
-
-                        _connection.SendData(Encoding.UTF8.GetBytes(httpResponse));
+                        _connection.SendData(filterResults);
                         Reset();
                     }
                     else

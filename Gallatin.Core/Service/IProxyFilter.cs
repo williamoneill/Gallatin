@@ -33,16 +33,15 @@ namespace Gallatin.Core.Service
         /// <param name="args">HTTP request</param>
         /// <param name="connectionId">Clinet connection ID</param>
         /// <returns><c>null</c> if no filter was applied</returns>
-        string EvaluateConnectionFilters( IHttpRequest args, string connectionId );
+        byte[] EvaluateConnectionFilters( IHttpRequest args, string connectionId );
 
         /// <summary>
         /// Evaluates the response filters as a response is returned from the server
         /// </summary>
         /// <param name="args">HTTP response</param>
         /// <param name="connectionId">Clinet connection ID</param>
-        /// <param name="filterResponse"><c>null</c> if no filter was applied</param>
-        /// <returns><c>True</c> if the filters were able to function without the HTTP body</returns>
-        bool TryEvaluateResponseFilters( IHttpResponse args, string connectionId, out string filterResponse );
+        /// <param name="isBodyRequired"></param>
+        byte[] EvaluateResponseFilters( IHttpResponse args, string connectionId, out bool isBodyRequired );
 
         /// <summary>
         /// Evaluates the response once the HTTP body is available
@@ -89,28 +88,31 @@ namespace Gallatin.Core.Service
 
         public abstract IEnumerable<IWhitelistEvaluator> WhitelistEvaluators { get; set; }
 
-        public string EvaluateConnectionFilters( IHttpRequest args, string connectionId )
+        public byte[] EvaluateConnectionFilters( IHttpRequest args, string connectionId )
         {
-            Contract.Requires( args != null );
-            Contract.Requires( !string.IsNullOrEmpty( connectionId ) );
+            Contract.Requires(args!=null);
+            Contract.Requires(!string.IsNullOrEmpty(connectionId));
 
-            throw new NotImplementedException();
+            return null;
         }
 
-        public bool TryEvaluateResponseFilters( IHttpResponse args, string connectionId, out string filterResponse )
+        public byte[] EvaluateResponseFilters( IHttpResponse args, string connectionId, out bool isBodyRequired )
         {
-            Contract.Requires( args != null );
-            Contract.Requires( !string.IsNullOrEmpty( connectionId ) );
+            Contract.Requires(args != null);
+            Contract.Requires(!string.IsNullOrEmpty(connectionId));
 
-            throw new NotImplementedException();
+            isBodyRequired = false;
+
+            return null;
         }
 
         public byte[] EvaluateResponseFiltersWithBody( IHttpResponse args, string connectionId, byte[] body )
         {
-            Contract.Requires( args != null );
-            Contract.Requires( !string.IsNullOrEmpty( connectionId ) );
+            Contract.Requires(args != null);
+            Contract.Requires(!string.IsNullOrEmpty(connectionId));
+            Contract.Requires(body!=null);
 
-            throw new NotImplementedException();
+            return null;
         }
 
         #endregion

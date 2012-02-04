@@ -95,14 +95,22 @@ namespace Gallatin.Core.Service
             // body that was passed in, which has possibly been decompressed.
             if ( filteredBody != null )
             {
+                ServiceLog.Logger.Verbose("Response body has been modified by proxy server");
                 args.Headers.UpsertKeyValue( "Content-Length", filteredBody.Length.ToString() );
             }
             else
             {
+                ServiceLog.Logger.Verbose("Proxy server did not modify response body");
                 filteredBody = body;
             }
 
-            return filteredBody;
+            byte[] header = args.GetBuffer();
+
+            byte[] returnBuffer = new byte[header.Length + filteredBody.Length];
+            Array.Copy( header, returnBuffer, header.Length );
+            Array.Copy( filteredBody, 0, returnBuffer, header.Length, filteredBody.Length );
+
+            return returnBuffer;
         }
 
         private List<string> _whiteListedConnections = new List<string>();
@@ -129,12 +137,13 @@ namespace Gallatin.Core.Service
         }
 
 
-        public bool TryEvaluateResponseFilters( IHttpResponse args, string connectionId, out string filterResponse )
+        public byte[] EvaluateResponseFilters( IHttpResponse args, string connectionId, out bool isBodyRequired )
         {
+            isBodyRequired = false;
+
             if (!_settings.FilteringEnabled.Value || ResponseFilters == null || ResponseFilters.Count() == 0)
             {
-                filterResponse = null;
-                return true;
+                return null;
             }
 
             lock (_whiteListedConnections)
@@ -142,8 +151,7 @@ namespace Gallatin.Core.Service
                 if (_whiteListedConnections.Contains(connectionId))
                 {
                     _whiteListedConnections.Remove(connectionId);
-                    filterResponse = null;
-                    return true;
+                    return null;
                 }
             }
 
@@ -178,30 +186,29 @@ namespace Gallatin.Core.Service
                 string body = String.Format("<html><head><title>Gallatin Proxy - Response Filtered</title></head><body>{0}</body></html>",
                                                 errorMessage);
 
-                filterResponse =
+                return Encoding.UTF8.GetBytes(
                     String.Format("HTTP/{0} 200 OK\r\nConnection: close\r\nContent length: {1}\r\nContent-Type: text/html\r\n\r\n{2}",
                                     args.Version,
                                     body.Length,
-                                    body);
+                                    body) );
+            }
+
+            // Clear the filters that require the HTTP body if there will be no body. Filters should
+            // check this themselves. This is a catch-all. Without this, a bad filter could hang the proxy
+            // by waiting for a body that will never arrive.
+            if (!args.HasBody)
+            {
+                _callbackList.Clear();
             }
             else
             {
-                // Clear the filters that require the HTTP body if there will be no body. Filters should
-                // check this themselves. This is a catch-all. Without this, a bad filter could hang the proxy
-                // by waiting for a body that will never arrive.
-                if (!args.HasBody)
-                {
-                    _callbackList.Clear();
-                }
-
-                filterResponse = null;
+                isBodyRequired = true;
             }
 
-            return _callbackList.Count == 0;
-                
+            return null;
         }
 
-        public string EvaluateConnectionFilters( IHttpRequest args, string connectionId )
+        public byte[] EvaluateConnectionFilters( IHttpRequest args, string connectionId )
         {
             if (!_settings.FilteringEnabled.Value || IsWhitelisted(args, connectionId))
             {
@@ -220,11 +227,11 @@ namespace Gallatin.Core.Service
                         "<html><head><title>Gallatin Proxy - Connection Rejected</title></head><body>{0}</body></html>",
                         errorMessage );
 
-                    return
+                    return Encoding.UTF8.GetBytes(
                         String.Format( "HTTP/{0} 200 OK\r\nConnection: close\r\nContent length: {1}\r\nContent-Type: text/html\r\n\r\n{2}",
                                        args.Version,
                                        body.Length,
-                                       body );
+                                       body ) );
                 }
             }
 

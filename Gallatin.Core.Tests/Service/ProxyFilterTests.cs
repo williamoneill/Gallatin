@@ -51,11 +51,12 @@ namespace Gallatin.Core.Tests.Service
             filters.Add( mockFilter.Object );
             filter.ResponseFilters = filters;
 
-            string filterResponse;
-            bool noBodyNeeded = filter.TryEvaluateResponseFilters( response.Object, "connectionid", out filterResponse );
+            bool isBodyNeeded;
+            byte[] filterResponse;
+            filterResponse = filter.EvaluateResponseFilters( response.Object, "connectionid", out isBodyNeeded );
 
-            Assert.That( noBodyNeeded,
-                         Is.True,
+            Assert.That( isBodyNeeded,
+                         Is.False,
                          "Since the HTTP response did not have a body, a body should not be requested even though the body required delegate was set" );
             Assert.That( filterResponse, Is.Null );
         }
@@ -100,12 +101,12 @@ namespace Gallatin.Core.Tests.Service
             filters.Add( mockFilter.Object );
             filter.ResponseFilters = filters;
 
-            string filterResponse;
-            bool noBodyNeeded = filter.TryEvaluateResponseFilters( response.Object, "connectionid", out filterResponse );
+            bool isBodyNeeded;
+            byte[] filterResponse = filter.EvaluateResponseFilters( response.Object, "connectionid", out isBodyNeeded );
 
             if (filterEnabled)
             {
-                Assert.That(noBodyNeeded, Is.False);
+                Assert.That(isBodyNeeded, Is.True);
                 Assert.That(filterResponse, Is.Null);
 
                 byte[] responseMessage = filter.EvaluateResponseFiltersWithBody(response.Object, "connectionid", compressedBody);
@@ -123,7 +124,7 @@ namespace Gallatin.Core.Tests.Service
             }
             else
             {
-                Assert.That(noBodyNeeded, Is.True);
+                Assert.That(isBodyNeeded, Is.False);
                 Assert.That(filterResponse, Is.Null);
                 
             }
@@ -165,16 +166,16 @@ namespace Gallatin.Core.Tests.Service
             // Needed to set the internal whitelist to short-curcuit evaluation on response
             filter.EvaluateConnectionFilters( requestArgs.Object, "connectionid" );
 
-            string filterResponse;
-            bool noBodyNeeded = filter.TryEvaluateResponseFilters( response.Object, "connectionid", out filterResponse );
+            bool isBodyNeeded;
+            byte[] filterResponse = filter.EvaluateResponseFilters( response.Object, "connectionid", out isBodyNeeded );
 
-            Assert.That( noBodyNeeded, Is.True );
+            Assert.That( isBodyNeeded, Is.False );
 
             if (filterEnabled && !isWhitelisted )
             {
                 Assert.That(filterResponse,
-                             Is.EqualTo(
-                                 "HTTP/ 200 OK\r\nConnection: close\r\nContent length: 91\r\nContent-Type: text/html\r\n\r\n<html><head><title>Gallatin Proxy - Response Filtered</title></head><body>foo</body></html>"));
+                             Is.EqualTo( Encoding.UTF8.GetBytes(
+                                 "HTTP/ 200 OK\r\nConnection: close\r\nContent length: 91\r\nContent-Type: text/html\r\n\r\n<html><head><title>Gallatin Proxy - Response Filtered</title></head><body>foo</body></html>")));
             }
             else
             {
@@ -211,13 +212,13 @@ namespace Gallatin.Core.Tests.Service
             filter.ConnectionFilters = filters;
             filter.WhitelistEvaluators = whitelistEvaluators;
 
-            string output = filter.EvaluateConnectionFilters( requestArgs.Object, "whatever" );
+            byte[] output = filter.EvaluateConnectionFilters( requestArgs.Object, "whatever" );
 
             if (filterEnabled && !isWhitelisted)
             {
                 Assert.That(output,
                              Is.EqualTo(
-                                 "HTTP/ 200 OK\r\nConnection: close\r\nContent length: 93\r\nContent-Type: text/html\r\n\r\n<html><head><title>Gallatin Proxy - Connection Rejected</title></head><body>Foo</body></html>"));
+                                 Encoding.UTF8.GetBytes( "HTTP/ 200 OK\r\nConnection: close\r\nContent length: 93\r\nContent-Type: text/html\r\n\r\n<html><head><title>Gallatin Proxy - Connection Rejected</title></head><body>Foo</body></html>")));
             }
             else
             {

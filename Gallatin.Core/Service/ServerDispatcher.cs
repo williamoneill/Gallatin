@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using System.Diagnostics.Contracts;
 using System.Threading;
+using Gallatin.Core.Service;
 
 namespace Gallatin.Core.Net
 {
@@ -18,11 +19,15 @@ namespace Gallatin.Core.Net
 
         private string _host;
         private int _port;
+        private IProxyFilter _proxyFilter;
 
         [ImportingConstructor]
-        public ServerDispatcher( INetworkConnectionFactory factory )
+        public ServerDispatcher( INetworkConnectionFactory factory, IProxyFilter proxyFilter )
         {
             Contract.Requires( factory != null );
+            Contract.Requires(proxyFilter != null);
+
+            _proxyFilter = proxyFilter;
 
             Logger = new DefaultSessionLogger();
 
@@ -123,7 +128,7 @@ namespace Gallatin.Core.Net
                         }
 
                         connection.Logger = Logger;
-                        _activeServer = new HttpServer( connection );
+                        _activeServer = new HttpServer( connection, _proxyFilter );
                         _serverConnections.Add( _activeServer );
 
                         _activeServer.SessionClosed += ServerConnectionClosed;

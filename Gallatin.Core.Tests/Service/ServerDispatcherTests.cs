@@ -3,7 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading;
+using Gallatin.Contracts;
 using Gallatin.Core.Net;
+using Gallatin.Core.Service;
 using Moq;
 using NUnit.Framework;
 
@@ -14,13 +16,17 @@ namespace Gallatin.Core.Tests.Net
     {
         Mock<INetworkConnectionFactory> _factory;
         Mock<INetworkConnection> _connection;
+        private Mock<IProxyFilter> _proxyFilter;
 
         [SetUp]
         public void Setup()
         {
             _factory = new Mock<INetworkConnectionFactory>();
             _connection = new Mock<INetworkConnection>();
-            
+            _proxyFilter = new Mock<IProxyFilter>();
+
+            bool temp = false;
+            _proxyFilter.Setup( m => m.EvaluateResponseFilters( It.IsAny<IHttpResponse>(), It.IsAny<string>(), out temp ) ).Returns( null as byte[] );
         }
 
         /// <summary>
@@ -40,7 +46,7 @@ namespace Gallatin.Core.Tests.Net
         {
             ManualResetEvent resetEvent = new ManualResetEvent(false);
 
-            ServerDispatcher dispatcher = new ServerDispatcher(_factory.Object);
+            ServerDispatcher dispatcher = new ServerDispatcher(_factory.Object, _proxyFilter.Object);
             bool secondConnectionOccurred = false;
 
             _factory.Setup(m => m.BeginConnect("www.cnn.com", 80, It.IsAny<Action<bool, INetworkConnection>>()))
@@ -77,7 +83,7 @@ namespace Gallatin.Core.Tests.Net
         {
             ManualResetEvent resetEvent = new ManualResetEvent(false);
 
-            _dispatcher = new ServerDispatcher(_factory.Object);
+            _dispatcher = new ServerDispatcher(_factory.Object, _proxyFilter.Object);
 
             _factory.Setup(m => m.BeginConnect("www.cnn.com", 80, It.IsAny<Action<bool, INetworkConnection>>()))
                 .Callback<string, int, Action<bool, INetworkConnection>>((a, b, c) => c(true, _connection.Object));
@@ -157,7 +163,7 @@ namespace Gallatin.Core.Tests.Net
             Mock<INetworkConnection> barServer = new Mock<INetworkConnection>();
             Mock<INetworkConnection> fooServer2 = new Mock<INetworkConnection>();
 
-            ServerDispatcher dispatcher = new ServerDispatcher(_factory.Object);
+            ServerDispatcher dispatcher = new ServerDispatcher(_factory.Object, _proxyFilter.Object);
 
             _factory.Setup(m => m.BeginConnect("www.foo.com", 80, It.IsAny<Action<bool, INetworkConnection>>()))
                 .Callback<string, int, Action<bool, INetworkConnection>>((a, b, c) =>
@@ -227,7 +233,7 @@ namespace Gallatin.Core.Tests.Net
         {
             ManualResetEvent resetEvent = new ManualResetEvent(false);
 
-            var buffer = new byte[] { 1, 2, 3 };
+            var buffer = Encoding.UTF8.GetBytes( "HTTP/1.1 200 OK\r\nConnection: close\r\nContent length: 0\r\n\r\n" );
 
             WaitForIt();
 

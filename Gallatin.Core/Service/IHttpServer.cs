@@ -9,6 +9,5 @@ namespace Gallatin.Core.Net
         event EventHandler<DataAvailableEventArgs> DataAvailable;
         void Send( byte[] data );
         void Close();
-        //event EventHandler ReceivedCompleteHttpResponse;
     }
 }
