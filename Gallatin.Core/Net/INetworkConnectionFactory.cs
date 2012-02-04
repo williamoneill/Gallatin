@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics.Contracts;
 using System.Linq;
 using System.Text;
 
@@ -8,6 +9,7 @@ namespace Gallatin.Core.Net
     /// <summary>
     /// Interface for network connection factories
     /// </summary>
+    [ContractClass(typeof(NetworkConnectionFactoryContract))]
     public interface INetworkConnectionFactory
     {
         /// <summary>
@@ -30,6 +32,25 @@ namespace Gallatin.Core.Net
         /// Stops listening for new client connections
         /// </summary>
         void EndListen();
+    }
 
+    [ContractClassFor(typeof(INetworkConnectionFactory))]
+    internal abstract class NetworkConnectionFactoryContract : INetworkConnectionFactory
+    {
+        public void BeginConnect( string host, int port, Action<bool, INetworkConnection> callback )
+        {
+            Contract.Requires(!string.IsNullOrEmpty(host));
+            Contract.Requires(port > 0);
+            Contract.Requires(callback!=null);
+        }
+
+        public void Listen( string address, int port, Action<INetworkConnection> callback )
+        {
+            Contract.Requires(!string.IsNullOrEmpty(address));
+            Contract.Requires(port > 0);
+            Contract.Requires(callback != null);
+        }
+
+        public abstract void EndListen();
     }
 }

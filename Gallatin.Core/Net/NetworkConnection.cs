@@ -1,7 +1,6 @@
 using System;
 using System.Diagnostics.Contracts;
 using System.Net.Sockets;
-using System.Threading;
 
 namespace Gallatin.Core.Net
 {
@@ -17,9 +16,9 @@ namespace Gallatin.Core.Net
 
         public NetworkConnection( Socket socket )
         {
-            Contract.Requires(socket!=null);
+            Contract.Requires( socket != null );
             Logger = new DefaultSessionLogger();
-            Logger.Verbose(string.Format("{0} NetworkConnection Constructor", socket.GetHashCode()));
+            Logger.Verbose( string.Format( "{0} NetworkConnection Constructor", socket.GetHashCode() ) );
 
             _socket = socket;
 
@@ -39,7 +38,10 @@ namespace Gallatin.Core.Net
 
         public string Id
         {
-            get { return _socket.RemoteEndPoint.ToString(); }
+            get
+            {
+                return _socket.RemoteEndPoint.ToString();
+            }
         }
 
         public ISessionLogger Logger { private get; set; }
@@ -50,14 +52,14 @@ namespace Gallatin.Core.Net
 
             lock ( _socket )
             {
-                if ( _socket.Connected  )
+                if ( _socket.Connected )
                 {
                     Logger.Verbose( "Sending socket data" );
                     _socket.BeginSend( data, 0, data.Length, SocketFlags.None, HandleSend, null );
                 }
                 else
                 {
-                    throw new SocketException((int)SocketError.Shutdown);
+                    throw new SocketException( (int) SocketError.Shutdown );
                 }
             }
         }
@@ -68,7 +70,8 @@ namespace Gallatin.Core.Net
 
             lock ( _socket )
             {
-                if ( _socket.Connected && !_hasClosed )
+                if ( _socket.Connected
+                     && !_hasClosed )
                 {
                     if ( !_hasShutdown )
                     {
@@ -87,8 +90,6 @@ namespace Gallatin.Core.Net
         }
 
         #endregion
-
-
 
         private void OnDataSent()
         {
@@ -158,48 +159,49 @@ namespace Gallatin.Core.Net
 
             try
             {
-                if (_hasShutdown || _hasClosed || !_socket.Connected )
+                if ( _hasShutdown || _hasClosed
+                     || !_socket.Connected )
                 {
-                    Logger.Info("Receive handler - socket stopped sending data - ignoring invocation");
+                    Logger.Info( "Receive handler - socket stopped sending data - ignoring invocation" );
                 }
                 else
                 {
                     SocketError socketError;
-                    int bytesReceived = _socket.EndReceive(ar, out socketError);
+                    int bytesReceived = _socket.EndReceive( ar, out socketError );
 
-                    if (bytesReceived == 0)
+                    if ( bytesReceived == 0 )
                     {
                         OnShutdown();
-                        Logger.Verbose("Socket stopped sending data");
+                        Logger.Verbose( "Socket stopped sending data" );
                     }
-                    else if (socketError != SocketError.Success)
+                    else if ( socketError != SocketError.Success )
                     {
                         OnSocketClosed();
-                        Logger.Verbose("Socket closed");
+                        Logger.Verbose( "Socket closed" );
                     }
                     else
                     {
-                        Logger.Verbose(string.Format("{0} NetworkConnection HandleReceive", _socket.GetHashCode()));
+                        Logger.Verbose( string.Format( "{0} NetworkConnection HandleReceive", _socket.GetHashCode() ) );
                         byte[] buffer = ar.AsyncState as byte[];
                         byte[] trimmedBuffer = new byte[bytesReceived];
-                        Array.Copy(buffer, trimmedBuffer, bytesReceived);
-                        OnDataAvailable(trimmedBuffer);
+                        Array.Copy( buffer, trimmedBuffer, bytesReceived );
+                        OnDataAvailable( trimmedBuffer );
 
-                        lock (_socket)
+                        lock ( _socket )
                         {
-                            if (_socket.Connected && !_hasClosed
-                                 && !_hasShutdown)
+                            if ( _socket.Connected && !_hasClosed
+                                 && !_hasShutdown )
                             {
                                 byte[] receiveBuffer = new byte[BufferLength];
-                                _socket.BeginReceive(receiveBuffer, 0, BufferLength, SocketFlags.None, HandleReceive, receiveBuffer);
+                                _socket.BeginReceive( receiveBuffer, 0, BufferLength, SocketFlags.None, HandleReceive, receiveBuffer );
                             }
                         }
                     }
                 }
             }
-            catch (Exception ex)
+            catch ( Exception ex )
             {
-                Logger.Exception("Unhandled exception receiving data on socket", ex);
+                Logger.Exception( "Unhandled exception receiving data on socket", ex );
                 OnSocketClosed();
             }
         }
@@ -210,7 +212,8 @@ namespace Gallatin.Core.Net
 
             try
             {
-                if ( _hasShutdown || _hasClosed || !_socket.Connected )
+                if ( _hasShutdown || _hasClosed
+                     || !_socket.Connected )
                 {
                     Logger.Info( "Send handler - socket stopped receiving data - ignoring invocation" );
                 }

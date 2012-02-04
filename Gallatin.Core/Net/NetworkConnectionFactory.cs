@@ -43,10 +43,6 @@ namespace Gallatin.Core.Net
 
         public void Listen( string address, int port, Action<INetworkConnection> callback )
         {
-            Contract.Requires( !string.IsNullOrEmpty( address ) );
-            Contract.Requires( port > 0 );
-            Contract.Requires( callback != null );
-
             if ( _socket != null )
             {
                 throw new InvalidOperationException( "Factory already listening for connections. Listen method called twice." );
