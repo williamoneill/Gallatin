@@ -5,7 +5,7 @@ using Gallatin.Core.Util;
 
 namespace Gallatin.Core.Service
 {
-
+    [ContractClass(typeof(SessionContract))]
     internal interface ISession : IPooledObject
     {
         /// <summary>
@@ -25,8 +25,17 @@ namespace Gallatin.Core.Service
         void Start(INetworkConnection connection);
     }
     
-    
-
+    [ContractClassFor(typeof(ISession))]
+    internal abstract class SessionContract : ISession
+    {
+        public abstract void Reset();
+        public abstract string Id { get; }
+        public abstract event EventHandler SessionEnded;
+        public void Start(INetworkConnection connection)
+        {
+            Contract.Requires(connection != null);
+        }
+    }
 
 
 }

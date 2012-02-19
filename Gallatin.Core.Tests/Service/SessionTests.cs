@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Gallatin.Contracts;
+using Gallatin.Core.Filters;
 using Gallatin.Core.Net;
 using Gallatin.Core.Service;
 using Gallatin.Core.Util;
@@ -19,7 +20,8 @@ namespace Gallatin.Core.Tests.Net
         private Mock<IAccessLog> _mockLog;
         private Mock<IServerDispatcher> _mockDispatcher;
         private Mock<INetworkConnection> _mockClient;
-        private Mock<IProxyFilter> _mockFilter;
+        private Mock<IHttpFilter> _mockFilter;
+        private Mock<IHttpResponseFilter> _responseFilter;
 
         [SetUp]
         public void Setup()
@@ -27,13 +29,14 @@ namespace Gallatin.Core.Tests.Net
             _mockClient = new Mock<INetworkConnection>();
             _mockLog = new Mock<IAccessLog>();
             _mockDispatcher = new Mock<IServerDispatcher>();
-            _mockFilter = new Mock<IProxyFilter>();
+            _mockFilter = new Mock<IHttpFilter>();
+            _responseFilter = new Mock<IHttpResponseFilter>();
         }
 
         [Test]
         public void InitializeTest()
         {
-            Session session = new Session(_mockLog.Object, _mockDispatcher.Object, _mockFilter.Object);
+            Session session = new Session(_mockDispatcher.Object, _mockFilter.Object);
 
             _mockDispatcher.VerifySet(m=>m.Logger = It.IsAny<ISessionLogger>(), Times.Once());
         }
@@ -41,7 +44,7 @@ namespace Gallatin.Core.Tests.Net
         [Test]
         public void SimpleStart()
         {
-            Session session = new Session(_mockLog.Object, _mockDispatcher.Object, _mockFilter.Object);
+            Session session = new Session(_mockDispatcher.Object, _mockFilter.Object);
 
             session.Start(_mockClient.Object);
 
@@ -52,7 +55,7 @@ namespace Gallatin.Core.Tests.Net
         [Test]
         public void ResetWithoutConnectTest()
         {
-            Session session = new Session(_mockLog.Object, _mockDispatcher.Object, _mockFilter.Object);
+            Session session = new Session( _mockDispatcher.Object, _mockFilter.Object);
 
             session.Reset();
         }
@@ -60,7 +63,7 @@ namespace Gallatin.Core.Tests.Net
         [Test]
         public void ClientSuddenlyDisconnectsAfterConnect([Values(true, false)]bool shouldReset, [Values(true, false)]bool connectionClose, [Values(true, false)]bool connectionReset)
         {
-            Session session = new Session(_mockLog.Object, _mockDispatcher.Object, _mockFilter.Object);
+            Session session = new Session( _mockDispatcher.Object, _mockFilter.Object);
 
             session.Start(_mockClient.Object);
 
@@ -93,14 +96,14 @@ namespace Gallatin.Core.Tests.Net
 
             byte[] dataFromServer = new byte[]{1,2,3};
 
-            _mockFilter.Setup(m => m.EvaluateConnectionFilters(It.IsAny<IHttpRequest>(), It.IsAny<string>())).Returns(null as byte[]);
+            _mockFilter.Setup(m => m.ApplyConnectionFilters(It.IsAny<IHttpRequest>(), It.IsAny<string>())).Returns(null as byte[]);
 
-            _mockDispatcher.Setup( m => m.ConnectToServer( "www.yahoo.com", 80, It.IsAny<Action<bool>>() ) )
-                .Callback<string, int, Action<Boolean>>( ( a, b, c ) => c( true ) );
+            _mockDispatcher.Setup( m => m.ConnectToServer( "www.yahoo.com", 80, It.IsAny<IHttpResponseFilter>(), It.IsAny<Action<bool>>() ) )
+                .Callback<string, int, IHttpResponseFilter, Action<Boolean>>((a, b, c, d) => d(true));
 
             _mockDispatcher.Setup( m => m.TrySendDataToActiveServer( rawHeader ) ).Returns( true );
 
-            Session session = new Session(_mockLog.Object, _mockDispatcher.Object, _mockFilter.Object);
+            Session session = new Session( _mockDispatcher.Object, _mockFilter.Object);
 
             session.Start(_mockClient.Object);
 
@@ -118,7 +121,7 @@ namespace Gallatin.Core.Tests.Net
         {
             byte[] testData = Encoding.UTF8.GetBytes("GET / HTTP/1.1\r\nHost: www.yahoo.com\r\n\r\n");
 
-            _mockFilter.Setup(m => m.EvaluateConnectionFilters(It.IsAny<IHttpRequest>(), It.IsAny<string>())).Returns(null as byte[]);
+            _mockFilter.Setup(m => m.ApplyConnectionFilters(It.IsAny<IHttpRequest>(), It.IsAny<string>())).Returns(null as byte[]);
 
             Mock<IHttpsTunnel> mockTunnel = new Mock<IHttpsTunnel>();
 
@@ -127,7 +130,7 @@ namespace Gallatin.Core.Tests.Net
             string header = "CONNECT www.yahoo.com:443 HTTP/1.1\r\nHost: www.yahoo.com\r\n\r\nfooy stuff that is just noise";
             var rawHeader = Encoding.UTF8.GetBytes(header);
 
-            Session session = new Session(_mockLog.Object, _mockDispatcher.Object, _mockFilter.Object);
+            Session session = new Session(_mockDispatcher.Object, _mockFilter.Object);
 
             session.Start(_mockClient.Object);
 
@@ -138,7 +141,7 @@ namespace Gallatin.Core.Tests.Net
             // After establishing a SSL connection, data from the client should never be sent to the server dispatcher
             _mockClient.Raise(m=> m.DataAvailable += null, new DataAvailableEventArgs(testData));
 
-            _mockDispatcher.Verify(m =>m.ConnectToServer(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<Action<bool>>()), Times.Never());
+            _mockDispatcher.Verify(m =>m.ConnectToServer(It.IsAny<string>(), It.IsAny<int>(), _responseFilter.Object, It.IsAny<Action<bool>>()), Times.Never());
             _mockDispatcher.Verify(m => m.TrySendDataToActiveServer(It.IsAny<byte[]>()), Times.Never());
         }
 
@@ -148,10 +151,10 @@ namespace Gallatin.Core.Tests.Net
             string header = "GET / HTTP/1.1\r\nHost: www.yahoo.com\r\n\r\n";
             var rawHeader = Encoding.UTF8.GetBytes(header);
 
-            _mockDispatcher.Setup(m => m.ConnectToServer("www.yahoo.com", 80, It.IsAny<Action<bool>>()))
-                .Callback<string, int, Action<Boolean>>((a, b, c) => c(true));
+            _mockDispatcher.Setup(m => m.ConnectToServer("www.yahoo.com", 80, _responseFilter.Object, It.IsAny<Action<bool>>()))
+                .Callback<string, int, IHttpResponseFilter, Action<Boolean>>((a, b, c, d) => d(true));
 
-            Session session = new Session(_mockLog.Object, _mockDispatcher.Object, _mockFilter.Object);
+            Session session = new Session(_mockDispatcher.Object, _mockFilter.Object);
 
             session.Start(_mockClient.Object);
 
@@ -170,19 +173,19 @@ namespace Gallatin.Core.Tests.Net
             string header = "GET / HTTP/1.1\r\nHost: www.yahoo.com\r\n\r\n";
             var rawHeader = Encoding.UTF8.GetBytes(header);
 
-            Session session = new Session(_mockLog.Object, _mockDispatcher.Object, _mockFilter.Object);
+            Session session = new Session( _mockDispatcher.Object, _mockFilter.Object);
 
             session.Start(_mockClient.Object);
 
             string response = "HTTP/1.1 200 OK\r\nContent-Length: 3\r\n\r\nfoo";
             var responseBytes = Encoding.UTF8.GetBytes( response );
 
-            _mockFilter.Setup( m => m.EvaluateConnectionFilters( It.IsAny<IHttpRequest>(), It.IsAny<string>() ) ).Returns( responseBytes );
+            _mockFilter.Setup( m => m.ApplyConnectionFilters( It.IsAny<IHttpRequest>(), It.IsAny<string>() ) ).Returns( responseBytes );
 
             // Connect to server
             _mockClient.Raise(m => m.DataAvailable += null, new DataAvailableEventArgs(rawHeader));
 
-            _mockDispatcher.Verify(m=>m.ConnectToServer(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<Action<bool>>()), Times.Never());
+            _mockDispatcher.Verify(m=>m.ConnectToServer(It.IsAny<string>(), It.IsAny<int>(), _responseFilter.Object, It.IsAny<Action<bool>>()), Times.Never());
 
             _mockClient.Verify(m=>m.SendData( responseBytes ), Times.Once() );
 

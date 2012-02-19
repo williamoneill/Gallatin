@@ -25,11 +25,6 @@ namespace Gallatin.Core.Net
 
         public void EstablishTunnel( string host, int port, string httpVersion, INetworkConnection client )
         {
-            Contract.Requires(client!=null);
-            Contract.Requires(port>0);
-            Contract.Requires(!string.IsNullOrEmpty(host));
-            Contract.Requires(!string.IsNullOrEmpty(httpVersion));
-
             _client = client;
             _httpVersion = httpVersion;
 

@@ -96,9 +96,17 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Filters\FilterCollections.cs" />
+    <Compile Include="Filters\HttpFilter.cs" />
+    <Compile Include="Filters\HttpResponseFilter.cs" />
+    <Compile Include="Filters\IFilterCollections.cs" />
+    <Compile Include="Filters\IHttpFilter.cs" />
+    <Compile Include="Filters\IHttpResponseFilter.cs" />
     <Compile Include="Net\DataAvailableEventArgs.cs" />
+    <Compile Include="Service\AccessLogType.cs" />
     <Compile Include="Service\HttpServer.cs" />
     <Compile Include="Service\HttpsTunnel.cs" />
+    <Compile Include="Service\IAccessLog.cs" />
     <Compile Include="Service\IHttpServer.cs" />
     <Compile Include="Service\IHttpsTunnel.cs" />
     <Compile Include="Net\INetworkConnection.cs" />
@@ -114,8 +122,6 @@
     <Compile Include="Service\SessionLogger.cs" />
     <Compile Include="Service\AccessLog.cs" />
     <Compile Include="Service\CrossDomainProxyService.cs" />
-    <Compile Include="Service\ProxyFilter.cs" />
-    <Compile Include="Service\IProxyFilter.cs" />
     <Compile Include="CoreSettings.cs" />
     <Compile Include="ICoreSettings.cs" />
     <Compile Include="Service\IProxySession.cs" />

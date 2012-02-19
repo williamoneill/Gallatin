@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using Gallatin.Contracts;
+using Gallatin.Core.Filters;
 using Gallatin.Core.Net;
 using Gallatin.Core.Service;
 using Moq;
@@ -16,17 +17,15 @@ namespace Gallatin.Core.Tests.Net
     {
         Mock<INetworkConnectionFactory> _factory;
         Mock<INetworkConnection> _connection;
-        private Mock<IProxyFilter> _proxyFilter;
+        private Mock<IHttpResponseFilter> _responseFilter;
 
         [SetUp]
         public void Setup()
         {
             _factory = new Mock<INetworkConnectionFactory>();
             _connection = new Mock<INetworkConnection>();
-            _proxyFilter = new Mock<IProxyFilter>();
+            _responseFilter = new Mock<IHttpResponseFilter>();
 
-            bool temp = false;
-            _proxyFilter.Setup( m => m.EvaluateResponseFilters( It.IsAny<IHttpResponse>(), It.IsAny<string>(), out temp ) ).Returns( null as byte[] );
         }
 
         /// <summary>
@@ -46,7 +45,7 @@ namespace Gallatin.Core.Tests.Net
         {
             ManualResetEvent resetEvent = new ManualResetEvent(false);
 
-            ServerDispatcher dispatcher = new ServerDispatcher(_factory.Object, _proxyFilter.Object);
+            ServerDispatcher dispatcher = new ServerDispatcher(_factory.Object);
             bool secondConnectionOccurred = false;
 
             _factory.Setup(m => m.BeginConnect("www.cnn.com", 80, It.IsAny<Action<bool, INetworkConnection>>()))
@@ -59,19 +58,19 @@ namespace Gallatin.Core.Tests.Net
                                                                                  c(true, _connection.Object);
                                                                              });
 
-            dispatcher.ConnectToServer("www.cnn.com", 80, b =>
-            {
-                // Connected to remote host. Other connection should still be blocking.
-                if (b && !secondConnectionOccurred)
-                {
-                    resetEvent.Set();
-                }
-            });
-
-            dispatcher.ConnectToServer("www.yahoo.com", 80, b =>
+            dispatcher.ConnectToServer("www.cnn.com", 80, _responseFilter.Object, b =>
                                                                 {
-                                                                    secondConnectionOccurred = true;
+                                                                    // Connected to remote host. Other connection should still be blocking.
+                                                                    if (b && !secondConnectionOccurred)
+                                                                    {
+                                                                        resetEvent.Set();
+                                                                    }
                                                                 });
+
+            dispatcher.ConnectToServer("www.yahoo.com", 80, _responseFilter.Object, b =>
+                                                                  {
+                                                                      secondConnectionOccurred = true;
+                                                                  });
 
             Assert.That(resetEvent.WaitOne(2000), "Never attempted to connect to remote host");
 
@@ -83,18 +82,18 @@ namespace Gallatin.Core.Tests.Net
         {
             ManualResetEvent resetEvent = new ManualResetEvent(false);
 
-            _dispatcher = new ServerDispatcher(_factory.Object, _proxyFilter.Object);
+            _dispatcher = new ServerDispatcher(_factory.Object);
 
             _factory.Setup(m => m.BeginConnect("www.cnn.com", 80, It.IsAny<Action<bool, INetworkConnection>>()))
                 .Callback<string, int, Action<bool, INetworkConnection>>((a, b, c) => c(true, _connection.Object));
 
-            _dispatcher.ConnectToServer("www.cnn.com", 80, b =>
-            {
-                if (b)
-                {
-                    resetEvent.Set();
-                }
-            });
+            _dispatcher.ConnectToServer("www.cnn.com", 80, _responseFilter.Object, b =>
+                                                                 {
+                                                                     if (b)
+                                                                     {
+                                                                         resetEvent.Set();
+                                                                     }
+                                                                 });
 
             Assert.That(resetEvent.WaitOne(2000), "Never attempted to connect to remote host");
             
@@ -132,13 +131,13 @@ namespace Gallatin.Core.Tests.Net
             _factory.Setup(m => m.BeginConnect("www.yahoo.com", 80, It.IsAny<Action<bool, INetworkConnection>>()))
                 .Callback<string, int, Action<bool, INetworkConnection>>((a, b, c) => c(true, yahoo.Object));
 
-            _dispatcher.ConnectToServer("www.yahoo.com", 80, b =>
-            {
-                if (b)
-                {
-                    resetEvent.Set();
-                }
-            });
+            _dispatcher.ConnectToServer("www.yahoo.com", 80, _responseFilter.Object, b =>
+                                                                   {
+                                                                       if (b)
+                                                                       {
+                                                                           resetEvent.Set();
+                                                                       }
+                                                                   });
 
             Assert.That(resetEvent.WaitOne(2000));
 
@@ -163,7 +162,7 @@ namespace Gallatin.Core.Tests.Net
             Mock<INetworkConnection> barServer = new Mock<INetworkConnection>();
             Mock<INetworkConnection> fooServer2 = new Mock<INetworkConnection>();
 
-            ServerDispatcher dispatcher = new ServerDispatcher(_factory.Object, _proxyFilter.Object);
+            ServerDispatcher dispatcher = new ServerDispatcher(_factory.Object);
 
             _factory.Setup(m => m.BeginConnect("www.foo.com", 80, It.IsAny<Action<bool, INetworkConnection>>()))
                 .Callback<string, int, Action<bool, INetworkConnection>>((a, b, c) =>
@@ -176,30 +175,30 @@ namespace Gallatin.Core.Tests.Net
             _factory.Setup(m => m.BeginConnect("www.bar.com", 80, It.IsAny<Action<bool, INetworkConnection>>()))
                 .Callback<string, int, Action<bool, INetworkConnection>>((a, b, c) => c(true, barServer.Object));
 
-            dispatcher.ConnectToServer("www.foo.com", 80, b =>
-            {
-                if (b)
-                {
-                    callbackCount++;
-                }
-            });
+            dispatcher.ConnectToServer("www.foo.com", 80, _responseFilter.Object, b =>
+                                                                {
+                                                                    if (b)
+                                                                    {
+                                                                        callbackCount++;
+                                                                    }
+                                                                });
 
-            dispatcher.ConnectToServer("www.bar.com", 80, b =>
-            {
-                if (b)
-                {
-                    callbackCount++;
-                }
-            });
+            dispatcher.ConnectToServer("www.bar.com", 80, _responseFilter.Object, b =>
+                                                                {
+                                                                    if (b)
+                                                                    {
+                                                                        callbackCount++;
+                                                                    }
+                                                                });
 
-            dispatcher.ConnectToServer("www.foo.com", 80, b =>
-            {
-                if (b)
-                {
-                    callbackCount++;
-                    resetEvent.Set();
-                }
-            });
+            dispatcher.ConnectToServer("www.foo.com", 80, _responseFilter.Object, b =>
+                                                                {
+                                                                    if (b)
+                                                                    {
+                                                                        callbackCount++;
+                                                                        resetEvent.Set();
+                                                                    }
+                                                                });
 
             Assert.That(resetEvent.WaitOne(2000));
                 
@@ -220,7 +219,7 @@ namespace Gallatin.Core.Tests.Net
         {
             WaitForIt();
 
-            _dispatcher.ConnectToServer("www.cnn.com", 80, Assert.That);
+            _dispatcher.ConnectToServer("www.cnn.com", 80, _responseFilter.Object, Assert.That);
 
             _connection.Verify(m => m.Start(), Times.Once(), "The existing, active connection should not have been re-established.");
         }
@@ -232,6 +231,9 @@ namespace Gallatin.Core.Tests.Net
         public void DataSentFromServerTest()
         {
             ManualResetEvent resetEvent = new ManualResetEvent(false);
+
+            IEnumerable<Func<IHttpResponse, string, byte[], byte[]>> callbacks = null;
+            _responseFilter.Setup(m => m.ApplyResponseHeaderFilters(It.IsAny<IHttpResponse>(), out callbacks)).Returns(null as byte[]);
 
             var buffer = Encoding.UTF8.GetBytes( "HTTP/1.1 200 OK\r\nConnection: close\r\nContent length: 0\r\n\r\n" );
 
@@ -288,13 +290,13 @@ namespace Gallatin.Core.Tests.Net
             _factory.Setup(m => m.BeginConnect("www.yahoo.com", 80, It.IsAny<Action<bool, INetworkConnection>>()))
                 .Callback<string, int, Action<bool, INetworkConnection>>((a, b, c) => c(true, yahoo.Object));
 
-            _dispatcher.ConnectToServer("www.yahoo.com", 80, b =>
-            {
-                if (b)
-                {
-                    resetEvent.Set();
-                }
-            });
+            _dispatcher.ConnectToServer("www.yahoo.com", 80, _responseFilter.Object, b =>
+                                                                   {
+                                                                       if (b)
+                                                                       {
+                                                                           resetEvent.Set();
+                                                                       }
+                                                                   });
 
             Assert.That(resetEvent.WaitOne(2000));
 

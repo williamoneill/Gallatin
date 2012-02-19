@@ -55,16 +55,19 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="CoreSettingsTests.cs" />
-    <Compile Include="Service\HttpServerTests.cs" />
+    <Compile Include="Filters\HttpFilterTests.cs" />
+    <Compile Include="Filters\HttpResponseFilterTests.cs" />
+    <Compile Include="Service\HttpServerTests.cs">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="Service\HttpsTunnelTests.cs" />
     <Compile Include="Net\NetworkConnectionFactoryTests.cs" />
     <Compile Include="Net\NetworkConnectionTests.cs" />
-    <Compile Include="Service\ProxyFilterTests.cs">
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Service\ServerDispatcherTests.cs">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="Service\ServerDispatcherTests.cs" />
     <Compile Include="Service\SessionTests.cs" />
-    <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Web\HttpHeaderEventArgsTests.cs" />
     <Compile Include="Web\HttpHeadersTests.cs" />
     <Compile Include="Web\HttpRequestHeaderEventArgsTests.cs" />

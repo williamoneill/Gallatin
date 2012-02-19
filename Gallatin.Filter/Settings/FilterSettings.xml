@@ -164,7 +164,7 @@ pick up new settings.
 		<!--Every match in the regular expression counts as one hit. Each hit is multipled by the weight. When the weight exceeds 100, the page is banned.-->
 		<!--This proxy uses the .NET (Microsoft) regular expression engine and regex syntax.-->
 		<Regex name="No Proxy (English)" 
-			   value="(prox\w{1,4})" 
+			   value="(prox\w{1,3})\s" 
 			   weight="50"/>
 		<Regex name="Profanity (English)" 
 			   value="\s(ass\w{0,2}|bastard\w{0,1}|bitch\w{0,2}|jerk off)\s" 

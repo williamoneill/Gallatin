@@ -1,7 +1,9 @@
 using System;
+using System.Collections;
+using System.Collections.Generic;
 using System.Diagnostics.Contracts;
 using Gallatin.Contracts;
-using Gallatin.Core.Service;
+using Gallatin.Core.Filters;
 using Gallatin.Core.Web;
 
 namespace Gallatin.Core.Net
@@ -10,17 +12,15 @@ namespace Gallatin.Core.Net
     {
         private readonly INetworkConnection _connection;
         private readonly IHttpStreamParser _parser;
-        private readonly IProxyFilter _proxyFilter;
-
+        private readonly IHttpResponseFilter _responseFilter;
         private IHttpResponse _lastResponse;
 
-        public HttpServer( INetworkConnection connection, IProxyFilter proxyFilter )
+        public HttpServer( INetworkConnection connection, IHttpResponseFilter responseFilter )
         {
             Contract.Requires( connection != null );
-            Contract.Requires( proxyFilter != null );
 
+            _responseFilter = responseFilter;
             _connection = connection;
-            _proxyFilter = proxyFilter;
 
             connection.ConnectionClosed += ConnectionConnectionClosed;
             connection.Shutdown += ConnectionConnectionClosed;
@@ -48,44 +48,58 @@ namespace Gallatin.Core.Net
 
         #endregion
 
+        IEnumerable<Func<IHttpResponse, string, byte[], byte[]>> _callbacks;
+
         private void ParserReadResponseHeaderComplete( object sender, HttpResponseHeaderEventArgs e )
         {
             _lastResponse = HttpResponse.CreateResponse( e );
 
+            // Always unsubscribe. This could be left over from the last request.
             _parser.PartialDataAvailable -= ParserPartialDataAvailable;
             _parser.BodyAvailable -= ParserBodyAvailable;
 
-            bool isBodyRequired;
-            byte[] response = _proxyFilter.EvaluateResponseFilters( _lastResponse, "todo", out isBodyRequired );
-
-            if ( isBodyRequired )
+            if ( _responseFilter != null )
             {
-                // Get the full body before sending the response
-                _parser.BodyAvailable += ParserBodyAvailable;
-            }
+                
+                byte[] filterResponse = _responseFilter.ApplyResponseHeaderFilters( _lastResponse, out _callbacks );
 
-            else if ( response == null )
-            {
-                // Re-subscribe to partial HTTP body data being sent from the server.
-                // Send the received header, unmodified.
-                _parser.PartialDataAvailable += ParserPartialDataAvailable;
-                OnDataAvailable( e.GetBuffer() );
+                if ( _callbacks != null )
+                {
+                    // Get the full body before sending the response
+                    _parser.BodyAvailable += ParserBodyAvailable;
+                }
+
+                else if ( filterResponse == null )
+                {
+                    // Send the received header, unmodified, and re-subscribe to publish raw data coming from the server
+                    _parser.PartialDataAvailable += ParserPartialDataAvailable;
+                    OnDataAvailable( e.GetBuffer() );
+                }
+
+                else
+                {
+                    // Send the modified response since we have enough information to know to filter the response.
+                    OnDataAvailable( filterResponse );
+                    Close();
+                }
             }
 
             else
             {
-                // Send the modified response since we have enough information to know to filter the response.
-                OnDataAvailable( response );
-                Close();
+                // Send the received header, unmodified, and re-subscribe to publish raw data coming from the server
+                _parser.PartialDataAvailable += ParserPartialDataAvailable;
+                OnDataAvailable(e.GetBuffer());
             }
         }
 
         private void ParserBodyAvailable( object sender, HttpDataEventArgs e )
         {
-            var filterResponse = _proxyFilter.EvaluateResponseFiltersWithBody(_lastResponse, "todo", e.Data);
+            byte[] filterResponse = _responseFilter.ApplyResponseBodyFilter( _lastResponse, e.Data, _callbacks );
 
-            if(filterResponse==null)
-                throw new InvalidOperationException("Response body filter did not return a response for the client");
+            if ( filterResponse == null )
+            {
+                throw new InvalidOperationException( "Response body filter did not return a response for the client" );
+            }
 
             // Unsubscribe to the parser events. If we don't, the Close invocation will recursively 
             // invoke this method and we get a stack overflow.

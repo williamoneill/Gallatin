@@ -4,6 +4,7 @@ using System.Diagnostics.Contracts;
 using System.Text;
 using System.Threading;
 using Gallatin.Contracts;
+using Gallatin.Core.Filters;
 using Gallatin.Core.Service;
 using Gallatin.Core.Util;
 using Gallatin.Core.Web;
@@ -21,19 +22,17 @@ namespace Gallatin.Core.Net
         private INetworkConnection _connection;
         private IHttpRequest _lastRequest;
         private IHttpStreamParser _parser;
-        private IAccessLog _accessLog;
-        private IProxyFilter _filter;
+        private IHttpFilter _filter;
 
         [ImportingConstructor]
-        public Session( IAccessLog accessLog, IServerDispatcher dispatcher, IProxyFilter filter )
+        public Session( IServerDispatcher dispatcher, IHttpFilter filter )
         {
-            Contract.Ensures( accessLog != null );
             Contract.Ensures( dispatcher != null );
-            Contract.Ensures(filter != null);
-
-            _accessLog = accessLog;
+            Contract.Ensures(filter!=null);
 
             Id = Guid.NewGuid().ToString();
+            
+            _filter = filter;
 
             _serverConnectingEvent = new Semaphore( 1, 1 );
             _logger = new SessionLogger( Id );
@@ -42,8 +41,6 @@ namespace Gallatin.Core.Net
             _serverDispatcher.ActiveServerClosedConnection += new EventHandler(_serverDispatcher_ActiveServerClosedConnection);
             _serverDispatcher.ServerDataAvailable += ServerDispatcherServerDataAvailable;
             _serverDispatcher.Logger = _logger;
-
-            _filter = filter;
 
             _logger.Verbose( "Creating session" );
         }
@@ -92,8 +89,6 @@ namespace Gallatin.Core.Net
 
         public void Start( INetworkConnection connection )
         {
-            Contract.Requires( connection != null );
-
             _logger.Info( "Starting new proxy client session" );
 
             lock ( _mutex )
@@ -203,12 +198,11 @@ namespace Gallatin.Core.Net
 
                 if ( TryParseAddress( _lastRequest, out host, out port ) )
                 {
-                    var filterResults = _filter.EvaluateConnectionFilters( _lastRequest, _connection.Id );
+                    var filterResults = _filter.ApplyConnectionFilters( _lastRequest, _connection.Id );
 
                     if (filterResults != null)
                     {
                         _logger.Info("Connection filter rejected connection");
-                        _accessLog.Write( _connection.Id, _lastRequest, AccessLogType.AccessBlocked );
 
                         _connection.SendData(filterResults);
                         Reset();
@@ -219,17 +213,14 @@ namespace Gallatin.Core.Net
 
                         if (_lastRequest.IsSsl)
                         {
-                            _accessLog.Write(_connection.Id, _lastRequest, AccessLogType.HttpsTunnel);
                             EstablishSslConnection(host, port, _lastRequest.Version);
                         }
                         else
                         {
-                            _accessLog.Write(_connection.Id, _lastRequest, AccessLogType.AccessGranted);
-                            _serverDispatcher.ConnectToServer(host, port, ServerConnected);
+                            var responseFilter = _filter.CreateResponseFilters( _lastRequest, _connection.Id );
+                            _serverDispatcher.ConnectToServer(host, port, responseFilter, ServerConnected);
                         }
-                        
                     }
-
                 }
                 else
                 {

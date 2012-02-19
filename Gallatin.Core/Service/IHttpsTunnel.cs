@@ -1,13 +1,13 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using Gallatin.Core.Util;
+using System.Diagnostics.Contracts;
+using Gallatin.Core.Net;
 
-namespace Gallatin.Core.Net
+namespace Gallatin.Core.Service
 {
     /// <summary>
     /// Interface for HTTPS tunnels
     /// </summary>
+    [ContractClass(typeof(HttpsTunnelContract))]
     public interface IHttpsTunnel
     {
         /// <summary>
@@ -23,5 +23,18 @@ namespace Gallatin.Core.Net
         /// Raised when the tunnel is closed by either the client or server
         /// </summary>
         event EventHandler TunnelClosed;
+    }
+
+    [ContractClassFor(typeof(IHttpsTunnel))]
+    internal abstract class HttpsTunnelContract : IHttpsTunnel
+    {
+        public void EstablishTunnel(string host, int port, string httpVersion, INetworkConnection client)
+        {
+            Contract.Requires(client != null);
+            Contract.Requires(port > 0);
+            Contract.Requires(!string.IsNullOrEmpty(host));
+            Contract.Requires(!string.IsNullOrEmpty(httpVersion));
+        }
+        public abstract event EventHandler TunnelClosed;
     }
 }

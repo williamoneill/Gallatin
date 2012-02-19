@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using System.Diagnostics.Contracts;
 using System.Threading;
+using Gallatin.Core.Filters;
 using Gallatin.Core.Service;
 
 namespace Gallatin.Core.Net
@@ -19,15 +20,11 @@ namespace Gallatin.Core.Net
 
         private string _host;
         private int _port;
-        private IProxyFilter _proxyFilter;
 
         [ImportingConstructor]
-        public ServerDispatcher( INetworkConnectionFactory factory, IProxyFilter proxyFilter )
+        public ServerDispatcher( INetworkConnectionFactory factory )
         {
             Contract.Requires( factory != null );
-            Contract.Requires(proxyFilter != null);
-
-            _proxyFilter = proxyFilter;
 
             Logger = new DefaultSessionLogger();
 
@@ -37,19 +34,9 @@ namespace Gallatin.Core.Net
 
         #region IServerDispatcher Members
 
-        //Semaphore _waitingForHttpResponse = new Semaphore(1,1);
-
-        public void ConnectToServer( string host, int port, Action<bool> callback )
+        public void ConnectToServer( string host, int port, IHttpResponseFilter filter, Action<bool> callback )
         {
-            Contract.Requires( !string.IsNullOrEmpty( host ) );
-            Contract.Requires( port > 0 );
-            Contract.Requires( callback != null );
-
             Logger.Verbose("Waiting for HTTP response semaphore");
-            // TODO: this seems a bit excessive to block new requests to the server (even persistent connections)
-            // if the server did not change. Seems like this will hurt pipelining. We need something to track when
-            // a new HTTP request is made so we know that the response is received and we can switch servers.
-            //_waitingForHttpResponse.WaitOne();
 
             if ( host == _host
                  && port == _port
@@ -68,10 +55,12 @@ namespace Gallatin.Core.Net
                 _host = host;
                 _port = port;
                 _connectCallback = callback;
+                _responseFilter = filter;
                 _factory.BeginConnect( host, port, HandleConnect );
             }
         }
 
+        private IHttpResponseFilter _responseFilter;
 
         public bool TrySendDataToActiveServer( byte[] data )
         {
@@ -128,7 +117,7 @@ namespace Gallatin.Core.Net
                         }
 
                         connection.Logger = Logger;
-                        _activeServer = new HttpServer( connection, _proxyFilter );
+                        _activeServer = new HttpServer( connection, _responseFilter );
                         _serverConnections.Add( _activeServer );
 
                         _activeServer.SessionClosed += ServerConnectionClosed;
@@ -156,14 +145,6 @@ namespace Gallatin.Core.Net
                 _connectingToRemoteHost.Release();
             }
         }
-
-        //void _activeServer_ReceivedCompleteHttpResponse(object sender, EventArgs e)
-        //{
-        //    Logger.Verbose("Complete HTTP response received. Releasing semaphore.");
-        //    _waitingForHttpResponse.Release();
-        //}
-
-
 
         private void ActiveServerDataAvailable( object sender, DataAvailableEventArgs e )
         {

@@ -10,53 +10,6 @@ using Gallatin.Contracts;
 
 namespace Gallatin.Core.Service
 {
-
-    /// <summary>
-    /// 
-    /// </summary>
-    public enum AccessLogType
-    {
-        /// <summary>
-        /// 
-        /// </summary>
-        AccessGranted,
-
-        /// <summary>
-        /// 
-        /// </summary>
-        AccessBlocked,
-
-        /// <summary>
-        /// 
-        /// </summary>
-        HttpsTunnel
-    }
-
-    /// <summary>
-    /// 
-    /// </summary>
-    public interface IAccessLog
-    {
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="logDirectory"></param>
-        void Start(DirectoryInfo logDirectory);
-        
-        /// <summary>
-        /// 
-        /// </summary>
-        void Stop();
-        
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="connectionId"></param>
-        /// <param name="host"></param>
-        /// <param name="logType"></param>
-        void Write(string connectionId, IHttpRequest host, AccessLogType logType );
-    }
-
     [Export(typeof(IAccessLog))]
     internal class AccessLog : IAccessLog
     {
@@ -154,8 +107,6 @@ namespace Gallatin.Core.Service
 
         public void Start(DirectoryInfo logDirectory)
         {
-            Contract.Requires(logDirectory != null);
-
             if (!logDirectory.Exists)
             {
                 logDirectory.Create();
@@ -177,9 +128,6 @@ namespace Gallatin.Core.Service
 
         public void Write(string connectionId, IHttpRequest request, AccessLogType logType )
         {
-            Contract.Requires(!string.IsNullOrEmpty(connectionId));
-            Contract.Requires(request!=null);
-
             if (_timer != null)
             {
                 var entry = new LogEntry()

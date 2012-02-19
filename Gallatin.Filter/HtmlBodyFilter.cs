@@ -107,9 +107,31 @@ namespace Gallatin.Filter
 
         private static readonly Regex _ratingCheck = new Regex(@"<meta name=.*?rating.*? content.*?(rta-5042-1996-1400-1577-rta|mature|adult)", RegexOptions.Singleline|RegexOptions.Compiled);
 
-        private static string FindRawHtmlText( string body )
+        private static string FindRawHtmlTextOld( string body )
         {
             return _removeHtmlTags.Replace( body, " " );
+        }
+
+
+        private static string FindRawHtmlText(string body)
+        {
+            int balance = 0;
+
+            StringBuilder builder = new StringBuilder(body.Length);
+
+            foreach(var c in body)
+            {
+                if (c == '<')
+                    balance++;
+                else if (c == '>')
+                    balance--;
+                else if(balance == 0)
+                {
+                    builder.Append( c );
+                }
+            }
+
+            return builder.ToString();
         }
 
         private byte[] ParseBody( IHttpResponse response, string connectionId, byte[] body )
@@ -126,7 +148,8 @@ namespace Gallatin.Filter
             }
             else
             {
-                returnValue = ApplyRegexFiltering(FindRawHtmlText(htmlBody));
+                //returnValue = ApplyRegexFiltering(FindRawHtmlText(htmlBody));
+                returnValue = ApplyRegexFiltering(htmlBody);
             }
 
             DateTime end = DateTime.Now;

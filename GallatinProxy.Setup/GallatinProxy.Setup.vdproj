@@ -15,31 +15,13 @@
     {
         "Entry"
         {
-        "MsmKey" = "8:_0840AC5DD7332363657E327B668589FA"
-        "OwnerKey" = "8:_15C3772973374C77A43CEA302899F545"
-        "MsmSig" = "8:_UNDEFINED"
-        }
-        "Entry"
-        {
-        "MsmKey" = "8:_0840AC5DD7332363657E327B668589FA"
-        "OwnerKey" = "8:_A90601D3857A4F5FABE33216CF33357C"
-        "MsmSig" = "8:_UNDEFINED"
-        }
-        "Entry"
-        {
-        "MsmKey" = "8:_0840AC5DD7332363657E327B668589FA"
-        "OwnerKey" = "8:_87342605D1A65EBA708B6845DC7AAEDC"
-        "MsmSig" = "8:_UNDEFINED"
-        }
-        "Entry"
-        {
         "MsmKey" = "8:_15C3772973374C77A43CEA302899F545"
         "OwnerKey" = "8:_UNDEFINED"
         "MsmSig" = "8:_UNDEFINED"
         }
         "Entry"
         {
-        "MsmKey" = "8:_413137BDE50AA7D70DC9BB2A09CDD8D2"
+        "MsmKey" = "8:_1B3AE4F87B71E69F7E02DE773EC35DD7"
         "OwnerKey" = "8:_15C3772973374C77A43CEA302899F545"
         "MsmSig" = "8:_UNDEFINED"
         }
@@ -63,14 +45,32 @@
         }
         "Entry"
         {
-        "MsmKey" = "8:_87342605D1A65EBA708B6845DC7AAEDC"
+        "MsmKey" = "8:_A90601D3857A4F5FABE33216CF33357C"
+        "OwnerKey" = "8:_UNDEFINED"
+        "MsmSig" = "8:_UNDEFINED"
+        }
+        "Entry"
+        {
+        "MsmKey" = "8:_C101930C84D8931D834A5FF13A8BFE24"
         "OwnerKey" = "8:_15C3772973374C77A43CEA302899F545"
         "MsmSig" = "8:_UNDEFINED"
         }
         "Entry"
         {
-        "MsmKey" = "8:_A90601D3857A4F5FABE33216CF33357C"
-        "OwnerKey" = "8:_UNDEFINED"
+        "MsmKey" = "8:_C101930C84D8931D834A5FF13A8BFE24"
+        "OwnerKey" = "8:_A90601D3857A4F5FABE33216CF33357C"
+        "MsmSig" = "8:_UNDEFINED"
+        }
+        "Entry"
+        {
+        "MsmKey" = "8:_C101930C84D8931D834A5FF13A8BFE24"
+        "OwnerKey" = "8:_1B3AE4F87B71E69F7E02DE773EC35DD7"
+        "MsmSig" = "8:_UNDEFINED"
+        }
+        "Entry"
+        {
+        "MsmKey" = "8:_E6909880EA463593E8E0C13C3F980B6F"
+        "OwnerKey" = "8:_15C3772973374C77A43CEA302899F545"
         "MsmSig" = "8:_UNDEFINED"
         }
         "Entry"
@@ -94,18 +94,6 @@
         "Entry"
         {
         "MsmKey" = "8:_UNDEFINED"
-        "OwnerKey" = "8:_87342605D1A65EBA708B6845DC7AAEDC"
-        "MsmSig" = "8:_UNDEFINED"
-        }
-        "Entry"
-        {
-        "MsmKey" = "8:_UNDEFINED"
-        "OwnerKey" = "8:_0840AC5DD7332363657E327B668589FA"
-        "MsmSig" = "8:_UNDEFINED"
-        }
-        "Entry"
-        {
-        "MsmKey" = "8:_UNDEFINED"
         "OwnerKey" = "8:_FF772656142E44E7B221CC14F42E77D2"
         "MsmSig" = "8:_UNDEFINED"
         }
@@ -118,7 +106,19 @@
         "Entry"
         {
         "MsmKey" = "8:_UNDEFINED"
-        "OwnerKey" = "8:_413137BDE50AA7D70DC9BB2A09CDD8D2"
+        "OwnerKey" = "8:_E6909880EA463593E8E0C13C3F980B6F"
+        "MsmSig" = "8:_UNDEFINED"
+        }
+        "Entry"
+        {
+        "MsmKey" = "8:_UNDEFINED"
+        "OwnerKey" = "8:_1B3AE4F87B71E69F7E02DE773EC35DD7"
+        "MsmSig" = "8:_UNDEFINED"
+        }
+        "Entry"
+        {
+        "MsmKey" = "8:_UNDEFINED"
+        "OwnerKey" = "8:_C101930C84D8931D834A5FF13A8BFE24"
         "MsmSig" = "8:_UNDEFINED"
         }
     }
@@ -282,51 +282,20 @@
         }
         "File"
         {
-            "{9F6F8455-1EF1-4B85-886A-4223BCC8E7F7}:_0840AC5DD7332363657E327B668589FA"
+            "{9F6F8455-1EF1-4B85-886A-4223BCC8E7F7}:_1B3AE4F87B71E69F7E02DE773EC35DD7"
             {
             "AssemblyRegister" = "3:1"
             "AssemblyIsInGAC" = "11:FALSE"
-            "AssemblyAsmDisplayName" = "8:Gallatin.Contracts, Version=0.1.0.5, Culture=neutral, processorArchitecture=MSIL"
+            "AssemblyAsmDisplayName" = "8:Gallatin.Core, Version=0.2.0.0, Culture=neutral, processorArchitecture=MSIL"
                 "ScatterAssemblies"
                 {
-                    "_0840AC5DD7332363657E327B668589FA"
+                    "_1B3AE4F87B71E69F7E02DE773EC35DD7"
                     {
-                    "Name" = "8:Gallatin.Contracts.dll"
+                    "Name" = "8:Gallatin.Core.dll"
                     "Attributes" = "3:512"
                     }
                 }
-            "SourcePath" = "8:Gallatin.Contracts.dll"
-            "TargetName" = "8:"
-            "Tag" = "8:"
-            "Folder" = "8:_44B8E5FAD6A34DCDB99F814771A1621A"
-            "Condition" = "8:"
-            "Transitive" = "11:FALSE"
-            "Vital" = "11:TRUE"
-            "ReadOnly" = "11:FALSE"
-            "Hidden" = "11:FALSE"
-            "System" = "11:FALSE"
-            "Permanent" = "11:FALSE"
-            "SharedLegacy" = "11:FALSE"
-            "PackageAs" = "3:1"
-            "Register" = "3:1"
-            "Exclude" = "11:FALSE"
-            "IsDependency" = "11:TRUE"
-            "IsolateTo" = "8:"
-            }
-            "{9F6F8455-1EF1-4B85-886A-4223BCC8E7F7}:_413137BDE50AA7D70DC9BB2A09CDD8D2"
-            {
-            "AssemblyRegister" = "3:1"
-            "AssemblyIsInGAC" = "11:FALSE"
-            "AssemblyAsmDisplayName" = "8:Ionic.Zip, Version=1.9.1.8, Culture=neutral, PublicKeyToken=edbe51ad942a3f5c, processorArchitecture=MSIL"
-                "ScatterAssemblies"
-                {
-                    "_413137BDE50AA7D70DC9BB2A09CDD8D2"
-                    {
-                    "Name" = "8:Ionic.Zip.dll"
-                    "Attributes" = "3:512"
-                    }
-                }
-            "SourcePath" = "8:Ionic.Zip.dll"
+            "SourcePath" = "8:Gallatin.Core.dll"
             "TargetName" = "8:"
             "Tag" = "8:"
             "Folder" = "8:_44B8E5FAD6A34DCDB99F814771A1621A"
@@ -404,20 +373,51 @@
             "IsDependency" = "11:FALSE"
             "IsolateTo" = "8:"
             }
-            "{9F6F8455-1EF1-4B85-886A-4223BCC8E7F7}:_87342605D1A65EBA708B6845DC7AAEDC"
+            "{9F6F8455-1EF1-4B85-886A-4223BCC8E7F7}:_C101930C84D8931D834A5FF13A8BFE24"
             {
             "AssemblyRegister" = "3:1"
             "AssemblyIsInGAC" = "11:FALSE"
-            "AssemblyAsmDisplayName" = "8:Gallatin.Core, Version=0.1.0.5, Culture=neutral, processorArchitecture=MSIL"
+            "AssemblyAsmDisplayName" = "8:Gallatin.Contracts, Version=0.2.0.0, Culture=neutral, processorArchitecture=MSIL"
                 "ScatterAssemblies"
                 {
-                    "_87342605D1A65EBA708B6845DC7AAEDC"
+                    "_C101930C84D8931D834A5FF13A8BFE24"
                     {
-                    "Name" = "8:Gallatin.Core.dll"
+                    "Name" = "8:Gallatin.Contracts.dll"
                     "Attributes" = "3:512"
                     }
                 }
-            "SourcePath" = "8:Gallatin.Core.dll"
+            "SourcePath" = "8:Gallatin.Contracts.dll"
+            "TargetName" = "8:"
+            "Tag" = "8:"
+            "Folder" = "8:_44B8E5FAD6A34DCDB99F814771A1621A"
+            "Condition" = "8:"
+            "Transitive" = "11:FALSE"
+            "Vital" = "11:TRUE"
+            "ReadOnly" = "11:FALSE"
+            "Hidden" = "11:FALSE"
+            "System" = "11:FALSE"
+            "Permanent" = "11:FALSE"
+            "SharedLegacy" = "11:FALSE"
+            "PackageAs" = "3:1"
+            "Register" = "3:1"
+            "Exclude" = "11:FALSE"
+            "IsDependency" = "11:TRUE"
+            "IsolateTo" = "8:"
+            }
+            "{9F6F8455-1EF1-4B85-886A-4223BCC8E7F7}:_E6909880EA463593E8E0C13C3F980B6F"
+            {
+            "AssemblyRegister" = "3:1"
+            "AssemblyIsInGAC" = "11:FALSE"
+            "AssemblyAsmDisplayName" = "8:Ionic.Zip, Version=1.9.1.8, Culture=neutral, PublicKeyToken=edbe51ad942a3f5c, processorArchitecture=MSIL"
+                "ScatterAssemblies"
+                {
+                    "_E6909880EA463593E8E0C13C3F980B6F"
+                    {
+                    "Name" = "8:Ionic.Zip.dll"
+                    "Attributes" = "3:512"
+                    }
+                }
+            "SourcePath" = "8:Ionic.Zip.dll"
             "TargetName" = "8:"
             "Tag" = "8:"
             "Folder" = "8:_44B8E5FAD6A34DCDB99F814771A1621A"
@@ -544,15 +544,15 @@
         {
         "Name" = "8:Microsoft Visual Studio"
         "ProductName" = "8:Gallatin Proxy"
-        "ProductCode" = "8:{1A469535-E344-458C-84C2-27FA68C50B0E}"
-        "PackageCode" = "8:{6DD1F7DC-2ABD-4208-9256-649D84D2153D}"
+        "ProductCode" = "8:{2335D380-D677-4959-96A6-425F2F5DDB73}"
+        "PackageCode" = "8:{E5F4E4CD-AB85-4B39-8850-D9D613A37D53}"
         "UpgradeCode" = "8:{3AEDD68F-34CA-43DF-ACCA-E7F3AEFC869B}"
         "AspNetVersion" = "8:4.0.30319.0"
         "RestartWWWService" = "11:FALSE"
         "RemovePreviousVersions" = "11:TRUE"
         "DetectNewerInstalledVersion" = "11:TRUE"
         "InstallAllUsers" = "11:FALSE"
-        "ProductVersion" = "8:0.2.1"
+        "ProductVersion" = "8:0.2.2"
         "Manufacturer" = "8:Gallatin Proxy"
         "ARPHELPTELEPHONE" = "8:"
         "ARPHELPLINK" = "8:"
